@@ -4,6 +4,14 @@
 A drink delivery service for French Guiana (Guyane) built with Next.js. Features a neon punk aesthetic with dynamic product catalog loaded from Firebase Firestore, cart, WhatsApp/Stripe ordering, authentication, and admin panel.
 
 ## Recent Changes
+- **2026-02-23**: Real-time order tracking with live map
+  - Client tracking page (/suivi) shows live map with driver's position moving in real-time
+  - Driver's transport type (scooter/vélo/voiture) shown as icon on the map
+  - ETA and distance update in real-time as driver moves
+  - Driver info card with online status indicator
+  - GPS tracking auto-starts when driver takes an order, stops when delivered
+  - Transport type selector in driver portal (🏍️ scooter / 🚲 vélo / 🚗 voiture)
+  - Driver location stored in Firebase `driver_locations` collection, cleaned up on delivery
 - **2026-02-23**: Geolocation & Maps for delivery
   - Address autocomplete in order form using Nominatim (OpenStreetMap geocoding, focused on Guyane)
   - Coordinates (lat/lng) saved with each order in Firebase

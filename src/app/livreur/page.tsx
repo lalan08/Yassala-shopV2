@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
@@ -41,6 +41,9 @@ export default function LivreurPage() {
   const [expandedMap, setExpandedMap] = useState<string | null>(null);
   const [etaData, setEtaData] = useState<Record<string, {duration: string; distance: string}>>({});
   const mapRefs = useRef<Record<string, boolean>>({});
+  const [gpsActive, setGpsActive] = useState(false);
+  const [transportType, setTransportType] = useState<"scooter"|"velo"|"voiture">("scooter");
+  const watchIdRef = useRef<number | null>(null);
 
   const showToast = (msg: string) => {
     setToast({ msg, show: true });
@@ -86,6 +89,7 @@ export default function LivreurPage() {
       return;
     }
     setDriverData({ id: driverDoc.id, ...data });
+    if (data.transport) setTransportType(data.transport);
     setLoggedIn(true);
     try { localStorage.setItem("yassala_driver", JSON.stringify({ phone: phone.trim() })); } catch {}
   };
@@ -158,6 +162,54 @@ export default function LivreurPage() {
     showToast("Commande marquée comme livrée !");
     setConfirmAction(null);
   };
+
+  const startGPS = useCallback(() => {
+    if (!driverData || !navigator.geolocation) return;
+    if (watchIdRef.current !== null) return;
+    const wid = navigator.geolocation.watchPosition(
+      (pos) => {
+        setDoc(doc(db, "driver_locations", driverData.id), {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          heading: pos.coords.heading || 0,
+          speed: pos.coords.speed || 0,
+          transport: transportType,
+          driverName: driverData.name,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+    );
+    watchIdRef.current = wid;
+    setGpsActive(true);
+    showToast("Position GPS partagée en temps réel");
+  }, [driverData, transportType]);
+
+  const stopGPS = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setGpsActive(false);
+    if (driverData) {
+      deleteDoc(doc(db, "driver_locations", driverData.id)).catch(() => {});
+    }
+  }, [driverData]);
+
+  useEffect(() => {
+    if (!driverData) return;
+    const activeOrders = orders.filter(o => o.assignedDriver === driverData.id && o.status === "en_cours");
+    if (activeOrders.length > 0 && !gpsActive) {
+      startGPS();
+    } else if (activeOrders.length === 0 && gpsActive) {
+      stopGPS();
+    }
+  }, [orders, driverData, gpsActive, startGPS, stopGPS]);
+
+  useEffect(() => {
+    return () => { stopGPS(); };
+  }, []);
 
   const availableOrders = orders.filter(o => (o.status === "nouveau" || o.status === "en_cours") && !o.assignedDriver);
   const myOrders = orders.filter(o => o.assignedDriver === driverData?.id && o.status !== "livre");
@@ -421,7 +473,7 @@ export default function LivreurPage() {
             <div style={{fontWeight:600,fontSize:".85rem"}}>{driverData?.name}</div>
             <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470"}}>{driverData?.zone || driverData?.phone}</div>
           </div>
-          <button onClick={() => { setLoggedIn(false); setDriverData(null); setPhone(""); setPassword(""); localStorage.removeItem("yassala_driver"); }}
+          <button onClick={() => { stopGPS(); setLoggedIn(false); setDriverData(null); setPhone(""); setPassword(""); localStorage.removeItem("yassala_driver"); }}
             style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
               color:"#5a5470",padding:"6px 12px",borderRadius:6,
               fontFamily:"'Inter',sans-serif",fontSize:".78rem",cursor:"pointer"}}>
@@ -431,6 +483,38 @@ export default function LivreurPage() {
       </header>
 
       <div style={{maxWidth:600,margin:"0 auto",padding:"20px 14px",animation:"fadeUp .3s both"}}>
+
+        {/* GPS & Transport */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,
+          padding:"10px 14px",background: gpsActive ? "rgba(184,255,0,.06)" : "rgba(255,255,255,.02)",
+          border:`1px solid ${gpsActive ? "rgba(184,255,0,.2)" : "rgba(255,255,255,.06)"}`,
+          borderRadius:10}}>
+          <div style={{width:10,height:10,borderRadius:"50%",flexShrink:0,
+            background: gpsActive ? "#b8ff00" : "#5a5470",
+            boxShadow: gpsActive ? "0 0 8px #b8ff00" : "none",
+            animation: gpsActive ? "pulseGlow 2s infinite" : "none"}} />
+          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+            color: gpsActive ? "#b8ff00" : "#5a5470",letterSpacing:".08em",flex:1}}>
+            {gpsActive ? "GPS ACTIF" : "GPS INACTIF"}
+          </span>
+          <div style={{display:"flex",gap:4}}>
+            {(["scooter","velo","voiture"] as const).map(t => (
+              <button key={t} onClick={() => {
+                setTransportType(t);
+                if (driverData?.id) {
+                  updateDoc(doc(db, "driver_applications", driverData.id), { transport: t }).catch(() => {});
+                }
+              }}
+                style={{padding:"4px 10px",borderRadius:6,border:"none",cursor:"pointer",
+                  fontSize:".85rem",
+                  background: transportType === t ? "rgba(0,245,255,.15)" : "rgba(255,255,255,.03)",
+                  color: transportType === t ? "#00f5ff" : "#5a5470",
+                  transition:"all .2s"}}>
+                {t === "scooter" ? "🏍️" : t === "velo" ? "🚲" : "🚗"}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Stats */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:22}}>

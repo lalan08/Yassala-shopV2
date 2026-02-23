@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, doc, onSnapshot } from "firebase/firestore";
@@ -20,12 +20,25 @@ type Order = {
   id?: string; items: string; total: number; status: string;
   createdAt: string; phone: string; name?: string; address?: string;
   discount?: number; coupon?: string; deliveryFee?: number;
+  assignedDriver?: string; assignedDriverName?: string;
+  lat?: number; lng?: number; orderNumber?: number;
+};
+
+type DriverLocation = {
+  lat: number; lng: number; heading: number; speed: number;
+  transport: string; driverName: string; updatedAt: string;
+};
+
+const TRANSPORT_ICONS: Record<string, string> = {
+  scooter: "🏍️",
+  velo: "🚲",
+  voiture: "🚗",
 };
 
 const STEPS = [
-  { key: "nouveau",   label: "Commande reçue",        icon: "📥", desc: "Votre commande a bien été enregistrée." },
-  { key: "en_cours",  label: "En préparation",         icon: "🔥", desc: "Votre commande est en cours de préparation." },
-  { key: "livre",     label: "Livré",                  icon: "🛵", desc: "Votre commande a été livrée. Bonne soirée !" },
+  { key: "nouveau",   label: "Commande reçue",    icon: "📥", desc: "Votre commande a bien été enregistrée." },
+  { key: "en_cours",  label: "En route",            icon: "🏍️", desc: "Votre livreur est en route vers vous !" },
+  { key: "livre",     label: "Livrée",              icon: "✅", desc: "Votre commande a été livrée. Bonne soirée !" },
 ];
 
 function SuiviContent() {
@@ -33,6 +46,11 @@ function SuiviContent() {
   const id = params.get("id");
   const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [driverLoc, setDriverLoc] = useState<DriverLocation | null>(null);
+  const [eta, setEta] = useState<{duration: string; distance: string} | null>(null);
+  const mapRef = useRef<any>(null);
+  const driverMarkerRef = useRef<any>(null);
+  const mapInitRef = useRef(false);
 
   useEffect(() => {
     if (!id) { setNotFound(true); return; }
@@ -43,42 +61,137 @@ function SuiviContent() {
     return () => unsub();
   }, [id]);
 
+  useEffect(() => {
+    if (!order?.assignedDriver) { setDriverLoc(null); return; }
+    if (order.status === "livre") { setDriverLoc(null); return; }
+    const unsub = onSnapshot(doc(db, "driver_locations", order.assignedDriver), snap => {
+      if (!snap.exists()) { setDriverLoc(null); return; }
+      setDriverLoc(snap.data() as DriverLocation);
+    });
+    return () => unsub();
+  }, [order?.assignedDriver, order?.status]);
+
+  const fetchETA = useCallback(async (dLat: number, dLng: number, cLat: number, cLng: number) => {
+    try {
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${dLng},${dLat};${cLng},${cLat}?overview=false`
+      );
+      const data = await res.json();
+      if (data.routes?.[0]) {
+        const mins = Math.ceil(data.routes[0].duration / 60);
+        const km = (data.routes[0].distance / 1000).toFixed(1);
+        setEta({
+          duration: mins < 60 ? `${mins} min` : `${Math.floor(mins/60)}h${mins%60}min`,
+          distance: `${km} km`
+        });
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (driverLoc && order?.lat && order?.lng) {
+      fetchETA(driverLoc.lat, driverLoc.lng, order.lat, order.lng);
+    }
+  }, [driverLoc?.lat, driverLoc?.lng, order?.lat, order?.lng]);
+
+  const initMap = useCallback(() => {
+    if (mapInitRef.current) return;
+    if (!order?.lat || !order?.lng) return;
+    mapInitRef.current = true;
+
+    import("leaflet").then(L => {
+      const container = document.getElementById("tracking-map");
+      if (!container || (container as any)._leaflet_id) return;
+
+      const map = L.map(container, { zoomControl: false, attributionControl: false })
+        .setView([order.lat!, order.lng!], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+      const clientIcon = L.divIcon({
+        html: '<div style="font-size:30px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))">📍</div>',
+        iconSize: [30, 30], iconAnchor: [15, 30], className: ''
+      });
+      L.marker([order.lat!, order.lng!], { icon: clientIcon }).addTo(map);
+
+      mapRef.current = map;
+      setTimeout(() => map.invalidateSize(), 200);
+    });
+  }, [order?.lat, order?.lng]);
+
+  useEffect(() => {
+    if (order?.status === "en_cours" && order?.lat && order?.lng) {
+      setTimeout(initMap, 100);
+    }
+  }, [order?.status, initMap]);
+
+  useEffect(() => {
+    if (!mapRef.current || !driverLoc) return;
+    import("leaflet").then(L => {
+      const transport = driverLoc.transport || "scooter";
+      const emoji = TRANSPORT_ICONS[transport] || "🏍️";
+      const driverIcon = L.divIcon({
+        html: `<div style="font-size:32px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));transition:transform .3s;transform:rotate(${driverLoc.heading || 0}deg)">${emoji}</div>`,
+        iconSize: [32, 32], iconAnchor: [16, 16], className: ''
+      });
+
+      if (driverMarkerRef.current) {
+        driverMarkerRef.current.setLatLng([driverLoc.lat, driverLoc.lng]);
+        driverMarkerRef.current.setIcon(driverIcon);
+      } else {
+        driverMarkerRef.current = L.marker([driverLoc.lat, driverLoc.lng], { icon: driverIcon }).addTo(mapRef.current);
+      }
+
+      const bounds = L.latLngBounds(
+        [driverLoc.lat, driverLoc.lng],
+        [order?.lat || driverLoc.lat, order?.lng || driverLoc.lng]
+      );
+      mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    });
+  }, [driverLoc?.lat, driverLoc?.lng, driverLoc?.transport, driverLoc?.heading]);
+
   const stepIdx = order ? STEPS.findIndex(s => s.key === order.status) : -1;
   const isCancelled = order?.status === "annule";
+  const isEnRoute = order?.status === "en_cours" && order?.assignedDriver;
 
   return (
     <>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{background:#04020a;color:#f0eeff;font-family:'Rajdhani',sans-serif;min-height:100vh;}
+        body{background:#0a0a12;color:#f0eeff;font-family:'Inter',sans-serif;min-height:100vh;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
         @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+        @keyframes pulseGlow{0%,100%{box-shadow:0 0 8px rgba(184,255,0,.3)}50%{box-shadow:0 0 20px rgba(184,255,0,.6)}}
+        @keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
         .spin{animation:pulse 1.2s infinite;}
+        .leaflet-container{background:#0a0a12 !important;border-radius:12px;}
+        .leaflet-tile-pane{filter:brightness(.8) contrast(1.1) saturate(.7);}
       `}</style>
 
-      <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 24px",
-        borderBottom:"1px solid rgba(255,45,120,.2)",background:"rgba(4,2,10,.9)",backdropFilter:"blur(20px)",
+      <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",
+        borderBottom:"1px solid rgba(0,245,255,.1)",background:"rgba(10,10,18,.95)",backdropFilter:"blur(20px)",
         position:"sticky",top:0,zIndex:100}}>
-        <a href="/" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:"#ff2d78",
-          textShadow:"0 0 16px rgba(255,45,120,.5)",textDecoration:"none",letterSpacing:".06em"}}>
+        <a href="/" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",
+          background:"linear-gradient(135deg,#00f5ff,#ff2d78)",WebkitBackgroundClip:"text",
+          WebkitTextFillColor:"transparent",textDecoration:"none",letterSpacing:".04em"}}>
           YASSALA
         </a>
-        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
-          letterSpacing:".1em"}}>SUIVI DE COMMANDE</span>
+        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
+          letterSpacing:".1em"}}>SUIVI EN DIRECT</span>
       </nav>
 
-      <main style={{maxWidth:560,margin:"0 auto",padding:"40px 20px",animation:"fadeUp .4s both"}}>
+      <main style={{maxWidth:560,margin:"0 auto",padding:"24px 16px",animation:"fadeUp .4s both"}}>
         {!id && (
           <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",padding:"60px 0"}}>
-            // Aucun identifiant de commande fourni.
+            Aucun identifiant de commande fourni.
           </div>
         )}
 
         {id && !order && !notFound && (
           <div style={{textAlign:"center",padding:"60px 0"}}>
             <div className="spin" style={{fontSize:"2rem",marginBottom:12}}>⏳</div>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem",color:"#5a5470"}}>// chargement...</div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem",color:"#5a5470"}}>Chargement...</div>
           </div>
         )}
 
@@ -88,12 +201,9 @@ function SuiviContent() {
             <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:"#ff2d78",marginBottom:8}}>
               COMMANDE INTROUVABLE
             </div>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem",color:"#5a5470",marginBottom:24}}>
-              Vérifiez le lien ou contactez-nous.
-            </div>
-            <a href="/" style={{background:"#ff2d78",color:"#000",borderRadius:4,padding:"12px 24px",
-              fontFamily:"'Rajdhani',sans-serif",fontWeight:700,textDecoration:"none",fontSize:".9rem",
-              letterSpacing:".1em",textTransform:"uppercase"}}>
+            <a href="/" style={{background:"linear-gradient(135deg,#ff2d78,#ff6b35)",color:"#fff",borderRadius:8,
+              padding:"12px 24px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,textDecoration:"none",
+              fontSize:".9rem",letterSpacing:".06em"}}>
               RETOUR AU SHOP
             </a>
           </div>
@@ -101,36 +211,86 @@ function SuiviContent() {
 
         {order && (
           <div>
-            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em",marginBottom:6}}>
-              {isCancelled ? "❌" : "📦"} <span style={{color: isCancelled ? "#ff2d78" : "#f0eeff"}}>
-                {isCancelled ? "COMMANDE ANNULÉE" : "SUIVI DE COMMANDE"}
-              </span>
-            </div>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",marginBottom:28,letterSpacing:".1em"}}>
-              #{(order.id || "").slice(-8).toUpperCase()} · {new Date(order.createdAt).toLocaleString("fr-FR")}
+            {/* Order Header */}
+            <div style={{marginBottom:20}}>
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",letterSpacing:".04em",marginBottom:4}}>
+                {isCancelled ? "❌" : isEnRoute ? "🏍️" : "📦"}
+                <span style={{color: isCancelled ? "#ff2d78" : "#f0eeff",marginLeft:8}}>
+                  {isCancelled ? "ANNULÉE" : isEnRoute ? "EN ROUTE !" : "SUIVI COMMANDE"}
+                </span>
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",letterSpacing:".1em"}}>
+                #{order.orderNumber || (order.id || "").slice(-8).toUpperCase()} · {new Date(order.createdAt).toLocaleString("fr-FR")}
+              </div>
             </div>
 
-            {/* Progress bar */}
+            {/* LIVE MAP - Only shows when driver is en route */}
+            {isEnRoute && order.lat && order.lng && (
+              <div style={{marginBottom:20,borderRadius:14,overflow:"hidden",
+                border:"1px solid rgba(0,245,255,.2)",
+                boxShadow:"0 4px 30px rgba(0,245,255,.08)"}}>
+
+                {/* ETA Banner */}
+                <div style={{background:"linear-gradient(135deg,rgba(184,255,0,.12),rgba(0,245,255,.08))",
+                  padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",
+                  borderBottom:"1px solid rgba(184,255,0,.15)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:"1.5rem",animation:"bounce 1.5s infinite"}}>
+                      {driverLoc ? (TRANSPORT_ICONS[driverLoc.transport] || "🏍️") : "⏳"}
+                    </div>
+                    <div>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.1rem",
+                        color: driverLoc ? "#b8ff00" : "#5a5470"}}>
+                        {driverLoc
+                          ? (eta ? `Arrivée dans ~${eta.duration}` : "Livreur en route...")
+                          : "En attente du livreur..."}
+                      </div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>
+                        {driverLoc
+                          ? `${order.assignedDriverName || "Livreur"} · ${eta?.distance || "calcul..."}`
+                          : "Le livreur va bientôt démarrer"}
+                      </div>
+                    </div>
+                  </div>
+                  {driverLoc && (
+                    <div style={{width:12,height:12,borderRadius:"50%",background:"#b8ff00",
+                      boxShadow:"0 0 10px #b8ff00",animation:"pulseGlow 2s infinite",flexShrink:0}} />
+                  )}
+                </div>
+
+                {/* Map */}
+                <div id="tracking-map" style={{height:280,width:"100%"}} />
+
+                {/* Legend */}
+                <div style={{padding:"10px 16px",background:"rgba(0,0,0,.3)",
+                  display:"flex",justifyContent:"center",gap:20,
+                  fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>
+                  <span>📍 Ton adresse</span>
+                  <span>{driverLoc ? (TRANSPORT_ICONS[driverLoc.transport] || "🏍️") : "🏍️"} Ton livreur</span>
+                </div>
+              </div>
+            )}
+
+            {/* Progress Steps */}
             {!isCancelled && (
-              <div style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.07)",borderRadius:8,padding:"24px",marginBottom:24}}>
+              <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                borderRadius:12,padding:"24px 20px",marginBottom:20}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:0}}>
                   {STEPS.map((step, i) => {
                     const done = i <= stepIdx;
                     const active = i === stepIdx;
                     return (
                       <div key={step.key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
-                        {/* Connector line */}
                         {i < STEPS.length - 1 && (
                           <div style={{position:"absolute",top:20,left:"50%",width:"100%",height:2,
-                            background: i < stepIdx ? "#b8ff00" : "rgba(255,255,255,.08)",
+                            background: i < stepIdx ? "#b8ff00" : "rgba(255,255,255,.06)",
                             transition:"background .5s"}} />
                         )}
-                        {/* Circle */}
-                        <div style={{width:40,height:40,borderRadius:"50%",display:"flex",alignItems:"center",
+                        <div style={{width:42,height:42,borderRadius:"50%",display:"flex",alignItems:"center",
                           justifyContent:"center",fontSize:"1.2rem",position:"relative",zIndex:1,marginBottom:8,
-                          border:`2px solid ${active ? "#ff2d78" : done ? "#b8ff00" : "rgba(255,255,255,.1)"}`,
-                          background: active ? "rgba(255,45,120,.15)" : done ? "rgba(184,255,0,.1)" : "#080514",
-                          boxShadow: active ? "0 0 12px rgba(255,45,120,.4)" : done ? "0 0 8px rgba(184,255,0,.3)" : "none",
+                          border:`2px solid ${active ? "#ff2d78" : done ? "#b8ff00" : "rgba(255,255,255,.08)"}`,
+                          background: active ? "rgba(255,45,120,.12)" : done ? "rgba(184,255,0,.08)" : "rgba(255,255,255,.02)",
+                          boxShadow: active ? "0 0 14px rgba(255,45,120,.4)" : done ? "0 0 10px rgba(184,255,0,.3)" : "none",
                           transition:"all .4s"}}>
                           {step.icon}
                         </div>
@@ -143,21 +303,49 @@ function SuiviContent() {
                   })}
                 </div>
                 {stepIdx >= 0 && (
-                  <div style={{marginTop:20,padding:"14px",background:"rgba(255,45,120,.06)",borderRadius:6,
-                    fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#f0eeff",textAlign:"center",
-                    borderLeft:"3px solid #ff2d78"}}>
+                  <div style={{marginTop:18,padding:"12px 14px",
+                    background: isEnRoute ? "rgba(184,255,0,.06)" : "rgba(255,45,120,.06)",
+                    borderRadius:8,fontFamily:"'Rajdhani',sans-serif",fontSize:".88rem",color:"#f0eeff",
+                    textAlign:"center",borderLeft:`3px solid ${isEnRoute ? "#b8ff00" : "#ff2d78"}`}}>
                     {STEPS[stepIdx]?.desc}
                   </div>
                 )}
               </div>
             )}
 
+            {/* Driver Info */}
+            {order.assignedDriverName && order.status !== "nouveau" && (
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",
+                background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.12)",
+                borderRadius:12,marginBottom:16}}>
+                <div style={{width:44,height:44,borderRadius:"50%",
+                  background:"rgba(0,245,255,.1)",border:"2px solid rgba(0,245,255,.25)",
+                  display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.3rem",flexShrink:0}}>
+                  {driverLoc ? (TRANSPORT_ICONS[driverLoc.transport] || "🏍️") : "🏍️"}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:".95rem"}}>{order.assignedDriverName}</div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>
+                    {order.status === "en_cours" ? "En route vers vous" : order.status === "livre" ? "Livraison effectuée" : "Votre livreur"}
+                  </div>
+                </div>
+                {driverLoc && (
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <div style={{width:8,height:8,borderRadius:"50%",background:"#b8ff00",
+                      boxShadow:"0 0 6px #b8ff00"}} />
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#b8ff00"}}>EN LIGNE</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Order detail */}
-            <div style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.07)",borderRadius:8,padding:"20px 24px",marginBottom:16}}>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",letterSpacing:".08em",
-                color:"#5a5470",marginBottom:14}}>DÉTAIL DE LA COMMANDE</div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#f0eeff",lineHeight:1.9,
-                borderLeft:"2px solid rgba(255,45,120,.3)",paddingLeft:12,marginBottom:16}}>
+            <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+              borderRadius:12,padding:"18px 20px",marginBottom:16}}>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",letterSpacing:".1em",
+                color:"#5a5470",marginBottom:12}}>DÉTAIL DE LA COMMANDE</div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontSize:".88rem",color:"#d0d0e0",lineHeight:1.9,
+                borderLeft:"2px solid rgba(0,245,255,.2)",paddingLeft:12,marginBottom:14}}>
                 {order.items.split("\n").map((line, i) => <div key={i}>{line}</div>)}
               </div>
               {(order.discount ?? 0) > 0 && (
@@ -168,7 +356,8 @@ function SuiviContent() {
                 </div>
               )}
               <div style={{display:"flex",justifyContent:"space-between",
-                fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:12}}>
+                fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",
+                borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:12}}>
                 <span style={{color:"#ff2d78"}}>TOTAL</span>
                 <span style={{color:"#b8ff00",textShadow:"0 0 12px rgba(184,255,0,.4)"}}>
                   {Number(order.total).toFixed(2)}€
@@ -176,16 +365,25 @@ function SuiviContent() {
               </div>
             </div>
 
-            <div style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.07)",borderRadius:8,padding:"16px 20px",marginBottom:24}}>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",marginBottom:8}}>LIVRAISON</div>
-              <div style={{fontWeight:700,marginBottom:2}}>{order.name}</div>
-              {order.address && <div style={{fontSize:".82rem",color:"#5a5470"}}>📍 {order.address}</div>}
-            </div>
+            {/* Address */}
+            {order.address && (
+              <div style={{background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.1)",
+                borderRadius:12,padding:"14px 18px",marginBottom:20,
+                display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:"1.1rem",flexShrink:0}}>📍</span>
+                <div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
+                    letterSpacing:".08em",marginBottom:2}}>LIVRAISON</div>
+                  <div style={{fontSize:".88rem",color:"#00f5ff"}}>{order.address}</div>
+                </div>
+              </div>
+            )}
 
-            <a href="/" style={{display:"block",textAlign:"center",background:"transparent",
-              border:"1px solid rgba(255,45,120,.3)",color:"#ff2d78",borderRadius:4,padding:"12px",
-              fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",letterSpacing:".08em",
-              textDecoration:"none",textTransform:"uppercase"}}>
+            <a href="/" style={{display:"block",textAlign:"center",
+              background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.08)",
+              color:"#5a5470",borderRadius:10,padding:"14px",
+              fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",letterSpacing:".06em",
+              textDecoration:"none"}}>
               ← RETOUR AU SHOP
             </a>
           </div>
@@ -198,7 +396,7 @@ function SuiviContent() {
 export default function SuiviPage() {
   return (
     <Suspense fallback={
-      <div style={{background:"#04020a",minHeight:"100vh",display:"flex",alignItems:"center",
+      <div style={{background:"#0a0a12",minHeight:"100vh",display:"flex",alignItems:"center",
         justifyContent:"center",color:"#5a5470",fontFamily:"monospace"}}>
         Chargement...
       </div>
