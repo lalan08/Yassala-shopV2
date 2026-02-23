@@ -4,15 +4,10 @@
 - Environments: .env
 
 ✓ Starting...
-✓ Ready in 1094ms
- GET / 200 in 2.4s (compile: 1912ms, render: 449ms)
- GET / 200 in 2.4s (compile: 1996ms, render: 375ms)
+✓ Ready in 897ms
 ⚠ Blocked cross-origin request from 064d4fc4-f150-4d04-a316-4dd6b76c5b02-00-2sqefq0pispf6.riker.replit.dev to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET /livreur 200 in 2.3s (compile: 1790ms, render: 481ms)
 ⚠ Blocked cross-origin request from 127.0.0.1 to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- GET /favicon.png 404 in 326ms (compile: 129ms, render: 198ms)
- GET /livreur 200 in 114ms (compile: 57ms, render: 57ms)
- GET /admin 200 in 304ms (compile: 171ms, render: 133ms)
- GET / 200 in 48ms (compile: 4ms, render: 44ms)
- GET / 200 in 79ms (compile: 4ms, render: 75ms)
+ GET / 200 in 340ms (compile: 184ms, render: 156ms)

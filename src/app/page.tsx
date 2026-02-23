@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
@@ -66,7 +66,10 @@ export default function Home() {
   const [settings, setSettings]   = useState<Settings>(defaultSettings);
   const [loading, setLoading]     = useState(true);
   const [showCart, setShowCart]   = useState(false);
-  const [orderForm, setOrderForm] = useState({ name: "", phone: "", address: "" });
+  const [orderForm, setOrderForm] = useState({ name: "", phone: "", address: "", lat: 0, lng: 0 });
+  const [addressSuggestions, setAddressSuggestions] = useState<{display: string; lat: number; lng: number}[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const addressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('cash');
   const [banners, setBanners]         = useState<Banner[]>([]);
@@ -244,6 +247,26 @@ export default function Home() {
   const discountedTotal = cartTotal - getDiscount();
   const finalTotal = discountedTotal + (discountedTotal >= settings.freeDelivery ? 0 : 3);
 
+  const searchAddress = useCallback((q: string) => {
+    if (addressTimerRef.current) clearTimeout(addressTimerRef.current);
+    if (q.length < 3) { setAddressSuggestions([]); setShowSuggestions(false); return; }
+    addressTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + " Guyane française")}&limit=5&addressdetails=1&countrycodes=gf`
+        );
+        const data = await res.json();
+        const suggestions = data.map((r: any) => ({
+          display: r.display_name.replace(/, Guyane française.*$/, "").replace(/, French Guiana.*$/, ""),
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon),
+        }));
+        setAddressSuggestions(suggestions);
+        setShowSuggestions(suggestions.length > 0);
+      } catch { setAddressSuggestions([]); }
+    }, 400);
+  }, []);
+
   const applyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
     if (!code) return;
@@ -257,6 +280,10 @@ export default function Home() {
   const submitOrder = async () => {
     if (!orderForm.name || !orderForm.phone || !orderForm.address) {
       showToast("Remplis tous les champs !");
+      return;
+    }
+    if (!orderForm.lat || !orderForm.lng) {
+      showToast("Sélectionne une adresse dans la liste pour la localiser 📍");
       return;
     }
 
@@ -312,6 +339,8 @@ export default function Home() {
           phone: orderForm.phone,
           name: orderForm.name,
           address: orderForm.address,
+          lat: orderForm.lat || null,
+          lng: orderForm.lng || null,
           uid: currentUser?.uid || null,
           orderNumber: orderNum,
         });
@@ -352,7 +381,7 @@ export default function Home() {
         }).catch(() => {});
 
         setCart([]);
-        setOrderForm({ name: "", phone: "", address: "" });
+        setOrderForm({ name: "", phone: "", address: "", lat: 0, lng: 0 });
         setCoupon(null); setCouponInput("");
         setShowCart(false);
         setOrderConfirmId(orderRef.id);
@@ -1242,11 +1271,50 @@ export default function Home() {
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Rajdhani',sans-serif"}} />
-                  <textarea placeholder="Adresse de livraison complète" rows={3} value={orderForm.address}
-                    onChange={e => setOrderForm(f => ({...f, address: e.target.value}))}
-                    style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
-                      borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
-                      fontFamily:"'Rajdhani',sans-serif",resize:"vertical"}} />
+                  <div style={{position:"relative"}}>
+                    <div style={{position:"relative"}}>
+                      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>📍</span>
+                      <input placeholder="Tape ton adresse (ex: Rue Schoelcher, Cayenne)" value={orderForm.address}
+                        onChange={e => {
+                          const v = e.target.value;
+                          setOrderForm(f => ({...f, address: v, lat: 0, lng: 0}));
+                          searchAddress(v);
+                        }}
+                        onFocus={() => { if (addressSuggestions.length > 0) setShowSuggestions(true); }}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        style={{width:"100%",background:"#080514",
+                          border: orderForm.lat ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
+                          borderRadius:4,padding:"12px 12px 12px 36px",color:"#f0eeff",fontSize:".9rem",
+                          fontFamily:"'Rajdhani',sans-serif"}} />
+                      {orderForm.lat !== 0 && (
+                        <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
+                          color:"#b8ff00",fontSize:".78rem",fontFamily:"'Share Tech Mono',monospace"}}>✓ localisé</span>
+                      )}
+                    </div>
+                    {showSuggestions && addressSuggestions.length > 0 && (
+                      <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,
+                        background:"#0c0918",border:"1px solid rgba(0,245,255,.25)",borderRadius:"0 0 6px 6px",
+                        maxHeight:200,overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.6)"}}>
+                        {addressSuggestions.map((s, i) => (
+                          <div key={i}
+                            onMouseDown={() => {
+                              setOrderForm(f => ({...f, address: s.display, lat: s.lat, lng: s.lng}));
+                              setShowSuggestions(false);
+                              showToast("Adresse localisée ✓");
+                            }}
+                            style={{padding:"10px 14px",cursor:"pointer",fontSize:".82rem",
+                              color:"#d0d0e0",borderBottom:"1px solid rgba(255,255,255,.04)",
+                              fontFamily:"'Rajdhani',sans-serif",transition:"background .15s",
+                              display:"flex",alignItems:"center",gap:8}}
+                            onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,245,255,.08)")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                            <span style={{color:"#00f5ff",flexShrink:0}}>📍</span>
+                            {s.display}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {cartTotal < settings.deliveryMin && (

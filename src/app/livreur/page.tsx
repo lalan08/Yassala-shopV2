@@ -21,6 +21,7 @@ type Order = {
   createdAt: string; name?: string; address?: string; orderNumber?: number;
   orderType?: string; paidOnline?: boolean; assignedDriver?: string;
   assignedDriverName?: string; deliveredAt?: string;
+  lat?: number; lng?: number;
 };
 
 export default function LivreurPage() {
@@ -37,6 +38,9 @@ export default function LivreurPage() {
   const prevOrderCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [confirmAction, setConfirmAction] = useState<{id: string; type: "take"|"deliver"} | null>(null);
+  const [expandedMap, setExpandedMap] = useState<string | null>(null);
+  const [etaData, setEtaData] = useState<Record<string, {duration: string; distance: string}>>({});
+  const mapRefs = useRef<Record<string, boolean>>({});
 
   const showToast = (msg: string) => {
     setToast({ msg, show: true });
@@ -176,6 +180,80 @@ export default function LivreurPage() {
     return `il y a ${hrs}h${mins % 60 > 0 ? (mins % 60) + "min" : ""}`;
   };
 
+  const fetchETA = useCallback(async (orderId: string, lat: number, lng: number) => {
+    if (etaData[orderId]) return;
+    try {
+      const shopLat = 4.9372;
+      const shopLng = -52.3260;
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${shopLng},${shopLat};${lng},${lat}?overview=false`
+      );
+      const data = await res.json();
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const mins = Math.ceil(route.duration / 60);
+        const km = (route.distance / 1000).toFixed(1);
+        setEtaData(prev => ({ ...prev, [orderId]: {
+          duration: mins < 60 ? `${mins} min` : `${Math.floor(mins/60)}h${mins%60 > 0 ? mins%60 + "min" : ""}`,
+          distance: `${km} km`
+        }}));
+      }
+    } catch {}
+  }, [etaData]);
+
+  const mapInstancesRef = useRef<Record<string, any>>({});
+
+  const initMap = useCallback((containerId: string, lat: number, lng: number) => {
+    if (mapRefs.current[containerId]) return;
+    mapRefs.current[containerId] = true;
+    import("leaflet").then(L => {
+      const container = document.getElementById(containerId);
+      if (!container) { mapRefs.current[containerId] = false; return; }
+      if ((container as any)._leaflet_id) return;
+      const map = L.map(container, { zoomControl: false, attributionControl: false }).setView([lat, lng], 15);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+      const icon = L.divIcon({
+        html: '<div style="font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))">📍</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        className: ''
+      });
+      L.marker([lat, lng], { icon }).addTo(map);
+      mapInstancesRef.current[containerId] = map;
+      setTimeout(() => map.invalidateSize(), 100);
+    });
+  }, []);
+
+  const cleanupMap = useCallback((containerId: string) => {
+    const map = mapInstancesRef.current[containerId];
+    if (map) {
+      map.remove();
+      delete mapInstancesRef.current[containerId];
+    }
+    delete mapRefs.current[containerId];
+  }, []);
+
+  useEffect(() => {
+    if (expandedMap) {
+      const order = orders.find(o => o.id === expandedMap);
+      if (order?.lat && order?.lng) {
+        setTimeout(() => {
+          initMap(`map-${order.id}`, order.lat!, order.lng!);
+          fetchETA(order.id, order.lat!, order.lng!);
+        }, 100);
+      }
+    }
+  }, [expandedMap, orders, initMap, fetchETA]);
+
+  useEffect(() => {
+    const ordersWithCoords = displayOrders.filter(o => o.lat && o.lng && !etaData[o.id]);
+    ordersWithCoords.forEach((o, i) => {
+      setTimeout(() => fetchETA(o.id, o.lat!, o.lng!), i * 300);
+    });
+  }, [displayOrders.map(o => o.id).join(",")]); // eslint-disable-line
+
   if (!loggedIn) return (
     <>
       <style>{`
@@ -241,6 +319,7 @@ export default function LivreurPage() {
 
   return (
     <>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
         *{margin:0;padding:0;box-sizing:border-box;}
@@ -251,6 +330,8 @@ export default function LivreurPage() {
         ::-webkit-scrollbar{width:4px;}
         ::-webkit-scrollbar-track{background:#0a0a12;}
         ::-webkit-scrollbar-thumb{background:#00f5ff;border-radius:2px;}
+        .leaflet-container{background:#0a0a12 !important;border-radius:10px;}
+        .leaflet-tile-pane{filter:brightness(.8) contrast(1.1) saturate(.8);}
       `}</style>
 
       {/* Toast */}
@@ -475,13 +556,92 @@ export default function LivreurPage() {
                     </a>
                   </div>
 
-                  {/* Address */}
+                  {/* Address + Map + ETA */}
                   {o.address && (
-                    <div style={{background:"rgba(0,245,255,.05)",border:"1px solid rgba(0,245,255,.12)",
-                      borderRadius:8,padding:"10px 12px",marginBottom:10,
-                      fontSize:".88rem",display:"flex",alignItems:"flex-start",gap:8}}>
-                      <span style={{flexShrink:0}}>📍</span>
-                      <span style={{color:"#00f5ff",lineHeight:1.4}}>{o.address}</span>
+                    <div style={{marginBottom:10}}>
+                      <div style={{background:"rgba(0,245,255,.05)",border:"1px solid rgba(0,245,255,.12)",
+                        borderRadius: expandedMap === o.id ? "8px 8px 0 0" : 8,
+                        padding:"10px 12px",fontSize:".88rem",
+                        display:"flex",alignItems:"center",gap:8,cursor: o.lat ? "pointer" : "default"}}
+                        onClick={() => {
+                          if (o.lat && o.lng) {
+                            if (expandedMap === o.id) {
+                              cleanupMap(`map-${o.id}`);
+                              setExpandedMap(null);
+                            } else {
+                              if (expandedMap) cleanupMap(`map-${expandedMap}`);
+                              setExpandedMap(o.id);
+                            }
+                          }
+                        }}>
+                        <span style={{flexShrink:0}}>📍</span>
+                        <span style={{color:"#00f5ff",lineHeight:1.4,flex:1}}>{o.address}</span>
+                        {o.lat && o.lng && (
+                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                            color:"#5a5470",flexShrink:0}}>
+                            {expandedMap === o.id ? "▲" : "🗺️"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* ETA Banner */}
+                      {o.lat && o.lng && etaData[o.id] && (
+                        <div style={{display:"flex",gap:8,padding:"8px 12px",
+                          background:"rgba(184,255,0,.06)",borderLeft:"3px solid #b8ff00",
+                          borderRight:"1px solid rgba(184,255,0,.1)",
+                          borderBottom: expandedMap === o.id ? "none" : "1px solid rgba(184,255,0,.1)",
+                          borderRadius: expandedMap === o.id ? 0 : "0 0 8px 8px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
+                            <span style={{fontSize:".9rem"}}>🕐</span>
+                            <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
+                              color:"#b8ff00"}}>{etaData[o.id].duration}</span>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:".9rem"}}>📏</span>
+                            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",
+                              color:"#5a5470"}}>{etaData[o.id].distance}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {o.lat && o.lng && !etaData[o.id] && (
+                        <div style={{padding:"6px 12px",background:"rgba(255,255,255,.02)",
+                          borderRadius:"0 0 8px 8px",borderTop:"none",
+                          display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:".8rem",animation:"pulseGlow 2s infinite"}}>⏳</span>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                            color:"#5a5470",letterSpacing:".06em"}}>
+                            Calcul du trajet...
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Map */}
+                      {expandedMap === o.id && o.lat && o.lng && (
+                        <div style={{border:"1px solid rgba(0,245,255,.12)",borderTop:"none",
+                          borderRadius:"0 0 8px 8px",overflow:"hidden"}}>
+                          <div id={`map-${o.id}`} style={{height:200,width:"100%"}} />
+                          <div style={{padding:"8px 12px",background:"rgba(0,0,0,.3)",
+                            display:"flex",gap:8}}>
+                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${o.lat},${o.lng}&travelmode=driving`}
+                              target="_blank" rel="noopener"
+                              style={{flex:1,padding:"8px",borderRadius:6,textAlign:"center",
+                                background:"rgba(0,245,255,.1)",border:"1px solid rgba(0,245,255,.2)",
+                                color:"#00f5ff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                                fontSize:".82rem",textDecoration:"none",letterSpacing:".04em"}}>
+                              🧭 OUVRIR DANS GOOGLE MAPS
+                            </a>
+                            <a href={`https://waze.com/ul?ll=${o.lat},${o.lng}&navigate=yes`}
+                              target="_blank" rel="noopener"
+                              style={{padding:"8px 14px",borderRadius:6,textAlign:"center",
+                                background:"rgba(51,122,255,.1)",border:"1px solid rgba(51,122,255,.2)",
+                                color:"#337aff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                                fontSize:".82rem",textDecoration:"none"}}>
+                              WAZE
+                            </a>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
