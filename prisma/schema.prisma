@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          Role      @default(CLIENT) // CLIENT, DELIVERY_DRIVER, ADMIN
+  name          String?
+  address       String?
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]   @relation("UserOrders")
+  assignedOrders Order[]  @relation("DriverOrders")
+}
+
+model Vendor {
+  id            String    @id @default(cuid())
+  name          String
+  address       String
+  phone         String?
+  cuisineType   String? // e.g., "Italian", "Fast Food", "Grocery"
+  openingHours  String? // e.g., "Mon-Fri 9 AM - 10 PM"
+  imageUrl      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  products      Product[]
+  orders        Order[]
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  price         Float
+  imageUrl      String?
+  categoryId    String?
+  category      Category? @relation(fields: [categoryId], references: [id])
+  vendorId      String
+  vendor        Vendor    @relation(fields: [vendorId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orderItems    OrderItem[]
+}
+
+model Category {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  products      Product[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Order {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation("UserOrders", fields: [userId], references: [id])
+  vendorId      String
+  vendor        Vendor    @relation(fields: [vendorId], references: [id])
+  deliveryAddress String
+  totalAmount   Float
+  status        OrderStatus @default(PENDING) // PENDING, PREPARING, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
+  orderDate     DateTime  @default(now())
+  deliveryDate  DateTime? // Estimated or actual delivery date
+  driverId      String?
+  driver        User?     @relation("DriverOrders", fields: [driverId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orderItems    OrderItem[]
+}
+
+model OrderItem {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id])
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  quantity      Int
+  priceAtOrder  Float // Price of the product at the time of order
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum Role {
+  CLIENT
+  DELIVERY_DRIVER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
