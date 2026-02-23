@@ -15,3 +15,4 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET /livreur 200 in 114ms (compile: 57ms, render: 57ms)
  GET /admin 200 in 304ms (compile: 171ms, render: 133ms)
  GET / 200 in 48ms (compile: 4ms, render: 44ms)
+ GET / 200 in 79ms (compile: 4ms, render: 75ms)
