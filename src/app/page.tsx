@@ -38,7 +38,7 @@ const translateAuthError = (code: string) => {
 type Product = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
 type Pack = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; promoBanner?: { text: string; emoji: string; active: boolean; color: string }; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
 
@@ -747,37 +747,6 @@ export default function Home() {
             </span>
           )}
         </div>
-
-        {/* ── Bannière promo ── */}
-        {settings.promoBanner?.active && settings.promoBanner.text && (
-          <div style={{margin:"0 12px 20px",padding:"12px 18px",borderRadius:8,
-            background: settings.promoBanner.color === "pink"
-              ? "rgba(255,45,120,.12)"
-              : settings.promoBanner.color === "cyan"
-              ? "rgba(0,245,255,.1)"
-              : settings.promoBanner.color === "green"
-              ? "rgba(184,255,0,.1)"
-              : "rgba(255,180,0,.1)",
-            border: settings.promoBanner.color === "pink"
-              ? "1px solid rgba(255,45,120,.35)"
-              : settings.promoBanner.color === "cyan"
-              ? "1px solid rgba(0,245,255,.3)"
-              : settings.promoBanner.color === "green"
-              ? "1px solid rgba(184,255,0,.3)"
-              : "1px solid rgba(255,180,0,.35)",
-            fontFamily:"'Rajdhani',sans-serif",fontWeight:600,fontSize:"1rem",letterSpacing:".04em",
-            color: settings.promoBanner.color === "pink"
-              ? "#ff2d78"
-              : settings.promoBanner.color === "cyan"
-              ? "#00f5ff"
-              : settings.promoBanner.color === "green"
-              ? "#b8ff00"
-              : "#ffb400",
-            display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:"1.3rem"}}>{settings.promoBanner.emoji || "🎉"}</span>
-            {settings.promoBanner.text}
-          </div>
-        )}
 
         {/* ── À la une (produits HOT / BEST) ── */}
         {(() => {

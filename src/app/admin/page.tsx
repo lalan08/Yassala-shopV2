@@ -24,7 +24,7 @@ const storage = getStorage(app);
 type Product = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; };
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; promoBanner?: { text: string; emoji: string; active: boolean; color: string }; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
@@ -1502,8 +1502,6 @@ export default function AdminPage() {
                   onChange={v => setSettings(s => ({...s, hours: v}))} />
                 <Field label="ZONE DE LIVRAISON" value={settings.zone}
                   onChange={v => setSettings(s => ({...s, zone: v}))} />
-                <Field label="WHATSAPP" value={settings.whatsapp}
-                  onChange={v => setSettings(s => ({...s, whatsapp: v}))} />
                 <Field label="COMMANDE MINIMUM (€)" value={String(settings.deliveryMin)} type="number"
                   onChange={v => setSettings(s => ({...s, deliveryMin: Number(v)}))} />
                 <Field label="LIVRAISON GRATUITE À PARTIR DE (€)" value={String(settings.freeDelivery)} type="number"
