@@ -4,6 +4,18 @@
 A drink delivery service for French Guiana (Guyane) built with Next.js. Features a neon punk aesthetic with dynamic product catalog loaded from Firebase Firestore, cart, WhatsApp/Stripe ordering, authentication, and admin panel.
 
 ## Recent Changes
+- **2026-02-23**: Driver management system
+  - Created /livreur page with phone+password login for accepted drivers
+  - Drivers can see pending orders, take them, mark as delivered, view stats
+  - Admin generates password when accepting a driver application (shown in admin)
+  - "Devenir livreur" button in navbar + floating button on main shop page
+  - Driver application form saves to Firebase `driver_applications` collection
+  - Admin LIVREURS tab with filter by status, accept/refuse/delete actions
+- **2026-02-23**: Admin panel modernization
+  - Replaced CRT scanline effect with clean modern design
+  - Added Inter font, updated all section headers and buttons
+  - Glassmorphism cards, modern border-radius, smooth transitions
+  - Collapsible sidebar sections (closed by default)
 - **2026-02-22**: Fixed deployment build
   - Switched from Bun to Node.js runtime (Bun's worker_threads incompatible with Next.js build)
   - Removed unused pages (/commande, /panier, /commercant, /commercants) that caused build errors
@@ -43,8 +55,9 @@ A drink delivery service for French Guiana (Guyane) built with Next.js. Features
 - `src/app/succes/page.tsx` - Order success page
 
 ## Pages
-- `/` - Main page (products, packs, cart modal, auth, ordering)
-- `/admin` - Admin dashboard
+- `/` - Main page (products, packs, cart modal, auth, ordering, driver application form)
+- `/admin` - Admin dashboard (with LIVREURS tab for managing driver applications)
+- `/livreur` - Driver portal (login with phone+password, view/take orders, mark delivered, stats)
 - `/preview` - Preview page
 - `/suivi` - Order tracking
 - `/succes` - Order success page

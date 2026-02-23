@@ -86,7 +86,7 @@ export default function AdminPage() {
   const [usersWithOrders, setUsersWithOrders] = useState(0);
   const [usersList, setUsersList]             = useState<{id:string;name:string;email:string;createdAt?:string;lastLoginAt?:string}[]>([]);
   const [usersSearch, setUsersSearch]         = useState("");
-  const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string}[]>([]);
+  const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string;password?:string}[]>([]);
   const [driverFilter, setDriverFilter]       = useState<"all"|"nouveau"|"accepte"|"refuse">("all");
   const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
@@ -1681,13 +1681,30 @@ export default function AdminPage() {
                               &quot;{d.message}&quot;
                             </div>
                           )}
+
+                          {d.status === "accepte" && d.password && (
+                            <div style={{marginTop:10,padding:"10px 14px",background:"rgba(184,255,0,.06)",
+                              borderRadius:8,border:"1px solid rgba(184,255,0,.15)",
+                              display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",letterSpacing:".1em"}}>MOT DE PASSE</span>
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem",color:"#b8ff00",
+                                letterSpacing:".15em",fontWeight:700}}>{d.password}</span>
+                              <button onClick={() => { navigator.clipboard.writeText(d.password!); showToast("Copié !"); }}
+                                style={{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",
+                                  color:"#5a5470",padding:"4px 10px",borderRadius:6,cursor:"pointer",
+                                  fontFamily:"'Inter',sans-serif",fontSize:".75rem",marginLeft:"auto"}}>
+                                Copier
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         <div style={{display:"flex",gap:8,flexShrink:0}}>
                           {d.status !== "accepte" && (
                             <button onClick={async () => {
-                              await updateDoc(doc(db, "driver_applications", d.id), { status: "accepte" });
-                              showToast("Candidature acceptée !");
+                              const pwd = Math.random().toString(36).slice(-6).toUpperCase();
+                              await updateDoc(doc(db, "driver_applications", d.id), { status: "accepte", password: pwd });
+                              showToast(`Accepté ! Mot de passe : ${pwd}`);
                             }}
                               style={{background:"rgba(184,255,0,.1)",border:"1px solid rgba(184,255,0,.35)",
                                 color:"#b8ff00",padding:"8px 16px",borderRadius:8,cursor:"pointer",
