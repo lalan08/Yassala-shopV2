@@ -60,7 +60,7 @@ export default function AdminPage() {
   const [auth, setAuth]           = useState(false);
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers">("dashboard");
   const [products, setProducts]   = useState<Product[]>([]);
   const [packs, setPacks]         = useState<Pack[]>([]);
   const [orders, setOrders]       = useState<Order[]>([]);
@@ -86,6 +86,8 @@ export default function AdminPage() {
   const [usersWithOrders, setUsersWithOrders] = useState(0);
   const [usersList, setUsersList]             = useState<{id:string;name:string;email:string;createdAt?:string;lastLoginAt?:string}[]>([]);
   const [usersSearch, setUsersSearch]         = useState("");
+  const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string}[]>([]);
+  const [driverFilter, setDriverFilter]       = useState<"all"|"nouveau"|"accepte"|"refuse">("all");
   const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
@@ -214,8 +216,12 @@ export default function AdminPage() {
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       setDbCats(loaded);
     });
+    const unsubDrivers = onSnapshot(collection(db, "driver_applications"), snap => {
+      setDriverApps(snap.docs.map(d => ({ id: d.id, ...d.data() } as any))
+        .sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || "")));
+    });
 
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); };
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -649,6 +655,7 @@ export default function AdminPage() {
               { key:"dashboard",  label:"TABLEAU DE BORD", icon:"📊" },
               { key:"orders",     label:"COMMANDES",       icon:"📦" },
               { key:"users",      label:"CLIENTS",         icon:"👥" },
+              { key:"drivers",    label:"LIVREURS",        icon:"🏍️" },
             ]},
             { section:"CATALOGUE", items:[
               { key:"products",   label:"PRODUITS",        icon:"🍺" },
@@ -1568,6 +1575,149 @@ export default function AdminPage() {
                       </div>
                       <div style={{fontSize:".82rem",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace"}}>
                         {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString("fr-FR") : "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "drivers" && (
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
+                  🏍️ <span style={{color:"#00f5ff"}}>CANDIDATURES LIVREURS</span>
+                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#5a5470",
+                    marginLeft:12,letterSpacing:".1em"}}>{driverApps.length} candidature(s)</span>
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+                {([
+                  { val:"all",      label:"TOUTES",   color:"#5a5470" },
+                  { val:"nouveau",  label:"NOUVEAU",  color:"#00f5ff" },
+                  { val:"accepte",  label:"ACCEPTÉ",  color:"#b8ff00" },
+                  { val:"refuse",   label:"REFUSÉ",   color:"#ff2d78" },
+                ] as const).map(f => (
+                  <button key={f.val} onClick={() => setDriverFilter(f.val)}
+                    style={{background: driverFilter===f.val ? `${f.color}22` : "transparent",
+                      border:`1px solid ${driverFilter===f.val ? f.color : "rgba(255,255,255,.1)"}`,
+                      color: driverFilter===f.val ? f.color : "#5a5470",
+                      padding:"6px 16px",borderRadius:20,cursor:"pointer",
+                      fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".85rem",letterSpacing:".06em",
+                      transition:"all .2s"}}>
+                    {f.label}
+                    {f.val !== "all" && (
+                      <span style={{marginLeft:6,opacity:.7}}>
+                        ({driverApps.filter(d => d.status === f.val).length})
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {driverApps.length === 0 ? (
+                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                  padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:10}}>
+                  // aucune candidature pour l&apos;instant
+                </div>
+              ) : (
+                <div style={{display:"grid",gap:12}}>
+                  {(driverFilter === "all" ? driverApps : driverApps.filter(d => d.status === driverFilter)).map(d => (
+                    <div key={d.id} style={{background:"rgba(255,255,255,.02)",
+                      border:`1px solid ${d.status==="nouveau" ? "rgba(0,245,255,.25)" : "rgba(255,255,255,.06)"}`,
+                      borderRadius:10,padding:"20px 22px",transition:"all .15s ease",
+                      boxShadow: d.status==="nouveau" ? "0 0 16px rgba(0,245,255,.06)" : "none"}}>
+
+                      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+                        <div style={{flex:1,minWidth:200}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                            <span style={{fontSize:"1.4rem"}}>
+                              {d.vehicle === "moto" ? "🏍️" : d.vehicle === "voiture" ? "🚗" : "🚲"}
+                            </span>
+                            <div>
+                              <div style={{fontWeight:700,fontSize:"1.1rem",letterSpacing:".02em"}}>{d.name}</div>
+                              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",letterSpacing:".06em"}}>
+                                {new Date(d.createdAt).toLocaleString("fr-FR")}
+                              </div>
+                            </div>
+                            <span style={{marginLeft:8,padding:"3px 10px",borderRadius:12,fontSize:".75rem",fontWeight:600,
+                              fontFamily:"'Inter',sans-serif",letterSpacing:".06em",
+                              background: d.status==="nouveau" ? "rgba(0,245,255,.12)" : d.status==="accepte" ? "rgba(184,255,0,.12)" : "rgba(255,45,120,.12)",
+                              color: d.status==="nouveau" ? "#00f5ff" : d.status==="accepte" ? "#b8ff00" : "#ff2d78",
+                              border: `1px solid ${d.status==="nouveau" ? "rgba(0,245,255,.3)" : d.status==="accepte" ? "rgba(184,255,0,.3)" : "rgba(255,45,120,.3)"}`}}>
+                              {d.status==="nouveau" ? "NOUVEAU" : d.status==="accepte" ? "ACCEPTÉ" : "REFUSÉ"}
+                            </span>
+                          </div>
+
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 20px",marginTop:10}}>
+                            <div style={{fontSize:".88rem"}}>
+                              <span style={{color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".1em"}}>TEL </span>
+                              <span style={{color:"#00f5ff"}}>{d.phone}</span>
+                            </div>
+                            {d.email && (
+                              <div style={{fontSize:".88rem"}}>
+                                <span style={{color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".1em"}}>EMAIL </span>
+                                <span style={{color:"#7a7490"}}>{d.email}</span>
+                              </div>
+                            )}
+                            {d.zone && (
+                              <div style={{fontSize:".88rem"}}>
+                                <span style={{color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".1em"}}>ZONE </span>
+                                <span>{d.zone}</span>
+                              </div>
+                            )}
+                            <div style={{fontSize:".88rem"}}>
+                              <span style={{color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".1em"}}>VÉHICULE </span>
+                              <span>{d.vehicle === "moto" ? "Moto" : d.vehicle === "voiture" ? "Voiture" : "Vélo"}</span>
+                            </div>
+                          </div>
+
+                          {d.message && (
+                            <div style={{marginTop:10,padding:"10px 14px",background:"rgba(255,255,255,.03)",
+                              borderRadius:8,border:"1px solid rgba(255,255,255,.04)",
+                              fontSize:".88rem",color:"#7a7490",fontStyle:"italic"}}>
+                              &quot;{d.message}&quot;
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{display:"flex",gap:8,flexShrink:0}}>
+                          {d.status !== "accepte" && (
+                            <button onClick={async () => {
+                              await updateDoc(doc(db, "driver_applications", d.id), { status: "accepte" });
+                              showToast("Candidature acceptée !");
+                            }}
+                              style={{background:"rgba(184,255,0,.1)",border:"1px solid rgba(184,255,0,.35)",
+                                color:"#b8ff00",padding:"8px 16px",borderRadius:8,cursor:"pointer",
+                                fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".82rem",letterSpacing:".06em"}}>
+                              ✓ ACCEPTER
+                            </button>
+                          )}
+                          {d.status !== "refuse" && (
+                            <button onClick={async () => {
+                              await updateDoc(doc(db, "driver_applications", d.id), { status: "refuse" });
+                              showToast("Candidature refusée.");
+                            }}
+                              style={{background:"rgba(255,45,120,.08)",border:"1px solid rgba(255,45,120,.25)",
+                                color:"#ff2d78",padding:"8px 16px",borderRadius:8,cursor:"pointer",
+                                fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".82rem",letterSpacing:".06em"}}>
+                              ✕ REFUSER
+                            </button>
+                          )}
+                          <button onClick={async () => {
+                            if (confirm("Supprimer cette candidature ?")) {
+                              await deleteDoc(doc(db, "driver_applications", d.id));
+                              showToast("Candidature supprimée.");
+                            }
+                          }}
+                            style={{background:"transparent",border:"1px solid rgba(255,255,255,.1)",
+                              color:"#5a5470",padding:"8px 12px",borderRadius:8,cursor:"pointer",
+                              fontFamily:"'Inter',sans-serif",fontSize:".82rem"}}>
+                            🗑
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
