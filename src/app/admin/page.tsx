@@ -456,11 +456,9 @@ export default function AdminPage() {
   if (!auth) return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{background:#04020a;color:#f0eeff;font-family:'Rajdhani',sans-serif;}
-        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-          background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);}
+        body{background:#0a0a12;color:#f0eeff;font-family:'Inter',sans-serif;}
         input{outline:none;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
       `}</style>
@@ -504,18 +502,18 @@ export default function AdminPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{background:#04020a;color:#f0eeff;font-family:'Rajdhani',sans-serif;}
-        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-          background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);}
-        input,select,textarea{outline:none;font-family:'Rajdhani',sans-serif;}
+        html{scroll-behavior:smooth;}
+        body{background:#0a0a12;color:#f0eeff;font-family:'Inter',sans-serif;}
+        input,select,textarea{outline:none;font-family:'Inter',sans-serif;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
         @keyframes badgePulse{0%,100%{transform:scale(1);box-shadow:0 0 6px #ff2d78;}50%{transform:scale(1.2);box-shadow:0 0 14px #ff2d78;}}
-        .row:hover{background:rgba(255,45,120,.04);}
+        .row:hover{background:rgba(255,255,255,.04);}
         ::-webkit-scrollbar{width:4px;}
-        ::-webkit-scrollbar-track{background:#04020a;}
+        ::-webkit-scrollbar-track{background:#0a0a12;}
         ::-webkit-scrollbar-thumb{background:#ff2d78;border-radius:2px;}
+        .admin-sidebar-btn:hover{background:rgba(255,255,255,.04)!important;}
 
         /* ── MOBILE ── */
         @media(max-width:640px){
@@ -526,8 +524,8 @@ export default function AdminPage() {
             bottom:0!important;left:0!important;right:0!important;z-index:200!important;
             display:flex!important;flex-direction:row!important;
             padding:0!important;border-right:none!important;
-            border-top:1px solid rgba(255,45,120,.18)!important;
-            background:rgba(4,2,10,.97)!important;backdrop-filter:blur(20px)!important;
+            border-top:1px solid rgba(255,255,255,.06)!important;
+            background:rgba(10,10,18,.97)!important;backdrop-filter:blur(20px)!important;
             overflow-x:auto!important;height:62px!important;scrollbar-width:none!important;
           }
           .admin-sidebar::-webkit-scrollbar{display:none!important;}
@@ -537,14 +535,14 @@ export default function AdminPage() {
             flex-direction:column!important;justify-content:center!important;
             align-items:center!important;padding:5px 6px!important;gap:2px!important;
             width:auto!important;flex:1!important;min-width:50px!important;
-            border-left:3px solid transparent!important;
-            border-top:3px solid transparent!important;
+            border-left:2px solid transparent!important;
+            border-top:2px solid transparent!important;
             text-align:center!important;
           }
           .admin-sidebar-btn.active{
-            border-top:3px solid #ff2d78!important;
-            border-left:3px solid transparent!important;
-            background:rgba(255,45,120,.09)!important;
+            border-top:2px solid #ff2d78!important;
+            border-left:2px solid transparent!important;
+            background:rgba(255,45,120,.08)!important;
           }
           .admin-nav-icon{font-size:1.15rem!important;}
           .admin-nav-label{
@@ -577,38 +575,40 @@ export default function AdminPage() {
       `}</style>
 
       <div style={{position:"fixed",top:18,right:18,zIndex:10000,
-        background:"#0c0918",border:`1px solid ${toast.type==="err" ? "#ff2d78" : "#b8ff00"}`,
-        borderRadius:4,padding:"12px 18px",fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+        background: toast.type==="err" ? "rgba(255,45,120,.12)" : "rgba(184,255,0,.12)",
+        border:`1px solid ${toast.type==="err" ? "#ff2d78" : "#b8ff00"}`,
+        borderRadius:10,padding:"12px 18px",fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
         color: toast.type==="err" ? "#ff2d78" : "#b8ff00",maxWidth:260,
+        boxShadow:"0 8px 32px rgba(0,0,0,.4)",backdropFilter:"blur(12px)",
         transform: toast.show ? "translateX(0)" : "translateX(130%)",
         transition:"transform .4s cubic-bezier(.34,1.56,.64,1)"}}>
         {toast.msg}
       </div>
 
-      <header className="admin-header" style={{background:"rgba(4,2,10,.95)",borderBottom:"1px solid rgba(255,45,120,.2)",
-        padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",
+      <header className="admin-header" style={{background:"rgba(10,10,18,.85)",borderBottom:"1px solid rgba(255,255,255,.06)",
+        padding:"12px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",
         position:"sticky",top:0,zIndex:100,backdropFilter:"blur(20px)"}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:"#ff2d78",
-            textShadow:"0 0 15px rgba(255,45,120,.5)",letterSpacing:".06em"}}>YASSALA</div>
-          <div className="admin-header-subtitle" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",
+            letterSpacing:".06em"}}>YASSALA</div>
+          <div className="admin-header-subtitle" style={{fontFamily:"'Inter',sans-serif",fontSize:".75rem",fontWeight:500,color:"#6b7280",
             letterSpacing:".15em"}}>ADMIN PANEL</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:16}}>
-          <a className="admin-site-link" href="/" target="_blank" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",
-            color:"#00f5ff",letterSpacing:".1em",textDecoration:"none"}}>
+          <a className="admin-site-link" href="/" target="_blank" style={{fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:500,
+            color:"#6b7280",letterSpacing:".1em",textDecoration:"none"}}>
             VOIR LE SITE →
           </a>
-          <button className="admin-disconnect-btn" onClick={() => setAuth(false)} style={{background:"transparent",border:"1px solid rgba(255,255,255,.1)",
-            color:"#5a5470",padding:"6px 14px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",
-            fontSize:".88rem",letterSpacing:".1em",cursor:"pointer"}}>
+          <button className="admin-disconnect-btn" onClick={() => setAuth(false)} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+            color:"#6b7280",padding:"6px 14px",borderRadius:6,fontFamily:"'Inter',sans-serif",
+            fontSize:".82rem",fontWeight:500,letterSpacing:".1em",cursor:"pointer"}}>
             <span className="admin-disconnect-full">DÉCONNEXION</span>
             <span className="admin-disconnect-short" style={{display:"none"}}>✕</span>
           </button>
         </div>
       </header>
 
-      <div style={{padding:"10px 24px",fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(4,2,10,.95)"}}>
+      <div style={{padding:"10px 24px",fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:400,color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(10,10,18,.85)"}}>
         <span style={{color:"#5a5470"}}>🏠 Accueil</span>
         <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
         <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",settings:"Paramètres"}[tab]}</span>
@@ -621,7 +621,7 @@ export default function AdminPage() {
           <div style={{width:8,height:8,borderRadius:"50%",
             background: settings.shopOpen ? "#b8ff00" : "#ff2d78",
             boxShadow: settings.shopOpen ? "0 0 10px #b8ff00" : "0 0 10px #ff2d78"}} />
-          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+          <span style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",fontWeight:500,
             color: settings.shopOpen ? "#b8ff00" : "#ff2d78",letterSpacing:".1em"}}>
             SHOP {settings.shopOpen ? "OUVERT" : "FERMÉ"}
           </span>
@@ -634,15 +634,15 @@ export default function AdminPage() {
         }} style={{background: settings.shopOpen ? "rgba(255,45,120,.15)" : "rgba(184,255,0,.15)",
           border:`1px solid ${settings.shopOpen ? "#ff2d78" : "#b8ff00"}`,
           color: settings.shopOpen ? "#ff2d78" : "#b8ff00",
-          padding:"6px 16px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",
-          fontSize:".88rem",letterSpacing:".1em",cursor:"pointer"}}>
+          padding:"6px 16px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
+          fontSize:".82rem",letterSpacing:".1em",cursor:"pointer"}}>
           {settings.shopOpen ? "FERMER LE SHOP" : "OUVRIR LE SHOP"}
         </button>
       </div>
 
       <div className="admin-layout" style={{display:"flex",minHeight:"calc(100vh - 100px)"}}>
 
-        <aside className="admin-sidebar" style={{width:230,background:"#080514",borderRight:"1px solid rgba(255,45,120,.1)",
+        <aside className="admin-sidebar" style={{width:230,background:"#0e0e18",borderRight:"1px solid rgba(255,255,255,.06)",
           padding:"12px 0",flexShrink:0,overflowY:"auto"}}>
           {([
             { section:"OPÉRATIONS", items:[
@@ -668,8 +668,8 @@ export default function AdminPage() {
                 className="admin-section-header"
                 onClick={() => setCollapsedSections(s => ({...s, [group.section]: !s[group.section]}))}
                 style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-                  fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
-                  letterSpacing:".15em",padding:"16px 20px 8px",background:"transparent",border:"none",
+                  fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".68rem",color:"#4b5563",
+                  letterSpacing:".15em",textTransform:"uppercase" as const,padding:"16px 20px 8px",background:"transparent",border:"none",
                   cursor:"pointer",textAlign:"left",...(gi > 0 ? {marginTop:"4px"} : {})}}>
                 <span>{group.section}</span>
                 <span style={{transform: collapsedSections[group.section] ? "rotate(0deg)" : "rotate(180deg)",
@@ -680,9 +680,10 @@ export default function AdminPage() {
                   className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
                   onClick={() => { setTab(item.key); if (item.key === "orders") setNewOrdersCount(0); }}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
-                    background: tab===item.key ? "rgba(255,45,120,.1)" : "transparent",
-                    border:"none",color: tab===item.key ? "#ff2d78" : "#7a7490",cursor:"pointer",
-                    fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
+                    background: tab===item.key ? "rgba(255,45,120,.08)" : "transparent",
+                    border:"none",borderLeft: tab===item.key ? "2px solid #ff2d78" : "2px solid transparent",
+                    color: tab===item.key ? "#ff2d78" : "#7a7490",cursor:"pointer",
+                    fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".88rem",
                     letterSpacing:".06em",textTransform:"uppercase",textAlign:"left",
                     transition:"all .2s",position:"relative",borderRadius:0}}>
                   <span className="admin-nav-icon" style={{fontSize:"1.1rem"}}>{item.icon}</span>
@@ -730,13 +731,12 @@ export default function AdminPage() {
             const topProd = Object.entries(prodCount).sort((a,b) => b[1]-a[1])[0];
 
             const card = (icon: string, label: string, value: string, sub?: string, color = "#00f5ff") => (
-              <div style={{background:"#0c0918",border:`1px solid ${color}22`,borderRadius:8,padding:"22px 26px",
-                borderLeft:`3px solid ${color}`,minWidth:180,flex:1}}>
+              <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",borderRadius:12,padding:"22px 26px",
+                borderLeft:`3px solid ${color}`,minWidth:180,flex:1,boxShadow:"0 2px 8px rgba(0,0,0,.15)"}}>
                 <div style={{fontSize:"1.6rem",marginBottom:8}}>{icon}</div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#5a5470",
-                  letterSpacing:".1em",marginBottom:4}}>{label}</div>
-                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",color,
-                  textShadow:`0 0 14px ${color}55`}}>{value}</div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#6b7280",
+                  letterSpacing:".1em",textTransform:"uppercase" as const,marginBottom:4}}>{label}</div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.6rem",color}}>{value}</div>
                 {sub && <div style={{fontSize:".88rem",color:"#5a5470",marginTop:4,fontFamily:"'Share Tech Mono',monospace"}}>{sub}</div>}
               </div>
             );
@@ -744,16 +744,16 @@ export default function AdminPage() {
             return (
               <div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28,flexWrap:"wrap",gap:12}}>
-                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em"}}>
-                    📊 <span style={{color:"#ff2d78"}}>TABLEAU DE BORD</span>
-                    <span className="admin-dash-date" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",
+                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.5rem",letterSpacing:".04em"}}>
+                    <span style={{color:"#ff2d78"}}>Tableau de bord</span>
+                    <span className="admin-dash-date" style={{fontFamily:"'Inter',sans-serif",fontWeight:400,fontSize:".82rem",color:"#5a5470",
                       marginLeft:16,letterSpacing:".1em"}}>{now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     {(["24h","7j","30j"] as const).map(p => (
                       <button key={p} onClick={() => setDashPeriod(p)}
-                        style={{padding:"6px 14px",borderRadius:4,border:"none",
-                          fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",letterSpacing:".06em",cursor:"pointer",
+                        style={{padding:"6px 14px",borderRadius:6,border:"none",
+                          fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".85rem",letterSpacing:".06em",cursor:"pointer",
                           background: dashPeriod===p ? "#ff2d78" : "rgba(255,255,255,.06)",
                           color: dashPeriod===p ? "#000" : "#7a7490"}}>
                         {p}
@@ -800,9 +800,9 @@ export default function AdminPage() {
                   });
                   const maxCa = Math.max(...last7.map(d => d.ca), 1);
                   return (
-                    <div style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.06)",borderRadius:8,
+                    <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,
                       padding:"20px 24px",marginBottom:24}}>
-                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",
+                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".85rem",
                         letterSpacing:".08em",color:"#5a5470",marginBottom:16}}>CA 7 DERNIERS JOURS</div>
                       <div style={{display:"flex",alignItems:"flex-end",gap:8,height:80}}>
                         {last7.map((d, i) => (
@@ -832,8 +832,8 @@ export default function AdminPage() {
                   );
                 })()}
 
-                <div style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.06)",borderRadius:8,padding:"20px 24px"}}>
-                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",
+                <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,padding:"20px 24px"}}>
+                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".85rem",
                     letterSpacing:".08em",color:"#5a5470",marginBottom:16}}>DERNIÈRES COMMANDES</div>
                   {orders.slice(0,5).map(o => (
                     <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",
@@ -866,12 +866,12 @@ export default function AdminPage() {
           {tab === "products" && (
             <div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
-                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em"}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   🍺 <span style={{color:"#ff2d78"}}>PRODUITS</span>
                 </div>
                 <button onClick={() => { setEditProd({name:"",desc:"",price:0,image:"",cat:"biere",badge:"",stock:0}); setShowProdForm(true); }}
-                  style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:4,
-                    padding:"10px 20px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:8,
+                    padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
                     fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
                   + AJOUTER
                 </button>
@@ -893,9 +893,9 @@ export default function AdminPage() {
                       onDragStart={() => { dragRef.current = idx; }}
                       onDragOver={e => e.preventDefault()}
                       onDrop={() => { if (dragRef.current !== null) reorderProducts(dragRef.current, idx); dragRef.current = null; }}
-                      className="admin-product-row row" style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.06)",
-                        borderRadius:6,padding:"14px 18px",display:"flex",alignItems:"center",
-                        gap:14,transition:"background .2s",cursor:"grab"}}>
+                      className="admin-product-row row" style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                        borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",
+                        gap:14,transition:"all .15s ease",cursor:"grab"}}>
                       {/* poignée drag */}
                       <span style={{color:"#3a3450",fontSize:"1.1rem",lineHeight:1,flexShrink:0,cursor:"grab"}}
                         title="Glisser pour réordonner">⠿</span>
@@ -931,14 +931,14 @@ export default function AdminPage() {
                       <div className="admin-prod-actions" style={{display:"flex",gap:8}}>
                         <button onClick={() => { setEditProd(p); setShowProdForm(true); }}
                           style={{background:"transparent",border:"1px solid rgba(0,245,255,.3)",color:"#00f5ff",
-                            padding:"8px 18px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                            fontSize:".95rem",letterSpacing:".06em",cursor:"pointer"}}>
+                            padding:"8px 18px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
+                            fontSize:".88rem",letterSpacing:".06em",cursor:"pointer"}}>
                           ✏️ ÉDITER
                         </button>
                         <button onClick={() => deleteProd(p.id!)}
                           style={{background:"transparent",border:"1px solid rgba(255,45,120,.3)",color:"#ff2d78",
-                            padding:"8px 14px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                            fontSize:".95rem",cursor:"pointer"}}>
+                            padding:"8px 14px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
+                            fontSize:".88rem",cursor:"pointer"}}>
                           ✕
                         </button>
                       </div>
@@ -962,7 +962,7 @@ export default function AdminPage() {
           {/* ── CATÉGORIES ── */}
           {tab === "categories" && (
             <div>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",letterSpacing:".04em",marginBottom:28}}>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em",marginBottom:28}}>
                 🗂️ <span style={{color:"#ff2d78"}}>CATÉGORIES</span>
               </div>
 
@@ -1062,8 +1062,8 @@ export default function AdminPage() {
               ) : (
                 <div style={{display:"grid",gap:10}}>
                   {dbCats.map(c => (
-                    <div key={c.id} style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.08)",
-                      borderRadius:8,padding:"16px 22px",display:"flex",alignItems:"center",gap:16}}>
+                    <div key={c.id} style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                      borderRadius:10,padding:"16px 22px",display:"flex",alignItems:"center",gap:16,transition:"all .15s ease"}}>
                       <span style={{fontSize:"2rem",minWidth:44,textAlign:"center"}}>{c.emoji}</span>
                       <div style={{flex:1}}>
                         <div style={{fontWeight:700,fontSize:"1.05rem",letterSpacing:".04em"}}>{c.label}</div>
@@ -1105,12 +1105,12 @@ export default function AdminPage() {
           {tab === "packs" && (
             <div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
-                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em"}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   🎉 PACKS <span style={{color:"#ff2d78"}}>SOIRÉE</span>
                 </div>
                 <button onClick={() => { setEditPack({name:"",tag:"",emoji:"🎉",items:"",price:0,real:0,star:false}); setShowPackForm(true); }}
-                  style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:4,
-                    padding:"10px 20px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:8,
+                    padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
                     fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
                   + AJOUTER
                 </button>
@@ -1124,9 +1124,9 @@ export default function AdminPage() {
               ) : (
                 <div style={{display:"grid",gap:10}}>
                   {packs.map(p => (
-                    <div key={p.id} className="row" style={{background:"#0c0918",
+                    <div key={p.id} className="row" style={{background:"rgba(255,255,255,.02)",
                       border:`1px solid ${p.star ? "rgba(255,45,120,.3)" : "rgba(255,255,255,.06)"}`,
-                      borderRadius:6,padding:"14px 18px",display:"flex",alignItems:"center",gap:14}}>
+                      borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,transition:"all .15s ease"}}>
                       <span style={{fontSize:"1.8rem"}}>{p.emoji}</span>
                       <div style={{flex:1}}>
                         <div style={{fontWeight:700,fontSize:"1rem",letterSpacing:".04em",
@@ -1174,7 +1174,7 @@ export default function AdminPage() {
           {tab === "orders" && (
             <div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
-                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em"}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   📦 <span style={{color:"#ff2d78"}}>COMMANDES</span>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
@@ -1243,9 +1243,9 @@ export default function AdminPage() {
               ) : (
                 <div style={{display:"grid",gap:10}}>
                   {(orderFilter === "all" ? orders : orders.filter(o => o.status === orderFilter)).map(o => (
-                    <div key={o.id} style={{background:"#0c0918",
-                      border:`1px solid ${o.status==="nouveau" ? "rgba(255,45,120,.35)" : "rgba(255,255,255,.07)"}`,
-                      borderRadius:8,padding:"18px 20px",
+                    <div key={o.id} style={{background:"rgba(255,255,255,.02)",
+                      border:`1px solid ${o.status==="nouveau" ? "rgba(255,45,120,.35)" : "rgba(255,255,255,.06)"}`,
+                      borderRadius:10,padding:"18px 20px",transition:"all .15s ease",
                       boxShadow: o.status==="nouveau" ? "0 0 16px rgba(255,45,120,.08)" : "none"}}>
 
                       {/* En-tête commande */}
@@ -1321,7 +1321,7 @@ export default function AdminPage() {
 
           {tab === "coupons" && (
             <div>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em",marginBottom:24}}>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em",marginBottom:24}}>
                 🏷️ <span style={{color:"#ff2d78"}}>CODES PROMO</span>
               </div>
 
@@ -1386,8 +1386,8 @@ export default function AdminPage() {
               ) : (
                 <div style={{display:"grid",gap:8}}>
                   {coupons.map(c => (
-                    <div key={c.id} style={{background:"#0c0918",border:`1px solid ${c.active ? "rgba(184,255,0,.2)" : "rgba(255,255,255,.05)"}`,
-                      borderRadius:6,padding:"14px 18px",display:"flex",alignItems:"center",gap:14}}>
+                    <div key={c.id} style={{background:"rgba(255,255,255,.02)",border:`1px solid ${c.active ? "rgba(184,255,0,.2)" : "rgba(255,255,255,.06)"}`,
+                      borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,transition:"all .15s ease"}}>
                       <div style={{flex:1}}>
                         <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
                           color: c.active ? "#b8ff00" : "#5a5470"}}>{c.code}</div>
@@ -1424,12 +1424,12 @@ export default function AdminPage() {
           {tab === "banners" && (
             <div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
-                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em"}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   🎨 <span style={{color:"#ff2d78"}}>BANNIÈRES</span>
                 </div>
                 <button onClick={() => { setEditBanner({title:"",subtitle:"",desc:"",cta:"COMMANDER →",link:"catalogue",gradient:"linear-gradient(135deg,rgba(255,45,120,.85) 0%,rgba(80,0,40,.9) 100%)",image:"",brightness:0.28,active:true,order:banners.length}); setShowBannerForm(true); }}
-                  style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:4,
-                    padding:"10px 20px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:8,
+                    padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
                     fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
                   + AJOUTER
                 </button>
@@ -1519,7 +1519,7 @@ export default function AdminPage() {
           {tab === "users" && (
             <div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
-                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em"}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   👥 <span style={{color:"#ff2d78"}}>CLIENTS INSCRITS</span>
                   <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#5a5470",
                     marginLeft:12,letterSpacing:".1em"}}>{usersList.length} compte(s)</span>
@@ -1540,13 +1540,13 @@ export default function AdminPage() {
                   // aucun client inscrit
                 </div>
               ) : (
-                <div style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.06)",borderRadius:8,overflow:"hidden"}}>
+                <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,overflow:"hidden"}}>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 140px 140px",padding:"14px 18px",
                     borderBottom:"1px solid rgba(255,255,255,.08)",background:"rgba(255,45,120,.06)"}}>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>NOM</div>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>EMAIL</div>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>INSCRIT LE</div>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>DERNIÈRE CONNEXION</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>NOM</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>EMAIL</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>INSCRIT LE</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>DERNIÈRE CONNEXION</div>
                   </div>
                   {usersList
                     .filter(u => {
@@ -1578,7 +1578,7 @@ export default function AdminPage() {
 
           {tab === "settings" && (
             <div>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em",marginBottom:24}}>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em",marginBottom:24}}>
                 ⚙️ <span style={{color:"#ff2d78"}}>PARAMÈTRES</span>
               </div>
               <div className="admin-settings-form" style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.06)",
