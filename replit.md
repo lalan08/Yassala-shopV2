@@ -4,11 +4,14 @@
 A drink delivery service for French Guiana (Guyane) built with Next.js. Features a neon punk aesthetic with dynamic product catalog loaded from Firebase Firestore, cart, WhatsApp/Stripe ordering, authentication, and admin panel.
 
 ## Recent Changes
-- **2026-02-23**: Driver management system
-  - Created /livreur page with phone+password login for accepted drivers
-  - Drivers can see pending orders, take them, mark as delivered, view stats
-  - Admin generates password when accepting a driver application (shown in admin)
-  - "Devenir livreur" button in navbar + floating button on main shop page
+- **2026-02-23**: Full delivery management system
+  - Driver portal (/livreur): 3 tabs (Disponibles/Mes Courses/Livrées), real-time order alerts with sound, confirm modals, WhatsApp client contact, time-since display, auto-reconnect
+  - Admin order cards: driver assignment dropdown (assign/remove drivers), driver name displayed on orders
+  - Order flow: nouveau → en_cours (when driver takes or admin assigns) → livré (driver confirms)
+  - Drivers see all unassigned orders in real-time, take them with confirmation, mark as delivered
+  - Admin can manually assign any accepted driver to any order via dropdown
+  - "Espace livreur" link moved into connexion modal for clean navigation
+  - Admin generates password when accepting a driver application (shown in admin with copy button)
   - Driver application form saves to Firebase `driver_applications` collection
   - Admin LIVREURS tab with filter by status, accept/refuse/delete actions
 - **2026-02-23**: Admin panel modernization

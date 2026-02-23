@@ -1313,6 +1313,49 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      {/* Driver Assignment */}
+                      <div style={{borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:10,marginBottom:8,
+                        display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                          letterSpacing:".08em"}}>🏍️ LIVREUR :</span>
+                        {(o as any).assignedDriverName ? (
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",
+                              color:"#00f5ff"}}>{(o as any).assignedDriverName}</span>
+                            <button onClick={async () => {
+                              await updateDoc(doc(db, "orders", o.id!), { assignedDriver: null, assignedDriverName: null });
+                              showToast("Livreur retiré");
+                            }}
+                              style={{background:"rgba(255,45,120,.08)",border:"1px solid rgba(255,45,120,.2)",
+                                color:"#ff2d78",padding:"3px 10px",borderRadius:4,cursor:"pointer",
+                                fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem"}}>
+                              ✕ Retirer
+                            </button>
+                          </div>
+                        ) : (
+                          <select defaultValue="" onChange={async (e) => {
+                            if (!e.target.value) return;
+                            const [driverId, driverName] = e.target.value.split("||");
+                            await updateDoc(doc(db, "orders", o.id!), {
+                              assignedDriver: driverId,
+                              assignedDriverName: driverName,
+                              status: o.status === "nouveau" ? "en_cours" : o.status,
+                            });
+                            showToast(`Assigné à ${driverName}`);
+                            e.target.value = "";
+                          }}
+                            style={{background:"#080514",border:"1px solid rgba(0,245,255,.3)",
+                              color:"#00f5ff",padding:"6px 10px",borderRadius:4,
+                              fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",
+                              cursor:"pointer",minWidth:160}}>
+                            <option value="">Assigner un livreur...</option>
+                            {driverApps.filter(d => d.status === "accepte").map(d => (
+                              <option key={d.id} value={`${d.id}||${d.name}`}>{d.name} ({d.zone || d.phone})</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
                       {/* Articles */}
                       <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem",
                         color:"#8a84a0",borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:10,
