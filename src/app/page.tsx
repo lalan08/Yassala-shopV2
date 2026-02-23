@@ -95,6 +95,10 @@ export default function Home() {
   const [authLoading, setAuthLoading]     = useState(false);
   const [lastAddedId, setLastAddedId]     = useState<string|null>(null);
   const [likes, setLikes]                 = useState<Set<string>>(new Set());
+  const [showDriverForm, setShowDriverForm] = useState(false);
+  const [driverForm, setDriverForm]         = useState({name:"",phone:"",email:"",zone:"",vehicle:"moto",message:""});
+  const [driverSubmitting, setDriverSubmitting] = useState(false);
+  const [driverSuccess, setDriverSuccess]       = useState(false);
 
   const toggleLike = (id: string) => {
     setLikes(prev => {
@@ -386,6 +390,28 @@ export default function Home() {
     setHistoryLoading(false);
   };
 
+  const submitDriverApplication = async () => {
+    if (!driverForm.name.trim() || !driverForm.phone.trim()) {
+      setToast({msg:"Remplis au moins ton nom et téléphone.",show:true});
+      setTimeout(() => setToast(t => ({...t,show:false})),3000);
+      return;
+    }
+    setDriverSubmitting(true);
+    try {
+      await addDoc(collection(db, "driver_applications"), {
+        ...driverForm,
+        status: "nouveau",
+        createdAt: new Date().toISOString(),
+      });
+      setDriverSuccess(true);
+      setTimeout(() => { setShowDriverForm(false); setDriverSuccess(false); setDriverForm({name:"",phone:"",email:"",zone:"",vehicle:"moto",message:""}); }, 3000);
+    } catch {
+      setToast({msg:"Erreur lors de l'envoi. Réessaie.",show:true});
+      setTimeout(() => setToast(t => ({...t,show:false})),3000);
+    }
+    setDriverSubmitting(false);
+  };
+
   const handleSignup = async () => {
     if (!authName.trim() || !authEmail.trim() || !authPassword.trim()) {
       setAuthError("Remplis tous les champs."); return;
@@ -495,6 +521,7 @@ export default function Home() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
         @keyframes bannerIn{from{opacity:0;transform:translateX(22px);}to{opacity:1;transform:translateX(0);}}
         @keyframes bgShift{from{opacity:.7;}to{opacity:1;}}
+        @keyframes floatPulse{0%,100%{box-shadow:0 4px 20px rgba(0,245,255,.35),0 0 40px rgba(0,245,255,.15);}50%{box-shadow:0 4px 28px rgba(0,245,255,.5),0 0 50px rgba(0,245,255,.25);}}
         .flicker{animation:flicker 6s infinite;}
         .fade1{animation:fadeUp .5s .0s both;}
         .fade2{animation:fadeUp .5s .1s both;}
@@ -507,7 +534,10 @@ export default function Home() {
           .nav-main{padding:10px 14px !important;}
           .nav-logo{font-size:1.4rem !important;}
           .nav-status{display:none !important;}
+          .nav-driver-btn{display:none !important;}
           .nav-cart-btn{padding:7px 12px !important;font-size:.78rem !important;gap:5px !important;}
+          .floating-driver-btn{bottom:82px !important;padding:10px 14px !important;border-radius:12px !important;font-size:.75rem !important;}
+          .floating-driver-text{display:none !important;}
           .hero-content{padding:36px 16px 72px !important;max-width:100% !important;}
           .hero-content h1{font-size:clamp(2.6rem,14vw,4.5rem) !important;}
           .clock-hero{display:none !important;}
@@ -568,17 +598,28 @@ export default function Home() {
             animation: settings.shopOpen ? "pulse 1.5s infinite" : "none"}} />
           {settings.shopOpen ? `OPEN · ${settings.hours}` : "FERMÉ"}
         </div>
-        <button className="nav-cart-btn" onClick={openCart} style={{background:"transparent",border:"1px solid #ff2d78",
-          color:"#ff2d78",padding:"8px 18px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-          fontSize:".85rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",
-          display:"flex",alignItems:"center",gap:"8px",borderRadius:"3px"}}>
-          🛒 PANIER
-          <span style={{background:"#ff2d78",color:"#000",borderRadius:"2px",
-            width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:".72rem",fontWeight:900}}>
-            {cartCount}
-          </span>
-        </button>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <button className="nav-driver-btn" onClick={() => setShowDriverForm(true)}
+            style={{background:"linear-gradient(135deg,rgba(0,245,255,.1),rgba(255,45,120,.1))",
+              border:"1px solid rgba(0,245,255,.35)",
+              color:"#00f5ff",padding:"8px 16px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+              fontSize:".8rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer",
+              display:"flex",alignItems:"center",gap:"6px",borderRadius:"8px",
+              boxShadow:"0 0 12px rgba(0,245,255,.15)",transition:"all .3s"}}>
+            🏍️ LIVREUR
+          </button>
+          <button className="nav-cart-btn" onClick={openCart} style={{background:"transparent",border:"1px solid #ff2d78",
+            color:"#ff2d78",padding:"8px 18px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+            fontSize:".85rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",
+            display:"flex",alignItems:"center",gap:"8px",borderRadius:"3px"}}>
+            🛒 PANIER
+            <span style={{background:"#ff2d78",color:"#000",borderRadius:"2px",
+              width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:".72rem",fontWeight:900}}>
+              {cartCount}
+            </span>
+          </button>
+        </div>
       </nav>
 
       {/* ── HERO / CAROUSEL BANNIÈRES ── */}
@@ -1680,6 +1721,143 @@ export default function Home() {
 
         </div>
       </nav>
+
+      {/* ── FLOATING DRIVER BUTTON ── */}
+      <button className="floating-driver-btn" onClick={() => setShowDriverForm(true)}
+        style={{position:"fixed",bottom:90,left:18,zIndex:900,
+          background:"linear-gradient(135deg,#00f5ff,#0090ff)",
+          border:"none",borderRadius:14,padding:"12px 18px",
+          color:"#000",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+          fontSize:".82rem",letterSpacing:".06em",textTransform:"uppercase",
+          cursor:"pointer",display:"flex",alignItems:"center",gap:8,
+          boxShadow:"0 4px 20px rgba(0,245,255,.35),0 0 40px rgba(0,245,255,.15)",
+          animation:"floatPulse 3s ease-in-out infinite",transition:"transform .2s"}}>
+        <span style={{fontSize:"1.2rem"}}>🏍️</span>
+        <span className="floating-driver-text">Devenir livreur</span>
+      </button>
+
+      {/* ── DRIVER REGISTRATION MODAL ── */}
+      {showDriverForm && (
+        <div style={{position:"fixed",inset:0,zIndex:10000,background:"rgba(0,0,0,.7)",
+          backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",
+          padding:16,animation:"fadeUp .2s both"}}
+          onClick={e => e.target === e.currentTarget && setShowDriverForm(false)}>
+          <div style={{width:"100%",maxWidth:440,background:"#0a0a14",border:"1px solid rgba(0,245,255,.2)",
+            borderRadius:16,padding:0,maxHeight:"90vh",overflowY:"auto",
+            boxShadow:"0 8px 60px rgba(0,245,255,.15),0 0 0 1px rgba(0,245,255,.05)"}}>
+
+            <div style={{padding:"28px 28px 0",textAlign:"center"}}>
+              <div style={{fontSize:"2.8rem",marginBottom:8}}>🏍️</div>
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.5rem",
+                background:"linear-gradient(135deg,#00f5ff,#ff2d78)",WebkitBackgroundClip:"text",
+                WebkitTextFillColor:"transparent",letterSpacing:".04em"}}>
+                DEVENIR LIVREUR
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#5a5470",
+                letterSpacing:".1em",marginTop:6}}>
+                Rejoins l&apos;équipe YASSALA Night
+              </div>
+            </div>
+
+            {driverSuccess ? (
+              <div style={{padding:"40px 28px",textAlign:"center"}}>
+                <div style={{fontSize:"3rem",marginBottom:12}}>✅</div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.2rem",
+                  color:"#b8ff00",marginBottom:6}}>CANDIDATURE ENVOYÉE !</div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470"}}>
+                  On te recontacte très vite.
+                </div>
+              </div>
+            ) : (
+              <div style={{padding:"20px 28px 28px",display:"grid",gap:14}}>
+                <div>
+                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                    letterSpacing:".12em",display:"block",marginBottom:6}}>NOM COMPLET *</label>
+                  <input value={driverForm.name} onChange={e => setDriverForm(f => ({...f,name:e.target.value}))}
+                    placeholder="Ton nom"
+                    style={{width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+                      borderRadius:8,padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:".95rem"}} />
+                </div>
+                <div>
+                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                    letterSpacing:".12em",display:"block",marginBottom:6}}>TÉLÉPHONE *</label>
+                  <input value={driverForm.phone} onChange={e => setDriverForm(f => ({...f,phone:e.target.value}))}
+                    placeholder="+594 6XX XXX XXX" type="tel"
+                    style={{width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+                      borderRadius:8,padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:".95rem"}} />
+                </div>
+                <div>
+                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                    letterSpacing:".12em",display:"block",marginBottom:6}}>EMAIL</label>
+                  <input value={driverForm.email} onChange={e => setDriverForm(f => ({...f,email:e.target.value}))}
+                    placeholder="ton@email.com" type="email"
+                    style={{width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+                      borderRadius:8,padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:".95rem"}} />
+                </div>
+                <div>
+                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                    letterSpacing:".12em",display:"block",marginBottom:6}}>ZONE DE LIVRAISON</label>
+                  <input value={driverForm.zone} onChange={e => setDriverForm(f => ({...f,zone:e.target.value}))}
+                    placeholder="Cayenne, Rémire, Matoury..."
+                    style={{width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+                      borderRadius:8,padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:".95rem"}} />
+                </div>
+                <div>
+                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                    letterSpacing:".12em",display:"block",marginBottom:6}}>VÉHICULE</label>
+                  <div style={{display:"flex",gap:8}}>
+                    {([
+                      {val:"moto",label:"🏍️ Moto"},
+                      {val:"voiture",label:"🚗 Voiture"},
+                      {val:"velo",label:"🚲 Vélo"},
+                    ] as const).map(v => (
+                      <button key={v.val} onClick={() => setDriverForm(f => ({...f,vehicle:v.val}))}
+                        style={{flex:1,padding:"10px 8px",borderRadius:8,cursor:"pointer",
+                          background: driverForm.vehicle===v.val ? "rgba(0,245,255,.12)" : "rgba(255,255,255,.03)",
+                          border: driverForm.vehicle===v.val ? "1px solid rgba(0,245,255,.4)" : "1px solid rgba(255,255,255,.08)",
+                          color: driverForm.vehicle===v.val ? "#00f5ff" : "#7a7490",
+                          fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",
+                          transition:"all .2s"}}>
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                    letterSpacing:".12em",display:"block",marginBottom:6}}>MESSAGE (optionnel)</label>
+                  <textarea value={driverForm.message} onChange={e => setDriverForm(f => ({...f,message:e.target.value}))}
+                    placeholder="Parle-nous de toi, tes disponibilités..."
+                    rows={3}
+                    style={{width:"100%",background:"rgba(255,255,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+                      borderRadius:8,padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:".95rem",resize:"vertical"}} />
+                </div>
+                <div style={{display:"flex",gap:10,marginTop:4}}>
+                  <button onClick={() => setShowDriverForm(false)}
+                    style={{flex:1,padding:"13px",borderRadius:10,border:"1px solid rgba(255,255,255,.1)",
+                      background:"transparent",color:"#7a7490",fontFamily:"'Rajdhani',sans-serif",
+                      fontWeight:700,fontSize:".95rem",cursor:"pointer",letterSpacing:".06em"}}>
+                    ANNULER
+                  </button>
+                  <button onClick={submitDriverApplication} disabled={driverSubmitting}
+                    style={{flex:2,padding:"13px",borderRadius:10,border:"none",
+                      background: driverSubmitting ? "#333" : "linear-gradient(135deg,#00f5ff,#0090ff)",
+                      color:"#000",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                      fontSize:".95rem",cursor: driverSubmitting ? "wait" : "pointer",
+                      letterSpacing:".06em",boxShadow:"0 4px 20px rgba(0,245,255,.3)"}}>
+                    {driverSubmitting ? "ENVOI..." : "ENVOYER MA CANDIDATURE →"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── SCROLL TO TOP ── */}
       {showScrollTop && (
