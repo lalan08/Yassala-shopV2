@@ -381,6 +381,22 @@ export default function AdminPage() {
   };
 
   // ── CATÉGORIES CRUD ──
+  const DEFAULT_CATS: Category[] = [
+    { key: "biere", label: "🍺 BIÈRES", emoji: "🍺", order: 1 },
+    { key: "cocktail", label: "🍹 COCKTAILS", emoji: "🍹", order: 2 },
+    { key: "spiritueux", label: "🥃 SPIRITUEUX", emoji: "🥃", order: 3 },
+    { key: "snack", label: "🍟 SNACKS", emoji: "🍟", order: 4 },
+  ];
+  const initDefaultCats = async () => {
+    if (!confirm("Ajouter les catégories par défaut (Bières, Cocktails, Spiritueux, Snacks) dans la base ?")) return;
+    try {
+      for (const cat of DEFAULT_CATS) {
+        const exists = dbCats.some(c => c.key === cat.key);
+        if (!exists) await addDoc(collection(db, "categories"), { key: cat.key, label: cat.label, emoji: cat.emoji, order: cat.order });
+      }
+      showToast("Catégories par défaut ajoutées ✓");
+    } catch { showToast("Erreur lors de l'initialisation", "err"); }
+  };
   const saveCat = async () => {
     const data = editCat ?? catForm;
     if (!data.key.trim() || !data.label.trim()) { showToast("Clé et libellé requis", "err"); return; }
@@ -903,6 +919,18 @@ export default function AdminPage() {
                 🗂️ <span style={{color:"#ff2d78"}}>CATÉGORIES</span>
               </div>
 
+              {dbCats.length === 0 && (
+                <div style={{background:"rgba(255,45,120,.06)",border:"1px solid rgba(255,45,120,.2)",borderRadius:10,padding:"20px 24px",marginBottom:20,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                  <div style={{flex:1,fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",color:"#ff9ec4",lineHeight:1.6}}>
+                    Aucune catégorie en base. Les catégories affichées sur le site sont celles par défaut (hardcodées). Initialisez-les pour pouvoir les gérer.
+                  </div>
+                  <button onClick={initDefaultCats}
+                    style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:6,padding:"12px 24px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em",cursor:"pointer",whiteSpace:"nowrap"}}>
+                    🚀 INITIALISER LES CATÉGORIES
+                  </button>
+                </div>
+              )}
+
               {/* Formulaire ajout / édition */}
               <div style={{background:"#0c0918",border:"1px solid rgba(255,45,120,.2)",borderRadius:10,padding:"24px",marginBottom:28}}>
                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.1rem",
@@ -910,7 +938,7 @@ export default function AdminPage() {
                   {editCat ? "✏️ MODIFIER LA CATÉGORIE" : "➕ NOUVELLE CATÉGORIE"}
                 </div>
 
-                <div className="admin-cat-form-grid" style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr auto",gap:14,alignItems:"end"}}>
+                <div className="admin-cat-form-grid" style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 80px auto",gap:14,alignItems:"end"}}>
                   {/* Emoji */}
                   <div>
                     <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>EMOJI</div>
@@ -940,6 +968,17 @@ export default function AdminPage() {
                       placeholder="🍺 BIÈRES"
                       style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,
                         padding:"12px 14px",color:"#f0eeff",fontSize:"1rem"}} />
+                  </div>
+                  {/* Ordre */}
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>ORDRE</div>
+                    <input
+                      type="number"
+                      value={editCat ? editCat.order : catForm.order}
+                      onChange={e => editCat ? setEditCat(s => s && ({...s, order: Number(e.target.value)})) : setCatForm(s => ({...s, order: Number(e.target.value)}))}
+                      placeholder="1"
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,
+                        padding:"12px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}} />
                   </div>
                   {/* Boutons */}
                   <div style={{display:"flex",gap:8}}>
