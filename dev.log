@@ -13,3 +13,7 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
 ⚠ Blocked cross-origin request from 127.0.0.1 to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
  GET /favicon.png 404 in 671ms (compile: 372ms, render: 299ms)
+ GET / 200 in 74ms (compile: 6ms, render: 68ms)
+ GET / 200 in 50ms (compile: 3ms, render: 47ms)
+ GET / 200 in 47ms (compile: 1975µs, render: 45ms)
+ GET / 200 in 47ms (compile: 5ms, render: 42ms)
