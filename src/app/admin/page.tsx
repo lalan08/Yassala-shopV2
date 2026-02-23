@@ -86,6 +86,7 @@ export default function AdminPage() {
   const [usersWithOrders, setUsersWithOrders] = useState(0);
   const [usersList, setUsersList]             = useState<{id:string;name:string;email:string;createdAt?:string;lastLoginAt?:string}[]>([]);
   const [usersSearch, setUsersSearch]         = useState("");
+  const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
   const [newPwd,  setNewPwd]  = useState("");
   const [newPwd2, setNewPwd2] = useState("");
@@ -529,6 +530,7 @@ export default function AdminPage() {
             overflow-x:auto!important;height:62px!important;scrollbar-width:none!important;
           }
           .admin-sidebar::-webkit-scrollbar{display:none!important;}
+          .admin-section-header{display:none!important;}
 
           .admin-sidebar-btn{
             flex-direction:column!important;justify-content:center!important;
@@ -605,6 +607,12 @@ export default function AdminPage() {
         </div>
       </header>
 
+      <div style={{padding:"10px 24px",fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(4,2,10,.95)"}}>
+        <span style={{color:"#5a5470"}}>🏠 Accueil</span>
+        <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
+        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",settings:"Paramètres"}[tab]}</span>
+      </div>
+
       <div className="admin-shopbar" style={{background: settings.shopOpen ? "rgba(184,255,0,.08)" : "rgba(255,45,120,.08)",
         borderBottom:`1px solid ${settings.shopOpen ? "rgba(184,255,0,.2)" : "rgba(255,45,120,.2)"}`,
         padding:"10px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -634,40 +642,55 @@ export default function AdminPage() {
       <div className="admin-layout" style={{display:"flex",minHeight:"calc(100vh - 100px)"}}>
 
         <aside className="admin-sidebar" style={{width:230,background:"#080514",borderRight:"1px solid rgba(255,45,120,.1)",
-          padding:"20px 0",flexShrink:0}}>
+          padding:"12px 0",flexShrink:0}}>
           {([
-            { key:"dashboard",  label:"TABLEAU DE BORD", icon:"📊" },
-            { key:"orders",     label:"COMMANDES",       icon:"📦" },
-            { key:"products",   label:"PRODUITS",        icon:"🍺" },
-            { key:"categories", label:"CATÉGORIES",      icon:"🗂️" },
-            { key:"packs",      label:"PACKS",           icon:"🎉" },
-            { key:"coupons",    label:"COUPONS",         icon:"🏷️" },
-            { key:"banners",    label:"BANNIÈRES",       icon:"🎨" },
-            { key:"users",      label:"CLIENTS",         icon:"👥" },
-            { key:"settings",   label:"PARAMÈTRES",      icon:"⚙️" },
-          ] as const).map(item => (
-            <button key={item.key}
-              className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
-              onClick={() => { setTab(item.key); if (item.key === "orders") setNewOrdersCount(0); }}
-              style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"14px 20px",
-                background: tab===item.key ? "rgba(255,45,120,.12)" : "transparent",
-                borderLeft: tab===item.key ? "3px solid #ff2d78" : "3px solid transparent",
-                border:"none",color: tab===item.key ? "#ff2d78" : "#7a7490",cursor:"pointer",
-                fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
-                letterSpacing:".06em",textTransform:"uppercase",textAlign:"left",
-                transition:"all .2s",position:"relative"}}>
-              <span className="admin-nav-icon" style={{fontSize:"1.1rem"}}>{item.icon}</span>
-              <span className="admin-nav-label">{item.label}</span>
-              {item.key === "orders" && newOrdersCount > 0 && (
-                <span className="admin-badge-dot" style={{marginLeft:"auto",background:"#ff2d78",color:"#000",
-                  fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",fontWeight:700,
-                  minWidth:22,height:22,borderRadius:11,display:"flex",alignItems:"center",
-                  justifyContent:"center",padding:"0 6px",
-                  animation:"badgePulse 1.2s ease-in-out infinite"}}>
-                  {newOrdersCount}
-                </span>
-              )}
-            </button>
+            { section:"OPÉRATIONS", items:[
+              { key:"dashboard",  label:"TABLEAU DE BORD", icon:"📊" },
+              { key:"orders",     label:"COMMANDES",       icon:"📦" },
+              { key:"users",      label:"CLIENTS",         icon:"👥" },
+            ]},
+            { section:"CATALOGUE", items:[
+              { key:"products",   label:"PRODUITS",        icon:"🍺" },
+              { key:"categories", label:"CATÉGORIES",      icon:"🗂️" },
+              { key:"packs",      label:"PACKS",           icon:"🎉" },
+            ]},
+            { section:"MARKETING", items:[
+              { key:"coupons",    label:"COUPONS",         icon:"🏷️" },
+              { key:"banners",    label:"BANNIÈRES",       icon:"🎨" },
+            ]},
+            { section:"CONFIGURATION", items:[
+              { key:"settings",   label:"PARAMÈTRES",      icon:"⚙️" },
+            ]},
+          ] as const).map((group, gi) => (
+            <div key={group.section}>
+              <div className="admin-section-header" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                letterSpacing:".15em",padding:"20px 20px 8px",...(gi > 0 ? {marginTop:"8px"} : {})}}>
+                {group.section}
+              </div>
+              {group.items.map(item => (
+                <button key={item.key}
+                  className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
+                  onClick={() => { setTab(item.key); if (item.key === "orders") setNewOrdersCount(0); }}
+                  style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
+                    background: tab===item.key ? "rgba(255,45,120,.1)" : "transparent",
+                    border:"none",color: tab===item.key ? "#ff2d78" : "#7a7490",cursor:"pointer",
+                    fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
+                    letterSpacing:".06em",textTransform:"uppercase",textAlign:"left",
+                    transition:"all .2s",position:"relative",borderRadius:0}}>
+                  <span className="admin-nav-icon" style={{fontSize:"1.1rem"}}>{item.icon}</span>
+                  <span className="admin-nav-label">{item.label}</span>
+                  {item.key === "orders" && newOrdersCount > 0 && (
+                    <span className="admin-badge-dot" style={{marginLeft:"auto",background:"#ff2d78",color:"#000",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",fontWeight:700,
+                      minWidth:22,height:22,borderRadius:11,display:"flex",alignItems:"center",
+                      justifyContent:"center",padding:"0 6px",
+                      animation:"badgePulse 1.2s ease-in-out infinite"}}>
+                      {newOrdersCount}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           ))}
         </aside>
 
@@ -680,6 +703,9 @@ export default function AdminPage() {
 
             const todayOrders  = orders.filter(o => o.createdAt.slice(0,10) === todayStr);
             const monthOrders  = orders.filter(o => o.createdAt.slice(0,7) === monthStr);
+            const weekOrders   = orders.filter(o => new Date(o.createdAt) >= new Date(now.getTime() - 7*24*60*60*1000));
+            const periodOrders = dashPeriod === "24h" ? todayOrders : dashPeriod === "7j" ? weekOrders : monthOrders;
+            const periodLabel  = dashPeriod === "24h" ? "AUJOURD'HUI" : dashPeriod === "7j" ? "7 DERNIERS JOURS" : "CE MOIS";
             const pending      = orders.filter(o => o.status === "nouveau");
             const inProgress   = orders.filter(o => o.status === "en_cours");
 
@@ -709,14 +735,27 @@ export default function AdminPage() {
 
             return (
               <div>
-                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em",marginBottom:28}}>
-                  📊 <span style={{color:"#ff2d78"}}>TABLEAU DE BORD</span>
-                  <span className="admin-dash-date" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",
-                    marginLeft:16,letterSpacing:".1em"}}>{now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28,flexWrap:"wrap",gap:12}}>
+                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",letterSpacing:".04em"}}>
+                    📊 <span style={{color:"#ff2d78"}}>TABLEAU DE BORD</span>
+                    <span className="admin-dash-date" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",
+                      marginLeft:16,letterSpacing:".1em"}}>{now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    {(["24h","7j","30j"] as const).map(p => (
+                      <button key={p} onClick={() => setDashPeriod(p)}
+                        style={{padding:"6px 14px",borderRadius:4,border:"none",
+                          fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",letterSpacing:".06em",cursor:"pointer",
+                          background: dashPeriod===p ? "#ff2d78" : "rgba(255,255,255,.06)",
+                          color: dashPeriod===p ? "#000" : "#7a7490"}}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
-                  {card("🗓️", "COMMANDES AUJOURD'HUI", String(todayOrders.length), `CA : ${sum(todayOrders).toFixed(2)} €`, "#00f5ff")}
+                  {card("🗓️", `COMMANDES ${periodLabel}`, String(periodOrders.length), `CA : ${sum(periodOrders).toFixed(2)} €`, "#00f5ff")}
                   {card("📅", "COMMANDES CE MOIS", String(monthOrders.length), `CA : ${sum(monthOrders).toFixed(2)} €`, "#b8ff00")}
                   {card("🔔", "EN ATTENTE", String(pending.length), "statut : nouveau", "#ff2d78")}
                   {card("🚚", "EN COURS", String(inProgress.length), "statut : en_cours", "#ff9500")}
