@@ -86,7 +86,7 @@ export default function AdminPage() {
   const [usersWithOrders, setUsersWithOrders] = useState(0);
   const [usersList, setUsersList]             = useState<{id:string;name:string;email:string;createdAt?:string;lastLoginAt?:string}[]>([]);
   const [usersSearch, setUsersSearch]         = useState("");
-  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
   const [newPwd,  setNewPwd]  = useState("");
