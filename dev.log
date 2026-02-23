@@ -13,3 +13,7 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
  GET /favicon.png 404 in 256ms (compile: 175ms, render: 81ms)
  GET /admin 200 in 426ms (compile: 329ms, render: 98ms)
+ GET / 200 in 64ms (compile: 10ms, render: 54ms)
+ GET / 200 in 49ms (compile: 4ms, render: 46ms)
+ GET / 200 in 67ms (compile: 3ms, render: 64ms)
+ GET / 200 in 52ms (compile: 3ms, render: 48ms)
