@@ -4,11 +4,7 @@
 - Environments: .env
 
 ✓ Starting...
-✓ Ready in 951ms
+✓ Ready in 852ms
+ GET / 200 in 2.2s (compile: 1781ms, render: 375ms)
 ⚠ Blocked cross-origin request from 064d4fc4-f150-4d04-a316-4dd6b76c5b02-00-2sqefq0pispf6.riker.replit.dev to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- GET / 200 in 1999ms (compile: 1339ms, render: 660ms)
- GET /admin 200 in 3.9s (compile: 3.3s, render: 625ms)
-⚠ Blocked cross-origin request from 127.0.0.1 to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
-Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- GET / 200 in 51ms (compile: 4ms, render: 47ms)

@@ -86,6 +86,7 @@ export default function AdminPage() {
   const [usersWithOrders, setUsersWithOrders] = useState(0);
   const [usersList, setUsersList]             = useState<{id:string;name:string;email:string;createdAt?:string;lastLoginAt?:string}[]>([]);
   const [usersSearch, setUsersSearch]         = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
   const [newPwd,  setNewPwd]  = useState("");
@@ -641,8 +642,9 @@ export default function AdminPage() {
 
       <div className="admin-layout" style={{display:"flex",minHeight:"calc(100vh - 100px)"}}>
 
-        <aside className="admin-sidebar" style={{width:230,background:"#080514",borderRight:"1px solid rgba(255,45,120,.1)",
-          padding:"12px 0",flexShrink:0}}>
+        <aside className="admin-sidebar" style={{width: sidebarCollapsed ? 60 : 230,background:"#080514",borderRight:"1px solid rgba(255,45,120,.1)",
+          padding:"12px 0",flexShrink:0,transition:"width .25s ease",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+          <div style={{flex:1}}>
           {([
             { section:"OPÉRATIONS", items:[
               { key:"dashboard",  label:"TABLEAU DE BORD", icon:"📊" },
@@ -663,23 +665,31 @@ export default function AdminPage() {
             ]},
           ] as const).map((group, gi) => (
             <div key={group.section}>
-              <div className="admin-section-header" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
-                letterSpacing:".15em",padding:"20px 20px 8px",...(gi > 0 ? {marginTop:"8px"} : {})}}>
-                {group.section}
-              </div>
+              {!sidebarCollapsed && (
+                <div className="admin-section-header" style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+                  letterSpacing:".15em",padding:"20px 20px 8px",...(gi > 0 ? {marginTop:"8px"} : {})}}>
+                  {group.section}
+                </div>
+              )}
+              {sidebarCollapsed && gi > 0 && (
+                <div style={{borderTop:"1px solid rgba(255,255,255,.06)",margin:"6px 10px"}} />
+              )}
               {group.items.map(item => (
                 <button key={item.key}
                   className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
                   onClick={() => { setTab(item.key); if (item.key === "orders") setNewOrdersCount(0); }}
-                  style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
+                  title={sidebarCollapsed ? item.label : undefined}
+                  style={{width:"100%",display:"flex",alignItems:"center",gap: sidebarCollapsed ? 0 : 12,
+                    padding: sidebarCollapsed ? "11px 0" : "11px 20px",
+                    justifyContent: sidebarCollapsed ? "center" : "flex-start",
                     background: tab===item.key ? "rgba(255,45,120,.1)" : "transparent",
                     border:"none",color: tab===item.key ? "#ff2d78" : "#7a7490",cursor:"pointer",
                     fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
                     letterSpacing:".06em",textTransform:"uppercase",textAlign:"left",
                     transition:"all .2s",position:"relative",borderRadius:0}}>
                   <span className="admin-nav-icon" style={{fontSize:"1.1rem"}}>{item.icon}</span>
-                  <span className="admin-nav-label">{item.label}</span>
-                  {item.key === "orders" && newOrdersCount > 0 && (
+                  {!sidebarCollapsed && <span className="admin-nav-label">{item.label}</span>}
+                  {!sidebarCollapsed && item.key === "orders" && newOrdersCount > 0 && (
                     <span className="admin-badge-dot" style={{marginLeft:"auto",background:"#ff2d78",color:"#000",
                       fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",fontWeight:700,
                       minWidth:22,height:22,borderRadius:11,display:"flex",alignItems:"center",
@@ -688,10 +698,26 @@ export default function AdminPage() {
                       {newOrdersCount}
                     </span>
                   )}
+                  {sidebarCollapsed && item.key === "orders" && newOrdersCount > 0 && (
+                    <span style={{position:"absolute",top:4,right:6,width:8,height:8,borderRadius:"50%",
+                      background:"#ff2d78",boxShadow:"0 0 6px #ff2d78"}} />
+                  )}
                 </button>
               ))}
             </div>
           ))}
+          </div>
+          <button onClick={() => setSidebarCollapsed(s => !s)}
+            className="admin-sidebar-toggle"
+            style={{width:"100%",padding:"14px 0",background:"rgba(255,255,255,.03)",border:"none",
+              borderTop:"1px solid rgba(255,255,255,.06)",color:"#5a5470",cursor:"pointer",
+              display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+              fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",letterSpacing:".1em",
+              transition:"all .2s"}}>
+            <span style={{transform: sidebarCollapsed ? "rotate(90deg)" : "rotate(-90deg)",display:"inline-block",
+              transition:"transform .25s",fontSize:".9rem"}}>‹</span>
+            {!sidebarCollapsed && <span>RÉDUIRE</span>}
+          </button>
         </aside>
 
         <main className="admin-main" style={{flex:1,padding:"28px",overflowY:"auto",animation:"fadeUp .3s both"}}>
