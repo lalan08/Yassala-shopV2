@@ -599,15 +599,6 @@ export default function Home() {
           {settings.shopOpen ? `OPEN · ${settings.hours}` : "FERMÉ"}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button className="nav-driver-btn" onClick={() => setShowDriverForm(true)}
-            style={{background:"linear-gradient(135deg,rgba(0,245,255,.1),rgba(255,45,120,.1))",
-              border:"1px solid rgba(0,245,255,.35)",
-              color:"#00f5ff",padding:"8px 16px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-              fontSize:".8rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer",
-              display:"flex",alignItems:"center",gap:"6px",borderRadius:"8px",
-              boxShadow:"0 0 12px rgba(0,245,255,.15)",transition:"all .3s"}}>
-            🏍️ LIVREUR
-          </button>
           <button className="nav-cart-btn" onClick={openCart} style={{background:"transparent",border:"1px solid #ff2d78",
             color:"#ff2d78",padding:"8px 18px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
             fontSize:".85rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",
@@ -1517,6 +1508,17 @@ export default function Home() {
                   textDecoration:"underline",padding:4}}>
                 {authMode === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
               </button>
+
+              <div style={{borderTop:"1px solid rgba(255,255,255,.06)",marginTop:10,paddingTop:14}}>
+                <a href="/livreur"
+                  style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                    background:"rgba(0,245,255,.06)",border:"1px solid rgba(0,245,255,.18)",
+                    borderRadius:10,padding:"12px",textDecoration:"none",
+                    color:"#00f5ff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                    fontSize:".9rem",letterSpacing:".06em",transition:"all .2s"}}>
+                  <span>🏍️</span> ESPACE LIVREUR
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -1722,8 +1724,8 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* ── FLOATING DRIVER BUTTONS ── */}
-      <a href="/livreur" className="floating-driver-btn"
+      {/* ── FLOATING DRIVER BUTTON ── */}
+      <button className="floating-driver-btn" onClick={() => setShowDriverForm(true)}
         style={{position:"fixed",bottom:90,left:18,zIndex:900,
           background:"linear-gradient(135deg,#00f5ff,#0090ff)",
           border:"none",borderRadius:14,padding:"12px 18px",
@@ -1731,19 +1733,8 @@ export default function Home() {
           fontSize:".82rem",letterSpacing:".06em",textTransform:"uppercase",
           cursor:"pointer",display:"flex",alignItems:"center",gap:8,
           boxShadow:"0 4px 20px rgba(0,245,255,.35),0 0 40px rgba(0,245,255,.15)",
-          textDecoration:"none",transition:"transform .2s"}}>
+          animation:"floatPulse 3s ease-in-out infinite",transition:"transform .2s"}}>
         <span style={{fontSize:"1.2rem"}}>🏍️</span>
-        <span className="floating-driver-text">Espace livreur</span>
-      </a>
-      <button className="floating-driver-btn" onClick={() => setShowDriverForm(true)}
-        style={{position:"fixed",bottom:145,left:18,zIndex:900,
-          background:"rgba(255,255,255,.06)",
-          border:"1px solid rgba(0,245,255,.25)",borderRadius:14,padding:"10px 16px",
-          color:"#00f5ff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-          fontSize:".78rem",letterSpacing:".06em",textTransform:"uppercase",
-          cursor:"pointer",display:"flex",alignItems:"center",gap:8,
-          backdropFilter:"blur(10px)",transition:"transform .2s"}}>
-        <span style={{fontSize:"1rem"}}>📝</span>
         <span className="floating-driver-text">Devenir livreur</span>
       </button>
 
