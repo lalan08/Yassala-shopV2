@@ -14,3 +14,10 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET / 200 in 47ms (compile: 3ms, render: 44ms)
  GET / 200 in 52ms (compile: 4ms, render: 48ms)
  GET / 200 in 63ms (compile: 4ms, render: 59ms)
+ GET / 200 in 42ms (compile: 2ms, render: 40ms)
+ GET / 200 in 64ms (compile: 4ms, render: 59ms)
+ GET / 200 in 54ms (compile: 3ms, render: 50ms)
+ GET / 200 in 60ms (compile: 4ms, render: 55ms)
+⚠ Blocked cross-origin request from 127.0.0.1 to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET /favicon.png 404 in 308ms (compile: 158ms, render: 150ms)
