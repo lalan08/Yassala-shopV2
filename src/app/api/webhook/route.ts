@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Update order status in Firestore
     const { initializeApp, getApps } = await import('firebase/app');
-    const { getFirestore, doc, updateDoc } = await import('firebase/firestore');
+    const { getFirestore, doc, updateDoc, getDoc } = await import('firebase/firestore');
     const firebaseConfig = {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI',
       authDomain: 'yassala-shop.firebaseapp.com',
@@ -34,8 +34,17 @@ export async function POST(req: NextRequest) {
     };
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     const db  = getFirestore(app);
+
+    let orderEmail: string | null = null;
+    let orderItems: string = '';
     if (m.orderId) {
       try {
+        const orderSnap = await getDoc(doc(db, 'orders', m.orderId));
+        if (orderSnap.exists()) {
+          const orderData = orderSnap.data();
+          orderEmail = orderData.email || null;
+          orderItems = orderData.items || '';
+        }
         await updateDoc(doc(db, 'orders', m.orderId), { status: 'en_cours', paidOnline: true });
       } catch {}
     }
@@ -65,6 +74,24 @@ export async function POST(req: NextRequest) {
         paid:        true,
       }),
     }).catch(() => {});
+
+    // Envoyer email de confirmation au client (paiement en ligne)
+    if (orderEmail) {
+      fetch(`${origin}/api/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type:        'confirmation',
+          email:       orderEmail,
+          orderNumber: m.orderNumber || '',
+          items:       orderItems,
+          total:       amountTotal,
+          address:     m.customerAddress || '',
+          method:      'online',
+          trackingUrl: m.orderId ? `${origin}/suivi?id=${m.orderId}` : '',
+        }),
+      }).catch(() => {});
+    }
   }
 
   return NextResponse.json({ received: true });

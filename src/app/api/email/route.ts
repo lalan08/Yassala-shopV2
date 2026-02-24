@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     const { subject, html } = buildEmail(type as EmailType, data);
 
     await resend.emails.send({
-      from: "YASSALA <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "YASSALA <onboarding@resend.dev>",
       to: email,
       subject,
       html,

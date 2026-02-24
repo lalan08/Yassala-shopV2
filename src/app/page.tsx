@@ -142,7 +142,12 @@ export default function Home() {
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       setDbCats(loaded);
     });
-    const unsubAuth = onAuthStateChanged(auth, user => setCurrentUser(user));
+    const unsubAuth = onAuthStateChanged(auth, user => {
+      setCurrentUser(user);
+      if (user?.email) {
+        setOrderForm(f => ({ ...f, email: f.email || user.email! }));
+      }
+    });
     return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubBanners(); unsubCats(); unsubAuth(); };
   }, []);
 
@@ -284,6 +289,10 @@ export default function Home() {
   const submitOrder = async () => {
     if (!orderForm.name || !orderForm.phone || !orderForm.address) {
       showToast("Remplis tous les champs !");
+      return;
+    }
+    if (!orderForm.email) {
+      showToast("L'email est requis pour recevoir les notifications de commande !");
       return;
     }
     if (!orderForm.lat || !orderForm.lng) {
@@ -1293,10 +1302,11 @@ export default function Home() {
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Rajdhani',sans-serif"}} />
-                  <input placeholder="Email (pour recevoir le suivi)" value={orderForm.email}
+                  <input placeholder="Email * (obligatoire pour recevoir les notifications)" value={orderForm.email}
                     onChange={e => setOrderForm(f => ({...f, email: e.target.value}))}
                     type="email"
-                    style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                    style={{width:"100%",background:"#080514",
+                      border: orderForm.email ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,45,120,.4)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Rajdhani',sans-serif"}} />
                   <div style={{position:"relative"}}>
