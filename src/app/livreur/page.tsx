@@ -44,6 +44,9 @@ export default function LivreurPage() {
   const [gpsActive, setGpsActive] = useState(false);
   const [transportType, setTransportType] = useState<"scooter"|"velo"|"voiture">("scooter");
   const watchIdRef = useRef<number | null>(null);
+  const [showContract, setShowContract] = useState(false);
+  const [contractScrolled, setContractScrolled] = useState(false);
+  const contractRef = useRef<HTMLDivElement>(null);
 
   const showToast = (msg: string) => {
     setToast({ msg, show: true });
@@ -90,8 +93,23 @@ export default function LivreurPage() {
     }
     setDriverData({ id: driverDoc.id, ...data });
     if (data.transport) setTransportType(data.transport);
+    if (!data.contractAccepted) {
+      setShowContract(true);
+    }
     setLoggedIn(true);
     try { localStorage.setItem("yassala_driver", JSON.stringify({ phone: phone.trim() })); } catch {}
+  };
+
+  const acceptContract = async () => {
+    if (!driverData?.id) return;
+    const now = new Date().toISOString();
+    await updateDoc(doc(db, "driver_applications", driverData.id), {
+      contractAccepted: true,
+      contractAcceptedAt: now,
+    });
+    setDriverData((d: any) => ({ ...d, contractAccepted: true, contractAcceptedAt: now }));
+    setShowContract(false);
+    showToast("Contrat accepté ! Bienvenue chez Yassala");
   };
 
   useEffect(() => {
@@ -105,7 +123,7 @@ export default function LivreurPage() {
   }, []);
 
   const loadOrders = useCallback(() => {
-    if (!driverData) return () => {};
+    if (!driverData || showContract) return () => {};
     const unsub = onSnapshot(collection(db, "orders"), snap => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -363,6 +381,129 @@ export default function LivreurPage() {
               fontSize:".78rem",textDecoration:"none",letterSpacing:".1em"}}>
               ← RETOUR AU SHOP
             </a>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  if (showContract) return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#0a0a12;color:#f0eeff;font-family:'Inter',sans-serif;min-height:100vh;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+      `}</style>
+      <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",
+        justifyContent:"center",padding:"24px 16px"}}>
+        <div style={{maxWidth:560,width:"100%",animation:"fadeUp .4s both"}}>
+          <div style={{textAlign:"center",marginBottom:24}}>
+            <div style={{fontSize:"2.5rem",marginBottom:8}}>📋</div>
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",
+              background:"linear-gradient(135deg,#00f5ff,#ff2d78)",WebkitBackgroundClip:"text",
+              WebkitTextFillColor:"transparent",marginBottom:4}}>
+              CONTRAT DE PRESTATION
+            </div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",
+              letterSpacing:".1em"}}>
+              YASSALA NIGHT DELIVERY
+            </div>
+          </div>
+
+          <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(0,245,255,.15)",
+            borderRadius:14,overflow:"hidden",marginBottom:20}}>
+            <div ref={(el) => {
+                (contractRef as any).current = el;
+                if (el && el.scrollHeight <= el.clientHeight + 30) setContractScrolled(true);
+              }}
+              onScroll={() => {
+                const el = contractRef.current;
+                if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 30) setContractScrolled(true);
+              }}
+              style={{maxHeight:400,overflowY:"auto",padding:"24px 22px",
+                fontFamily:"'Rajdhani',sans-serif",fontSize:".88rem",lineHeight:1.7,color:"#d0d0e0"}}>
+
+              <div style={{fontWeight:700,fontSize:"1rem",color:"#00f5ff",marginBottom:12}}>
+                CONDITIONS GÉNÉRALES DE PRESTATION DE LIVRAISON
+              </div>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 1 – OBJET</div>
+              <p>Le présent contrat définit les conditions dans lesquelles le Prestataire (ci-après « le Livreur ») effectue des prestations de livraison pour le compte de YASSALA (ci-après « la Plateforme »). Le Livreur intervient en qualité de prestataire indépendant.</p>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 2 – STATUT DU LIVREUR</div>
+              <p>Le Livreur exerce son activité en tant que travailleur indépendant (auto-entrepreneur ou autre statut légal). Il n&apos;existe aucun lien de subordination entre le Livreur et la Plateforme. Le Livreur est libre d&apos;accepter ou de refuser les courses proposées.</p>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 3 – OBLIGATIONS DU LIVREUR</div>
+              <p>Le Livreur s&apos;engage à :</p>
+              <ul style={{paddingLeft:20,marginTop:4}}>
+                <li>Livrer les commandes dans les meilleurs délais et en bon état</li>
+                <li>Respecter le code de la route et les règles de sécurité</li>
+                <li>Disposer d&apos;un véhicule en bon état (vélo, scooter ou voiture)</li>
+                <li>Disposer d&apos;une assurance responsabilité civile professionnelle</li>
+                <li>Maintenir une présentation correcte et un comportement professionnel</li>
+                <li>Activer la géolocalisation pendant les livraisons pour le suivi client</li>
+                <li>Ne pas consommer d&apos;alcool ou de substances illicites pendant le service</li>
+                <li>Signaler tout incident ou problème lors d&apos;une livraison</li>
+              </ul>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 4 – RÉMUNÉRATION</div>
+              <p>Le Livreur est rémunéré par course effectuée selon les tarifs en vigueur communiqués par la Plateforme. Le paiement est effectué selon les modalités convenues (hebdomadaire ou mensuel). Le Livreur est responsable de ses propres charges fiscales et sociales.</p>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 5 – DONNÉES PERSONNELLES &amp; GÉOLOCALISATION</div>
+              <p>Le Livreur consent à la collecte de sa position GPS pendant les livraisons. Ces données sont utilisées uniquement pour :</p>
+              <ul style={{paddingLeft:20,marginTop:4}}>
+                <li>Permettre au client de suivre sa commande en temps réel</li>
+                <li>Calculer les distances et temps de trajet</li>
+                <li>Optimiser les courses</li>
+              </ul>
+              <p style={{marginTop:8}}>Les données de géolocalisation sont supprimées dès la livraison terminée. Les données personnelles sont traitées conformément au RGPD.</p>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 6 – RESPONSABILITÉ</div>
+              <p>Le Livreur est responsable de tout dommage causé aux marchandises pendant le transport. La Plateforme ne pourra être tenue responsable des accidents ou incidents survenant pendant les livraisons. Le Livreur déclare disposer d&apos;une assurance couvrant son activité.</p>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 7 – DURÉE ET RÉSILIATION</div>
+              <p>Le présent contrat est conclu pour une durée indéterminée. Chaque partie peut y mettre fin à tout moment, sans préavis ni indemnité. La Plateforme se réserve le droit de suspendre ou résilier l&apos;accès du Livreur en cas de manquement aux présentes conditions.</p>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 8 – CONFIDENTIALITÉ</div>
+              <p>Le Livreur s&apos;engage à ne pas divulguer les informations confidentielles auxquelles il pourrait avoir accès dans le cadre de son activité (données clients, informations commerciales, etc.).</p>
+
+              <div style={{fontWeight:700,color:"#ff2d78",marginTop:16,marginBottom:6}}>ARTICLE 9 – DROIT APPLICABLE</div>
+              <p>Le présent contrat est soumis au droit français. Tout litige sera soumis aux tribunaux compétents de Cayenne, Guyane française.</p>
+
+              <div style={{marginTop:24,padding:"14px 16px",background:"rgba(0,245,255,.06)",
+                border:"1px solid rgba(0,245,255,.15)",borderRadius:8,
+                fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#00f5ff"}}>
+                En cliquant sur « J&apos;accepte », vous reconnaissez avoir lu et compris l&apos;ensemble des conditions ci-dessus et vous vous engagez à les respecter.
+              </div>
+            </div>
+          </div>
+
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={() => { setShowContract(false); setLoggedIn(false); setDriverData(null); }}
+              style={{flex:1,padding:"14px",borderRadius:10,border:"1px solid rgba(255,255,255,.1)",
+                background:"transparent",color:"#5a5470",fontFamily:"'Rajdhani',sans-serif",
+                fontWeight:700,fontSize:".95rem",cursor:"pointer"}}>
+              REFUSER
+            </button>
+            <button onClick={acceptContract}
+              disabled={!contractScrolled}
+              style={{flex:2,padding:"14px",borderRadius:10,border:"none",
+                background: contractScrolled
+                  ? "linear-gradient(135deg,#b8ff00,#7acc00)"
+                  : "rgba(255,255,255,.06)",
+                color: contractScrolled ? "#000" : "#5a5470",
+                fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
+                cursor: contractScrolled ? "pointer" : "not-allowed",
+                boxShadow: contractScrolled ? "0 4px 16px rgba(184,255,0,.3)" : "none",
+                transition:"all .3s"}}>
+              {contractScrolled ? "✓ J'ACCEPTE LE CONTRAT" : "↓ Lis le contrat jusqu'en bas"}
+            </button>
+          </div>
+
+          <div style={{textAlign:"center",marginTop:14,fontFamily:"'Share Tech Mono',monospace",
+            fontSize:".68rem",color:"#5a5470"}}>
+            {driverData?.name} · {new Date().toLocaleDateString("fr-FR")}
           </div>
         </div>
       </div>

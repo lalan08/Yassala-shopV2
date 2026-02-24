@@ -1692,6 +1692,15 @@ export default function AdminPage() {
                               border: `1px solid ${d.status==="nouveau" ? "rgba(0,245,255,.3)" : d.status==="accepte" ? "rgba(184,255,0,.3)" : "rgba(255,45,120,.3)"}`}}>
                               {d.status==="nouveau" ? "NOUVEAU" : d.status==="accepte" ? "ACCEPTÉ" : "REFUSÉ"}
                             </span>
+                            {d.status === "accepte" && (
+                              <span style={{padding:"3px 10px",borderRadius:12,fontSize:".72rem",fontWeight:600,
+                                fontFamily:"'Share Tech Mono',monospace",letterSpacing:".06em",
+                                background: d.contractAccepted ? "rgba(184,255,0,.08)" : "rgba(255,165,0,.1)",
+                                color: d.contractAccepted ? "#b8ff00" : "#ffa500",
+                                border: `1px solid ${d.contractAccepted ? "rgba(184,255,0,.2)" : "rgba(255,165,0,.25)"}`}}>
+                                {d.contractAccepted ? "📋 CONTRAT SIGNÉ" : "⚠️ CONTRAT NON SIGNÉ"}
+                              </span>
+                            )}
                           </div>
 
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 20px",marginTop:10}}>
@@ -1738,6 +1747,15 @@ export default function AdminPage() {
                                   fontFamily:"'Inter',sans-serif",fontSize:".75rem",marginLeft:"auto"}}>
                                 Copier
                               </button>
+                            </div>
+                          )}
+
+                          {d.status === "accepte" && d.contractAccepted && d.contractAcceptedAt && (
+                            <div style={{marginTop:10,padding:"10px 14px",background:"rgba(184,255,0,.04)",
+                              borderRadius:8,border:"1px solid rgba(184,255,0,.1)",
+                              fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#b8ff00",
+                              display:"flex",alignItems:"center",gap:8}}>
+                              📋 Contrat signé le {new Date(d.contractAcceptedAt).toLocaleString("fr-FR")}
                             </div>
                           )}
                         </div>
