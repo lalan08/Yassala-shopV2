@@ -508,79 +508,186 @@ export default function AdminPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
         *{margin:0;padding:0;box-sizing:border-box;}
         html{scroll-behavior:smooth;}
         body{background:#0a0a12;color:#f0eeff;font-family:'Inter',sans-serif;}
         input,select,textarea{outline:none;font-family:'Inter',sans-serif;}
+        button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+        input,select{-webkit-appearance:none;}
+
+        /* ── ANIMATIONS ── */
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
         @keyframes badgePulse{0%,100%{transform:scale(1);box-shadow:0 0 6px #ff2d78;}50%{transform:scale(1.2);box-shadow:0 0 14px #ff2d78;}}
-        .row:hover{background:rgba(255,255,255,.04);}
-        ::-webkit-scrollbar{width:4px;}
-        ::-webkit-scrollbar-track{background:#0a0a12;}
-        ::-webkit-scrollbar-thumb{background:#ff2d78;border-radius:2px;}
-        .admin-sidebar-btn:hover{background:rgba(255,255,255,.04)!important;}
+        @keyframes tabIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes toastSlide{from{opacity:0;transform:translateY(12px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
 
-        /* ── MOBILE ── */
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar{width:4px;height:4px;}
+        ::-webkit-scrollbar-track{background:#0a0a12;}
+        ::-webkit-scrollbar-thumb{background:#2a1a2e;border-radius:2px;}
+        ::-webkit-scrollbar-thumb:hover{background:#ff2d78;}
+
+        /* ── ROW HOVER ── */
+        .row:hover{background:rgba(255,255,255,.04);}
+
+        /* ── SIDEBAR ── */
+        .admin-sidebar-btn{transition:background .15s ease,color .15s ease!important;}
+        .admin-sidebar-btn:hover{background:rgba(255,255,255,.05)!important;}
+
+        /* ── TAB ANIMATION ── */
+        .admin-tab-content{animation:tabIn .22s ease both;}
+
+        /* ── TABLE SCROLL ── */
+        .admin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+        .admin-table-wrap::-webkit-scrollbar{height:3px;}
+
+        /* ── TOAST ── */
+        .admin-toast{animation:toastSlide .3s cubic-bezier(.34,1.56,.64,1) both;}
+
+        /* ── STATUS BADGES ── */
+        .status-badge{
+          display:inline-flex;align-items:center;gap:5px;
+          padding:3px 10px;border-radius:20px;
+          font-family:'Inter',sans-serif;font-weight:600;font-size:.72rem;
+          letter-spacing:.06em;text-transform:uppercase;
+        }
+
+        /* ── TABLET (641–900px) ── */
+        @media(max-width:900px) and (min-width:641px){
+          .admin-sidebar{width:190px!important;}
+          .admin-nav-label{font-size:.8rem!important;}
+        }
+
+        /* ══ MOBILE (≤640px) ══ */
         @media(max-width:640px){
+
+          /* Layout général */
           .admin-layout{flex-direction:column!important;}
 
+          /* ── BOTTOM NAV ── */
           .admin-sidebar{
             width:100%!important;position:fixed!important;
             bottom:0!important;left:0!important;right:0!important;z-index:200!important;
             display:flex!important;flex-direction:row!important;
-            padding:0!important;border-right:none!important;
-            border-top:1px solid rgba(255,255,255,.06)!important;
-            background:rgba(10,10,18,.97)!important;backdrop-filter:blur(20px)!important;
-            overflow-x:auto!important;height:62px!important;scrollbar-width:none!important;
+            padding:0 4px!important;
+            padding-bottom:max(env(safe-area-inset-bottom),2px)!important;
+            border-right:none!important;
+            border-top:1px solid rgba(255,255,255,.08)!important;
+            background:rgba(6,4,16,.96)!important;
+            backdrop-filter:blur(28px)!important;-webkit-backdrop-filter:blur(28px)!important;
+            overflow-x:auto!important;
+            height:calc(62px + max(env(safe-area-inset-bottom),0px))!important;
+            scrollbar-width:none!important;
+            align-items:stretch!important;gap:0!important;
           }
           .admin-sidebar::-webkit-scrollbar{display:none!important;}
           .admin-section-header{display:none!important;}
 
           .admin-sidebar-btn{
             flex-direction:column!important;justify-content:center!important;
-            align-items:center!important;padding:5px 6px!important;gap:2px!important;
-            width:auto!important;flex:1!important;min-width:50px!important;
-            border-left:2px solid transparent!important;
-            border-top:2px solid transparent!important;
-            text-align:center!important;
+            align-items:center!important;
+            padding:6px 2px 4px!important;gap:3px!important;
+            flex:1!important;min-width:48px!important;max-width:80px!important;
+            border:none!important;
+            border-top:2.5px solid transparent!important;
+            border-radius:0!important;height:auto!important;
+            position:relative!important;
           }
           .admin-sidebar-btn.active{
-            border-top:2px solid #ff2d78!important;
-            border-left:2px solid transparent!important;
+            border-top-color:#ff2d78!important;
             background:rgba(255,45,120,.08)!important;
           }
-          .admin-nav-icon{font-size:1.15rem!important;}
+          .admin-sidebar-btn.active .admin-nav-label{color:#ff2d78!important;}
+
+          .admin-nav-icon{font-size:1.3rem!important;line-height:1!important;display:block!important;}
           .admin-nav-label{
-            font-size:.55rem!important;line-height:1!important;
+            font-size:.52rem!important;line-height:1.2!important;
             white-space:nowrap!important;overflow:hidden!important;
-            text-overflow:ellipsis!important;max-width:56px!important;
-            display:block!important;
+            text-overflow:ellipsis!important;max-width:64px!important;
+            display:block!important;font-weight:600!important;
+            letter-spacing:.04em!important;text-transform:uppercase!important;
           }
-          .admin-badge-dot{position:absolute!important;top:5px!important;right:8px!important;
-            width:8px!important;height:8px!important;border-radius:50%!important;
+          .admin-badge-dot{
+            position:absolute!important;top:4px!important;right:8px!important;
+            width:7px!important;height:7px!important;border-radius:50%!important;
             background:#ff2d78!important;padding:0!important;min-width:0!important;
-            font-size:0!important;overflow:hidden!important;margin-left:0!important;}
+            font-size:0!important;overflow:hidden!important;margin-left:0!important;
+            border:1.5px solid #060410!important;
+          }
 
-          .admin-main{padding:14px!important;padding-bottom:78px!important;}
-
+          /* ── HEADER ── */
+          .admin-header{padding:10px 14px!important;}
           .admin-header-subtitle{display:none!important;}
           .admin-site-link{display:none!important;}
-          .admin-disconnect-btn{padding:5px 8px!important;font-size:.72rem!important;}
+          .admin-disconnect-btn{padding:6px 10px!important;font-size:.72rem!important;}
           .admin-disconnect-full{display:none!important;}
           .admin-disconnect-short{display:inline!important;}
+
+          /* ── SHOPBAR ── */
           .admin-shopbar{padding:8px 14px!important;}
 
+          /* ── BREADCRUMB: hidden mobile ── */
+          .admin-breadcrumb{display:none!important;}
+
+          /* ── MAIN CONTENT ── */
+          .admin-main{padding:12px!important;padding-bottom:82px!important;}
+
+          /* ── DASHBOARD ── */
+          .admin-dash-date{display:none!important;}
+          .admin-kpi-grid{
+            display:grid!important;
+            grid-template-columns:1fr 1fr!important;
+            gap:10px!important;
+            margin-bottom:14px!important;
+          }
+          .admin-kpi-grid>*{
+            min-width:0!important;flex:none!important;
+            padding:14px 12px!important;
+          }
+          .admin-kpi-grid>* > div:first-child{font-size:1.25rem!important;margin-bottom:5px!important;}
+          .admin-kpi-grid>* > div:nth-child(3){font-size:1.3rem!important;}
+
+          /* ── ORDERS ── */
+          .admin-orders-actions{flex-wrap:wrap!important;gap:7px!important;}
+          .admin-orders-actions>button{
+            flex:1!important;min-width:120px!important;
+            justify-content:center!important;text-align:center!important;
+          }
+
+          /* ── PRODUCTS ── */
           .admin-product-row{flex-wrap:wrap!important;gap:8px!important;}
           .admin-prod-actions{margin-left:auto!important;}
 
+          /* ── CATEGORIES ── */
           .admin-cat-form-grid{grid-template-columns:1fr 1fr!important;}
+
+          /* ── SETTINGS ── */
           .admin-settings-form{max-width:100%!important;}
-          .admin-dash-date{display:none!important;}
+
+          /* ── USERS ── */
+          .admin-users-header{flex-direction:column!important;align-items:stretch!important;gap:12px!important;}
+          .admin-users-search{width:100%!important;}
+          .admin-users-table-header,.admin-users-table-row{
+            grid-template-columns:minmax(110px,1.2fr) minmax(140px,1.5fr) 95px 110px!important;
+            min-width:455px!important;
+          }
+
+          /* ── TOAST ── */
+          .admin-toast{
+            top:auto!important;
+            bottom:calc(68px + max(env(safe-area-inset-bottom),8px))!important;
+            right:12px!important;left:12px!important;
+            max-width:none!important;width:auto!important;
+            border-radius:12px!important;
+          }
+
+          /* ── GLOBAL BUTTONS ── */
+          button{min-height:36px;}
         }
       `}</style>
 
-      <div style={{position:"fixed",top:18,right:18,zIndex:10000,
+      <div className="admin-toast" style={{position:"fixed",top:18,right:18,zIndex:10000,
         background: toast.type==="err" ? "rgba(255,45,120,.12)" : "rgba(184,255,0,.12)",
         border:`1px solid ${toast.type==="err" ? "#ff2d78" : "#b8ff00"}`,
         borderRadius:10,padding:"12px 18px",fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
@@ -614,7 +721,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <div style={{padding:"10px 24px",fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:400,color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(10,10,18,.85)"}}>
+      <div className="admin-breadcrumb" style={{padding:"10px 24px",fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:400,color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(10,10,18,.85)"}}>
         <span style={{color:"#5a5470"}}>🏠 Accueil</span>
         <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
         <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",settings:"Paramètres"}[tab]}</span>
@@ -769,14 +876,14 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
+                <div className="admin-kpi-grid" style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
                   {card("🗓️", `COMMANDES ${periodLabel}`, String(periodOrders.length), `CA : ${sum(periodOrders).toFixed(2)} €`, "#00f5ff")}
                   {card("📅", "COMMANDES CE MOIS", String(monthOrders.length), `CA : ${sum(monthOrders).toFixed(2)} €`, "#b8ff00")}
                   {card("🔔", "EN ATTENTE", String(pending.length), "statut : nouveau", "#ff2d78")}
                   {card("🚚", "EN COURS", String(inProgress.length), "statut : en_cours", "#ff9500")}
                 </div>
 
-                <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
+                <div className="admin-kpi-grid" style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
                   {card("📦", "TOTAL COMMANDES", String(orders.length), `CA total : ${sum(orders).toFixed(2)} €`, "#a855f7")}
                   {topProd && card("🏆", "PRODUIT POPULAIRE", topProd[0].slice(0,18), `${topProd[1]} mention(s)`, "#b8ff00")}
                 </div>
@@ -785,7 +892,7 @@ export default function AdminPage() {
                 {(() => {
                   const activeUids = new Set(orders.map((o:any) => o.uid).filter(Boolean));
                   return (
-                    <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
+                    <div className="admin-kpi-grid" style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
                       {card("👥", "CLIENTS INSCRITS", String(usersCount), "comptes créés sur la boutique", "#00f5ff")}
                       {card("🛒", "CLIENTS ACTIFS", String(activeUids.size), "ont passé au moins 1 commande", "#ff2d78")}
                       {usersCount > 0 && card("📈", "TAUX D'ADOPTION", `${Math.round(activeUids.size/usersCount*100)}%`, "inscrits ayant commandé", "#b8ff00")}
@@ -1184,7 +1291,7 @@ export default function AdminPage() {
                 <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   📦 <span style={{color:"#ff2d78"}}>COMMANDES</span>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <div className="admin-orders-actions" style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
                   {typeof window !== "undefined" && "Notification" in window && Notification.permission !== "granted" && (
                     <button onClick={() => Notification.requestPermission()}
                       style={{background:"rgba(255,45,120,.12)",border:"1px solid rgba(255,45,120,.4)",
@@ -1568,13 +1675,14 @@ export default function AdminPage() {
 
           {tab === "users" && (
             <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
+              <div className="admin-users-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:12}}>
                 <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   👥 <span style={{color:"#ff2d78"}}>CLIENTS INSCRITS</span>
                   <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#5a5470",
                     marginLeft:12,letterSpacing:".1em"}}>{usersList.length} compte(s)</span>
                 </div>
                 <input
+                  className="admin-users-search"
                   value={usersSearch}
                   onChange={e => setUsersSearch(e.target.value)}
                   placeholder="Rechercher un client..."
@@ -1590,8 +1698,8 @@ export default function AdminPage() {
                   // aucun client inscrit
                 </div>
               ) : (
-                <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,overflow:"hidden"}}>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 140px 140px",padding:"14px 18px",
+                <div className="admin-table-wrap" style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,overflow:"hidden"}}>
+                  <div className="admin-users-table-header" style={{display:"grid",gridTemplateColumns:"1fr 1fr 140px 140px",padding:"14px 18px",
                     borderBottom:"1px solid rgba(255,255,255,.08)",background:"rgba(255,45,120,.06)"}}>
                     <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>NOM</div>
                     <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#ff2d78",letterSpacing:".1em"}}>EMAIL</div>
@@ -1605,7 +1713,7 @@ export default function AdminPage() {
                       return (u.name||"").toLowerCase().includes(s) || (u.email||"").toLowerCase().includes(s);
                     })
                     .map(u => (
-                    <div key={u.id} className="row" style={{display:"grid",gridTemplateColumns:"1fr 1fr 140px 140px",
+                    <div key={u.id} className="row admin-users-table-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr 140px 140px",
                       padding:"12px 18px",borderBottom:"1px solid rgba(255,255,255,.04)",
                       transition:"background .2s",alignItems:"center"}}>
                       <div style={{fontWeight:600,fontSize:".95rem"}}>
