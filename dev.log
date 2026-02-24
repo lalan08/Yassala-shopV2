@@ -7,3 +7,10 @@
 ✓ Ready in 898ms
 ⚠ Blocked cross-origin request from 064d4fc4-f150-4d04-a316-4dd6b76c5b02-00-2sqefq0pispf6.riker.replit.dev to /_next/* resource. To allow this, configure "allowedDevOrigins" in next.config
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET / 200 in 1834ms (compile: 1488ms, render: 346ms)
+ GET / 200 in 55ms (compile: 4ms, render: 51ms)
+ GET / 200 in 46ms (compile: 3ms, render: 44ms)
+ GET / 200 in 47ms (compile: 3ms, render: 43ms)
+ GET / 200 in 47ms (compile: 3ms, render: 44ms)
+ GET / 200 in 52ms (compile: 4ms, render: 48ms)
+ GET / 200 in 63ms (compile: 4ms, render: 59ms)
