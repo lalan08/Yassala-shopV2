@@ -61,6 +61,7 @@ export default function AdminPage() {
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
   const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers">("dashboard");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [products, setProducts]   = useState<Product[]>([]);
   const [packs, setPacks]         = useState<Pack[]>([]);
   const [orders, setOrders]       = useState<Order[]>([]);
@@ -535,6 +536,20 @@ export default function AdminPage() {
         .admin-sidebar-btn{transition:background .15s ease,color .15s ease!important;}
         .admin-sidebar-btn:hover{background:rgba(255,255,255,.05)!important;}
 
+        /* ── HAMBURGER: hidden on desktop ── */
+        .admin-hamburger{
+          display:none;background:none;border:none;cursor:pointer;
+          padding:7px;border-radius:8px;color:#f0eeff;line-height:0;
+          -webkit-tap-highlight-color:transparent;
+        }
+        .admin-hamburger:hover{background:rgba(255,255,255,.07);}
+        .admin-sidebar-close{
+          display:none;background:none;border:none;cursor:pointer;
+          padding:8px;color:#7a7490;line-height:0;border-radius:8px;
+          -webkit-tap-highlight-color:transparent;
+        }
+        .admin-sidebar-close:hover{background:rgba(255,255,255,.06);color:#f0eeff;}
+
         /* ── TAB ANIMATION ── */
         .admin-tab-content{animation:tabIn .22s ease both;}
 
@@ -545,14 +560,6 @@ export default function AdminPage() {
         /* ── TOAST ── */
         .admin-toast{animation:toastSlide .3s cubic-bezier(.34,1.56,.64,1) both;}
 
-        /* ── STATUS BADGES ── */
-        .status-badge{
-          display:inline-flex;align-items:center;gap:5px;
-          padding:3px 10px;border-radius:20px;
-          font-family:'Inter',sans-serif;font-weight:600;font-size:.72rem;
-          letter-spacing:.06em;text-transform:uppercase;
-        }
-
         /* ── TABLET (641–900px) ── */
         @media(max-width:900px) and (min-width:641px){
           .admin-sidebar{width:190px!important;}
@@ -562,58 +569,73 @@ export default function AdminPage() {
         /* ══ MOBILE (≤640px) ══ */
         @media(max-width:640px){
 
-          /* Layout général */
-          .admin-layout{flex-direction:column!important;}
+          /* ── HAMBURGER visible ── */
+          .admin-hamburger{display:flex;align-items:center;justify-content:center;}
+          .admin-sidebar-close{display:flex;align-items:center;justify-content:center;}
+          .admin-drawer-top{display:flex!important;}
 
-          /* ── BOTTOM NAV ── */
+          /* ── DRAWER OVERLAY ── */
+          .admin-drawer-overlay{
+            position:fixed;inset:0;z-index:250;
+            background:rgba(0,0,0,.55);
+            backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+            animation:fadeIn .2s ease;
+          }
+          @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+          /* ── SIDEBAR AS LEFT DRAWER ── */
+          .admin-layout{flex-direction:column!important;}
           .admin-sidebar{
-            width:100%!important;position:fixed!important;
-            bottom:0!important;left:0!important;right:0!important;z-index:200!important;
-            display:flex!important;flex-direction:row!important;
-            padding:0 4px!important;
-            padding-bottom:max(env(safe-area-inset-bottom),2px)!important;
-            border-right:none!important;
-            border-top:1px solid rgba(255,255,255,.08)!important;
-            background:rgba(6,4,16,.96)!important;
-            backdrop-filter:blur(28px)!important;-webkit-backdrop-filter:blur(28px)!important;
-            overflow-x:auto!important;
-            height:calc(62px + max(env(safe-area-inset-bottom),0px))!important;
+            position:fixed!important;top:0!important;left:0!important;bottom:0!important;
+            width:min(290px,85vw)!important;height:100%!important;
+            flex-direction:column!important;display:flex!important;
+            transform:translateX(-105%)!important;
+            transition:transform .32s cubic-bezier(.4,0,.2,1)!important;
+            z-index:300!important;overflow-y:auto!important;overflow-x:hidden!important;
+            padding:0!important;
+            border-right:1px solid rgba(255,255,255,.08)!important;border-top:none!important;
+            background:#08050f!important;
+            box-shadow:12px 0 48px rgba(0,0,0,.6)!important;
             scrollbar-width:none!important;
-            align-items:stretch!important;gap:0!important;
           }
           .admin-sidebar::-webkit-scrollbar{display:none!important;}
-          .admin-section-header{display:none!important;}
+          .admin-sidebar.open{transform:translateX(0)!important;}
 
+          /* Section headers re-enabled in drawer */
+          .admin-section-header{display:flex!important;}
+
+          /* Nav buttons — horizontal layout in drawer */
           .admin-sidebar-btn{
-            flex-direction:column!important;justify-content:center!important;
-            align-items:center!important;
-            padding:6px 2px 4px!important;gap:3px!important;
-            flex:1!important;min-width:48px!important;max-width:80px!important;
-            border:none!important;
-            border-top:2.5px solid transparent!important;
-            border-radius:0!important;height:auto!important;
-            position:relative!important;
+            flex-direction:row!important;align-items:center!important;
+            justify-content:flex-start!important;
+            padding:12px 18px!important;gap:14px!important;
+            width:100%!important;flex:0 0 auto!important;
+            border:none!important;border-radius:0!important;
+            border-left:3px solid transparent!important;
+            border-top:none!important;height:auto!important;
+            text-align:left!important;min-height:44px!important;
           }
           .admin-sidebar-btn.active{
-            border-top-color:#ff2d78!important;
-            background:rgba(255,45,120,.08)!important;
+            border-left-color:#ff2d78!important;
+            background:rgba(255,45,120,.09)!important;
           }
           .admin-sidebar-btn.active .admin-nav-label{color:#ff2d78!important;}
 
-          .admin-nav-icon{font-size:1.3rem!important;line-height:1!important;display:block!important;}
+          .admin-nav-icon{font-size:1.15rem!important;line-height:1!important;display:block!important;flex-shrink:0!important;}
           .admin-nav-label{
-            font-size:.52rem!important;line-height:1.2!important;
-            white-space:nowrap!important;overflow:hidden!important;
-            text-overflow:ellipsis!important;max-width:64px!important;
-            display:block!important;font-weight:600!important;
-            letter-spacing:.04em!important;text-transform:uppercase!important;
+            font-size:.85rem!important;line-height:1!important;
+            white-space:nowrap!important;max-width:none!important;
+            display:block!important;font-weight:500!important;
+            letter-spacing:.06em!important;text-transform:uppercase!important;
           }
           .admin-badge-dot{
-            position:absolute!important;top:4px!important;right:8px!important;
-            width:7px!important;height:7px!important;border-radius:50%!important;
-            background:#ff2d78!important;padding:0!important;min-width:0!important;
-            font-size:0!important;overflow:hidden!important;margin-left:0!important;
-            border:1.5px solid #060410!important;
+            margin-left:auto!important;position:static!important;
+            width:auto!important;height:20px!important;min-width:20px!important;
+            border-radius:10px!important;border:none!important;
+            font-size:.78rem!important;overflow:visible!important;
+            display:flex!important;align-items:center!important;justify-content:center!important;
+            padding:0 6px!important;color:#000!important;font-weight:700!important;
+            font-family:'Share Tech Mono',monospace!important;
           }
 
           /* ── HEADER ── */
@@ -625,35 +647,33 @@ export default function AdminPage() {
           .admin-disconnect-short{display:inline!important;}
 
           /* ── SHOPBAR ── */
-          .admin-shopbar{padding:8px 14px!important;}
+          .admin-shopbar{padding:7px 14px!important;font-size:.78rem!important;}
 
-          /* ── BREADCRUMB: hidden mobile ── */
+          /* ── BREADCRUMB: hidden ── */
           .admin-breadcrumb{display:none!important;}
 
           /* ── MAIN CONTENT ── */
-          .admin-main{padding:12px!important;padding-bottom:82px!important;}
+          .admin-main{padding:14px!important;padding-bottom:28px!important;}
 
-          /* ── DASHBOARD ── */
+          /* ── DASHBOARD: KPI horizontal scroll strip ── */
           .admin-dash-date{display:none!important;}
           .admin-kpi-grid{
-            display:grid!important;
-            grid-template-columns:1fr 1fr!important;
-            gap:10px!important;
-            margin-bottom:14px!important;
+            display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+            overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;
+            gap:10px!important;margin-bottom:16px!important;
+            padding-bottom:6px!important;scrollbar-width:none!important;
           }
+          .admin-kpi-grid::-webkit-scrollbar{display:none!important;}
           .admin-kpi-grid>*{
-            min-width:0!important;flex:none!important;
+            min-width:150px!important;flex:0 0 150px!important;
             padding:14px 12px!important;
           }
-          .admin-kpi-grid>* > div:first-child{font-size:1.25rem!important;margin-bottom:5px!important;}
-          .admin-kpi-grid>* > div:nth-child(3){font-size:1.3rem!important;}
+          .admin-kpi-grid>* > div:first-child{font-size:1.3rem!important;margin-bottom:4px!important;}
+          .admin-kpi-grid>* > div:nth-child(3){font-size:1.2rem!important;}
 
           /* ── ORDERS ── */
           .admin-orders-actions{flex-wrap:wrap!important;gap:7px!important;}
-          .admin-orders-actions>button{
-            flex:1!important;min-width:120px!important;
-            justify-content:center!important;text-align:center!important;
-          }
+          .admin-orders-actions>button{flex:1!important;min-width:120px!important;text-align:center!important;}
 
           /* ── PRODUCTS ── */
           .admin-product-row{flex-wrap:wrap!important;gap:8px!important;}
@@ -675,14 +695,12 @@ export default function AdminPage() {
 
           /* ── TOAST ── */
           .admin-toast{
-            top:auto!important;
-            bottom:calc(68px + max(env(safe-area-inset-bottom),8px))!important;
+            top:auto!important;bottom:20px!important;
             right:12px!important;left:12px!important;
             max-width:none!important;width:auto!important;
             border-radius:12px!important;
           }
 
-          /* ── GLOBAL BUTTONS ── */
           button{min-height:36px;}
         }
       `}</style>
@@ -698,10 +716,18 @@ export default function AdminPage() {
         {toast.msg}
       </div>
 
-      <header className="admin-header" style={{background:"rgba(10,10,18,.85)",borderBottom:"1px solid rgba(255,255,255,.06)",
+      <header className="admin-header" style={{background:"rgba(10,10,18,.9)",borderBottom:"1px solid rgba(255,255,255,.06)",
         padding:"12px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",
         position:"sticky",top:0,zIndex:100,backdropFilter:"blur(20px)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {/* Hamburger — mobile only */}
+          <button className="admin-hamburger" onClick={() => setDrawerOpen(true)} title="Menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="0" y="3.5" width="20" height="2.5" rx="1.25" fill="currentColor"/>
+              <rect x="0" y="8.75" width="20" height="2.5" rx="1.25" fill="currentColor"/>
+              <rect x="0" y="14" width="14" height="2.5" rx="1.25" fill="currentColor"/>
+            </svg>
+          </button>
           <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:"#ff2d78",
             letterSpacing:".06em"}}>YASSALA</div>
           <div className="admin-header-subtitle" style={{fontFamily:"'Inter',sans-serif",fontSize:".75rem",fontWeight:500,color:"#6b7280",
@@ -753,10 +779,30 @@ export default function AdminPage() {
         </button>
       </div>
 
+      {/* ── Drawer overlay (mobile) ── */}
+      {drawerOpen && (
+        <div className="admin-drawer-overlay" onClick={() => setDrawerOpen(false)} />
+      )}
+
       <div className="admin-layout" style={{display:"flex",minHeight:"calc(100vh - 100px)"}}>
 
-        <aside className="admin-sidebar" style={{width:230,background:"#0e0e18",borderRight:"1px solid rgba(255,255,255,.06)",
+        <aside className={`admin-sidebar${drawerOpen ? " open" : ""}`} style={{width:230,background:"#0e0e18",borderRight:"1px solid rgba(255,255,255,.06)",
           padding:"12px 0",flexShrink:0,overflowY:"auto"}}>
+
+          {/* ── Drawer top header (mobile only via CSS) ── */}
+          <div className="admin-drawer-top" style={{display:"none",alignItems:"center",justifyContent:"space-between",
+            padding:"14px 18px 10px",borderBottom:"1px solid rgba(255,255,255,.06)",marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",color:"#ff2d78",letterSpacing:".06em"}}>YASSALA</div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#3a3450",letterSpacing:".2em"}}>ADMIN</div>
+            </div>
+            <button className="admin-sidebar-close" onClick={() => setDrawerOpen(false)}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M3 3L15 15M3 15L15 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+
           {([
             { section:"OPÉRATIONS", items:[
               { key:"dashboard",  label:"TABLEAU DE BORD", icon:"📊" },
@@ -792,7 +838,7 @@ export default function AdminPage() {
               {!collapsedSections[group.section] && group.items.map(item => (
                 <button key={item.key}
                   className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
-                  onClick={() => { setTab(item.key); if (item.key === "orders") setNewOrdersCount(0); }}
+                  onClick={() => { setTab(item.key); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
                     background: tab===item.key ? "rgba(255,45,120,.08)" : "transparent",
                     border:"none",borderLeft: tab===item.key ? "2px solid #ff2d78" : "2px solid transparent",
