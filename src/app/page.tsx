@@ -253,11 +253,15 @@ export default function Home() {
     addressTimerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + " Guyane française")}&limit=5&addressdetails=1&countrycodes=gf`
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ", Guyane")}&limit=5&addressdetails=1&viewbox=-54.6,6.0,-51.5,2.1`
         );
         const data = await res.json();
-        const suggestions = data.map((r: any) => ({
-          display: r.display_name.replace(/, Guyane française.*$/, "").replace(/, French Guiana.*$/, ""),
+        const guyana = data.filter((r: any) => {
+          const lat = parseFloat(r.lat); const lon = parseFloat(r.lon);
+          return lat >= 2.1 && lat <= 6.0 && lon >= -54.6 && lon <= -51.5;
+        });
+        const suggestions = guyana.map((r: any) => ({
+          display: r.display_name.replace(/, Guyane,.*$/, "").replace(/, France$/, "").replace(/, French Guiana.*$/, ""),
           lat: parseFloat(r.lat),
           lng: parseFloat(r.lon),
         }));
