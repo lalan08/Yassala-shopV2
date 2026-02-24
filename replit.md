@@ -4,6 +4,18 @@
 A drink delivery service for French Guiana (Guyane) built with Next.js. Features a neon punk aesthetic with dynamic product catalog loaded from Firebase Firestore, cart, WhatsApp/Stripe ordering, authentication, and admin panel.
 
 ## Recent Changes
+- **2026-02-24**: Email notifications via Resend
+  - Confirmation email sent to client on order creation (with order summary + tracking link)
+  - "Livreur en route" email with driver name + live tracking link
+  - "Commande livrée" email with "Commander à nouveau" button
+  - Email field added to order form (optional, for notifications)
+  - Beautiful HTML emails matching Yassala branding (dark theme, gradients)
+  - Uses Resend API (free tier: 3000 emails/month)
+- **2026-02-24**: Driver contract acceptance
+  - Contract/terms screen shown on first driver login (9 articles)
+  - Must scroll to bottom before accepting
+  - Acceptance saved with timestamp in Firebase
+  - Admin sees "CONTRAT SIGNÉ"/"NON SIGNÉ" badge + date
 - **2026-02-23**: Real-time order tracking with live map
   - Client tracking page (/suivi) shows live map with driver's position moving in real-time
   - Driver's transport type (scooter/vélo/voiture) shown as icon on the map

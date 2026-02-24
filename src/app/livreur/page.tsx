@@ -21,7 +21,7 @@ type Order = {
   createdAt: string; name?: string; address?: string; orderNumber?: number;
   orderType?: string; paidOnline?: boolean; assignedDriver?: string;
   assignedDriverName?: string; deliveredAt?: string;
-  lat?: number; lng?: number;
+  lat?: number; lng?: number; email?: string;
 };
 
 export default function LivreurPage() {
@@ -168,6 +168,20 @@ export default function LivreurPage() {
       assignedDriverName: driverData.name,
       status: "en_cours",
     });
+    const order = orders.find(o => o.id === orderId);
+    if (order?.email) {
+      fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'en_route',
+          email: order.email,
+          orderNumber: order.orderNumber || orderId.slice(-8).toUpperCase(),
+          driverName: driverData.name,
+          trackingUrl: `${window.location.origin}/suivi?id=${orderId}`,
+        }),
+      }).catch(() => {});
+    }
     showToast("Commande prise en charge !");
     setConfirmAction(null);
   };
@@ -177,6 +191,19 @@ export default function LivreurPage() {
       status: "livre",
       deliveredAt: new Date().toISOString(),
     });
+    const order = orders.find(o => o.id === orderId);
+    if (order?.email) {
+      fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'delivered',
+          email: order.email,
+          orderNumber: order.orderNumber || orderId.slice(-8).toUpperCase(),
+          shopUrl: window.location.origin,
+        }),
+      }).catch(() => {});
+    }
     showToast("Commande marquée comme livrée !");
     setConfirmAction(null);
   };

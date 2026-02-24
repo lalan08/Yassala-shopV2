@@ -66,7 +66,7 @@ export default function Home() {
   const [settings, setSettings]   = useState<Settings>(defaultSettings);
   const [loading, setLoading]     = useState(true);
   const [showCart, setShowCart]   = useState(false);
-  const [orderForm, setOrderForm] = useState({ name: "", phone: "", address: "", lat: 0, lng: 0 });
+  const [orderForm, setOrderForm] = useState({ name: "", phone: "", address: "", email: "", lat: 0, lng: 0 });
   const [addressSuggestions, setAddressSuggestions] = useState<{display: string; lat: number; lng: number}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const addressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -346,6 +346,7 @@ export default function Home() {
           lat: orderForm.lat || null,
           lng: orderForm.lng || null,
           uid: currentUser?.uid || null,
+          email: orderForm.email || null,
           orderNumber: orderNum,
         });
       });
@@ -384,8 +385,25 @@ export default function Home() {
           }),
         }).catch(() => {});
 
+        if (orderForm.email) {
+          fetch('/api/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'confirmation',
+              email: orderForm.email,
+              orderNumber: orderNum,
+              items: orderItems,
+              total: totalWithDelivery,
+              address: orderForm.address,
+              method: 'cash',
+              trackingUrl: `${window.location.origin}/suivi?id=${orderRef.id}`,
+            }),
+          }).catch(() => {});
+        }
+
         setCart([]);
-        setOrderForm({ name: "", phone: "", address: "", lat: 0, lng: 0 });
+        setOrderForm({ name: "", phone: "", address: "", email: "", lat: 0, lng: 0 });
         setCoupon(null); setCouponInput("");
         setShowCart(false);
         setOrderConfirmId(orderRef.id);
@@ -1272,6 +1290,12 @@ export default function Home() {
                       fontFamily:"'Rajdhani',sans-serif"}} />
                   <input placeholder="Téléphone" value={orderForm.phone}
                     onChange={e => setOrderForm(f => ({...f, phone: e.target.value}))}
+                    style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                      borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
+                      fontFamily:"'Rajdhani',sans-serif"}} />
+                  <input placeholder="Email (pour recevoir le suivi)" value={orderForm.email}
+                    onChange={e => setOrderForm(f => ({...f, email: e.target.value}))}
+                    type="email"
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Rajdhani',sans-serif"}} />
