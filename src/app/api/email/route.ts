@@ -47,9 +47,9 @@ function buildEmail(type: EmailType, data: any): { subject: string; html: string
             </div>
 
             <div style="background:rgba(0,245,255,.06);border:1px solid rgba(0,245,255,.12);border-radius:8px;padding:14px;margin-bottom:16px;">
-              <div style="color:#5a5470;font-size:11px;letter-spacing:2px;margin-bottom:6px;">LIVRAISON</div>
-              <div style="color:#f0eeff;font-size:14px;">📍 ${data.address || ""}</div>
-              <div style="color:#5a5470;font-size:13px;margin-top:4px;">💰 ${data.method === "cash" ? "Paiement cash à la livraison" : "Payé en ligne"}</div>
+              <div style="color:#5a5470;font-size:11px;letter-spacing:2px;margin-bottom:6px;">${data.fulfillmentType === "pickup" ? "RETRAIT" : "LIVRAISON"}</div>
+              <div style="color:#f0eeff;font-size:14px;">${data.fulfillmentType === "pickup" ? "🏪" : "📍"} ${data.address || ""}</div>
+              <div style="color:#5a5470;font-size:13px;margin-top:4px;">💰 ${data.method === "cash" ? (data.fulfillmentType === "pickup" ? "Paiement cash au retrait" : "Paiement cash à la livraison") : "Payé en ligne"}</div>
             </div>
 
             ${trackingUrl ? `
