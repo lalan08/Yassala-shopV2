@@ -8,7 +8,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const { orderNumber, name, phone, address, items, subtotal, deliveryFee, total, method, paid } = await req.json();
+  const { orderNumber, name, phone, address, items, subtotal, deliveryFee, total, method, paid, fulfillmentType, pickupSnapshot, pickupTime } = await req.json();
+
+  const isPickup = fulfillmentType === 'pickup';
 
   const lines = (items as { name: string; qty: number; price: number }[])
     .map(i => `  • ${i.qty}× ${i.name}  —  ${(i.price * i.qty).toFixed(2)}€`);
@@ -18,23 +20,27 @@ export async function POST(req: NextRequest) {
     ? '✅ *PAIEMENT VALIDÉ — Stripe*'
     : method === 'online'
     ? '⏳ Paiement en ligne Stripe (en attente)'
-    : '💵 Cash à la livraison';
+    : isPickup ? '💵 Cash au retrait' : '💵 Cash à la livraison';
 
   const now = new Date().toLocaleString('fr-FR', { timeZone: 'America/Cayenne' });
 
+  const locationLine = isPickup
+    ? `🏪 Click & Collect — ${pickupSnapshot?.name || 'Stock Yassala'}${pickupSnapshot?.city ? `, ${pickupSnapshot.city}` : ''}${pickupTime && pickupTime !== 'asap' ? ` (retrait à ${pickupTime})` : ''}`
+    : `📍 ${address}`;
+
   const text = [
-    `🔔 *NOUVELLE COMMANDE — YASSALA*`,
+    isPickup ? `🏪 *CLICK & COLLECT — YASSALA*` : `🔔 *NOUVELLE COMMANDE — YASSALA*`,
     numLabel,
     '',
     `👤 ${name}`,
     `📞 ${phone}`,
-    `📍 ${address}`,
+    locationLine,
     '',
     '*Articles :*',
     ...lines,
     '',
     `💶 Sous-total : ${Number(subtotal).toFixed(2)}€`,
-    `🚴 Livraison : ${Number(deliveryFee).toFixed(2)}€`,
+    isPickup ? `🏪 Retrait : GRATUIT` : `🚴 Livraison : ${Number(deliveryFee).toFixed(2)}€`,
     `💰 *TOTAL : ${Number(total).toFixed(2)}€*`,
     '',
     payLine,

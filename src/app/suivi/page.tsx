@@ -22,6 +22,10 @@ type Order = {
   discount?: number; coupon?: string; deliveryFee?: number;
   assignedDriver?: string; assignedDriverName?: string;
   lat?: number; lng?: number; orderNumber?: number;
+  fulfillmentType?: 'delivery'|'pickup';
+  pickupType?: 'stock'|'relay';
+  pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string};
+  pickupTime?: string;
 };
 
 type DriverLocation = {
@@ -35,10 +39,16 @@ const TRANSPORT_ICONS: Record<string, string> = {
   voiture: "🚗",
 };
 
-const STEPS = [
+const STEPS_DELIVERY = [
   { key: "nouveau",   label: "Commande reçue",    icon: "📥", desc: "Votre commande a bien été enregistrée." },
   { key: "en_cours",  label: "En route",            icon: "🏍️", desc: "Votre livreur est en route vers vous !" },
   { key: "livre",     label: "Livrée",              icon: "✅", desc: "Votre commande a été livrée. Bonne soirée !" },
+];
+
+const STEPS_PICKUP = [
+  { key: "nouveau",   label: "Commande reçue",   icon: "📥", desc: "Votre commande a bien été enregistrée." },
+  { key: "en_cours",  label: "Prête à retirer",   icon: "🏪", desc: "Votre commande est prête ! Venez la récupérer." },
+  { key: "livre",     label: "Retirée",            icon: "✅", desc: "Commande retirée. Merci et bonne soirée !" },
 ];
 
 function SuiviContent() {
@@ -149,9 +159,12 @@ function SuiviContent() {
     });
   }, [driverLoc?.lat, driverLoc?.lng, driverLoc?.transport, driverLoc?.heading]);
 
+  const isPickup = order?.fulfillmentType === 'pickup';
+  const STEPS = isPickup ? STEPS_PICKUP : STEPS_DELIVERY;
   const stepIdx = order ? STEPS.findIndex(s => s.key === order.status) : -1;
   const isCancelled = order?.status === "annule";
-  const isEnRoute = order?.status === "en_cours" && order?.assignedDriver;
+  const isEnRoute = !isPickup && order?.status === "en_cours" && order?.assignedDriver;
+  const isPickupReady = isPickup && order?.status === "en_cours";
 
   return (
     <>
@@ -214,15 +227,42 @@ function SuiviContent() {
             {/* Order Header */}
             <div style={{marginBottom:20}}>
               <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",letterSpacing:".04em",marginBottom:4}}>
-                {isCancelled ? "❌" : isEnRoute ? "🏍️" : "📦"}
+                {isCancelled ? "❌" : isEnRoute ? "🏍️" : isPickupReady ? "🏪" : isPickup ? "📦" : "📦"}
                 <span style={{color: isCancelled ? "#ff2d78" : "#f0eeff",marginLeft:8}}>
-                  {isCancelled ? "ANNULÉE" : isEnRoute ? "EN ROUTE !" : "SUIVI COMMANDE"}
+                  {isCancelled ? "ANNULÉE" : isEnRoute ? "EN ROUTE !" : isPickupReady ? "PRÊTE À RETIRER !" : "SUIVI COMMANDE"}
                 </span>
               </div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",letterSpacing:".1em"}}>
-                #{order.orderNumber || (order.id || "").slice(-8).toUpperCase()} · {new Date(order.createdAt).toLocaleString("fr-FR")}
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",letterSpacing:".1em"}}>
+                  #{order.orderNumber || (order.id || "").slice(-8).toUpperCase()} · {new Date(order.createdAt).toLocaleString("fr-FR")}
+                </div>
+                {isPickup && (
+                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                    background:"rgba(0,245,255,.12)",color:"#00f5ff",borderRadius:3,
+                    padding:"2px 7px",letterSpacing:".08em"}}>🏪 CLICK & COLLECT</span>
+                )}
               </div>
             </div>
+
+            {/* Pickup ready card */}
+            {isPickupReady && (
+              <div style={{marginBottom:20,borderRadius:14,overflow:"hidden",
+                border:"1px solid rgba(0,245,255,.3)",
+                boxShadow:"0 4px 30px rgba(0,245,255,.08)"}}>
+                <div style={{background:"linear-gradient(135deg,rgba(0,245,255,.12),rgba(184,255,0,.06))",
+                  padding:"18px 20px",display:"flex",alignItems:"center",gap:14}}>
+                  <div style={{fontSize:"2rem",animation:"bounce 1.5s infinite"}}>🏪</div>
+                  <div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.1rem",color:"#00f5ff"}}>
+                      Votre commande est prête !
+                    </div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470",marginTop:2}}>
+                      Présentez votre numéro de commande au retrait
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* LIVE MAP - Only shows when driver is en route */}
             {isEnRoute && order.lat && order.lng && (
@@ -304,9 +344,9 @@ function SuiviContent() {
                 </div>
                 {stepIdx >= 0 && (
                   <div style={{marginTop:18,padding:"12px 14px",
-                    background: isEnRoute ? "rgba(184,255,0,.06)" : "rgba(255,45,120,.06)",
+                    background: (isEnRoute || isPickupReady) ? "rgba(184,255,0,.06)" : "rgba(255,45,120,.06)",
                     borderRadius:8,fontFamily:"'Rajdhani',sans-serif",fontSize:".88rem",color:"#f0eeff",
-                    textAlign:"center",borderLeft:`3px solid ${isEnRoute ? "#b8ff00" : "#ff2d78"}`}}>
+                    textAlign:"center",borderLeft:`3px solid ${(isEnRoute || isPickupReady) ? "#b8ff00" : "#ff2d78"}`}}>
                     {STEPS[stepIdx]?.desc}
                   </div>
                 )}
@@ -365,8 +405,35 @@ function SuiviContent() {
               </div>
             </div>
 
-            {/* Address */}
-            {order.address && (
+            {/* Address / Pickup location */}
+            {isPickup ? (
+              <div style={{background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+                borderRadius:12,padding:"14px 18px",marginBottom:20}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
+                  letterSpacing:".08em",marginBottom:8}}>POINT DE RETRAIT</div>
+                <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                  <span style={{fontSize:"1.1rem",flexShrink:0}}>🏪</span>
+                  <div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",color:"#00f5ff",marginBottom:2}}>
+                      {order.pickupLocationSnapshot?.name || "Stock Yassala"}
+                    </div>
+                    <div style={{fontSize:".82rem",color:"#d0d0e0"}}>
+                      {order.pickupLocationSnapshot?.address}{order.pickupLocationSnapshot?.city ? `, ${order.pickupLocationSnapshot.city}` : ""}
+                    </div>
+                    {order.pickupLocationSnapshot?.instructions && (
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#b8ff00",marginTop:4}}>
+                        ℹ️ {order.pickupLocationSnapshot.instructions}
+                      </div>
+                    )}
+                    {order.pickupTime && order.pickupTime !== 'asap' && (
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#ff2d78",marginTop:4}}>
+                        🕐 Retrait prévu à {order.pickupTime}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : order.address && (
               <div style={{background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.1)",
                 borderRadius:12,padding:"14px 18px",marginBottom:20,
                 display:"flex",alignItems:"center",gap:10}}>
