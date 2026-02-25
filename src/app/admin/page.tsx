@@ -646,9 +646,6 @@ export default function AdminPage() {
           .admin-disconnect-full{display:none!important;}
           .admin-disconnect-short{display:inline!important;}
 
-          /* ── SHOPBAR ── */
-          .admin-shopbar{padding:7px 14px!important;font-size:.78rem!important;}
-
           /* ── BREADCRUMB: hidden ── */
           .admin-breadcrumb{display:none!important;}
 
@@ -751,32 +748,6 @@ export default function AdminPage() {
         <span style={{color:"#5a5470"}}>🏠 Accueil</span>
         <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
         <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",settings:"Paramètres"}[tab]}</span>
-      </div>
-
-      <div className="admin-shopbar" style={{background: settings.shopOpen ? "rgba(184,255,0,.08)" : "rgba(255,45,120,.08)",
-        borderBottom:`1px solid ${settings.shopOpen ? "rgba(184,255,0,.2)" : "rgba(255,45,120,.2)"}`,
-        padding:"10px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:8,height:8,borderRadius:"50%",
-            background: settings.shopOpen ? "#b8ff00" : "#ff2d78",
-            boxShadow: settings.shopOpen ? "0 0 10px #b8ff00" : "0 0 10px #ff2d78"}} />
-          <span style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",fontWeight:500,
-            color: settings.shopOpen ? "#b8ff00" : "#ff2d78",letterSpacing:".1em"}}>
-            SHOP {settings.shopOpen ? "OUVERT" : "FERMÉ"}
-          </span>
-        </div>
-        <button onClick={async () => {
-          const newSettings = { ...settings, shopOpen: !settings.shopOpen };
-          setSettings(newSettings);
-          await setDoc(doc(db, "settings", "main"), newSettings);
-          showToast(`Shop ${newSettings.shopOpen ? "ouvert" : "fermé"} ✓`);
-        }} style={{background: settings.shopOpen ? "rgba(255,45,120,.15)" : "rgba(184,255,0,.15)",
-          border:`1px solid ${settings.shopOpen ? "#ff2d78" : "#b8ff00"}`,
-          color: settings.shopOpen ? "#ff2d78" : "#b8ff00",
-          padding:"6px 16px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
-          fontSize:".82rem",letterSpacing:".1em",cursor:"pointer"}}>
-          {settings.shopOpen ? "FERMER LE SHOP" : "OUVRIR LE SHOP"}
-        </button>
       </div>
 
       {/* ── Drawer overlay (mobile) ── */}
