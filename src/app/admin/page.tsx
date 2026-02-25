@@ -28,6 +28,7 @@ type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; 
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
+type OnlineDriver = { uid: string; name: string; status: "online"|"offline"|"busy"; isOnline: boolean; lastSeen: any; };
 
 const ADMIN_PASSWORD = "yassala2025";
 
@@ -60,11 +61,13 @@ export default function AdminPage() {
   const [auth, setAuth]           = useState(false);
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dispatchFilter, setDispatchFilter] = useState<"available"|"mine"|"delivered">("available");
   const [driverLocations, setDriverLocations] = useState<any[]>([]);
   const [dispatchConfirm, setDispatchConfirm] = useState<{id:string;type:"take"|"deliver"}|null>(null);
+  const [onlineDrivers, setOnlineDrivers]     = useState<OnlineDriver[]>([]);
+  const [assignDriverModal, setAssignDriverModal] = useState<OnlineDriver|null>(null);
   const [products, setProducts]   = useState<Product[]>([]);
   const [packs, setPacks]         = useState<Pack[]>([]);
   const [orders, setOrders]       = useState<Order[]>([]);
@@ -227,8 +230,20 @@ export default function AdminPage() {
     const unsubDriverLocs = onSnapshot(collection(db, "driver_locations"), snap => {
       setDriverLocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+    const unsubOnlineDrivers = onSnapshot(collection(db, "drivers"), snap => {
+      const now = Date.now();
+      const active = snap.docs
+        .map(d => ({ uid: d.id, ...d.data() } as OnlineDriver))
+        .filter(d => {
+          if (!d.isOnline) return false;
+          if (!d.lastSeen) return false;
+          const ms = d.lastSeen.toMillis ? d.lastSeen.toMillis() : typeof d.lastSeen === "number" ? d.lastSeen : Date.parse(d.lastSeen);
+          return now - ms < 60000;
+        });
+      setOnlineDrivers(active);
+    });
 
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); };
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -777,7 +792,7 @@ export default function AdminPage() {
       <div className="admin-breadcrumb" style={{padding:"10px 24px",fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:400,color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(10,10,18,.85)"}}>
         <span style={{color:"#5a5470"}}>🏠 Accueil</span>
         <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
-        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",dispatch:"Dispatch",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",settings:"Paramètres"}[tab]}</span>
+        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",dispatch:"Dispatch",online_drivers:"Livreurs en ligne",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",drivers:"Livreurs",settings:"Paramètres"}[tab]}</span>
       </div>
 
       <div className="admin-shopbar" style={{background: settings.shopOpen ? "rgba(184,255,0,.08)" : "rgba(255,45,120,.08)",
@@ -832,11 +847,12 @@ export default function AdminPage() {
 
           {([
             { section:"OPÉRATIONS", items:[
-              { key:"dashboard",  label:"TABLEAU DE BORD", icon:"📊" },
-              { key:"orders",     label:"COMMANDES",       icon:"📦" },
-              { key:"dispatch",   label:"DISPATCH",        icon:"🗺️" },
-              { key:"users",      label:"CLIENTS",         icon:"👥" },
-              { key:"drivers",    label:"LIVREURS",        icon:"🏍️" },
+              { key:"dashboard",      label:"TABLEAU DE BORD",  icon:"📊" },
+              { key:"orders",         label:"COMMANDES",        icon:"📦" },
+              { key:"dispatch",       label:"DISPATCH",         icon:"🗺️" },
+              { key:"online_drivers", label:"EN LIGNE",         icon:"🟢" },
+              { key:"users",          label:"CLIENTS",          icon:"👥" },
+              { key:"drivers",        label:"LIVREURS",         icon:"🏍️" },
             ]},
             { section:"CATALOGUE", items:[
               { key:"products",   label:"PRODUITS",        icon:"🍺" },
@@ -1986,6 +2002,103 @@ export default function AdminPage() {
             </div>
           )}
 
+          {tab === "online_drivers" && (() => {
+            const fmtLastSeen = (lastSeen: any) => {
+              if (!lastSeen) return "Inconnu";
+              const ms = lastSeen.toMillis ? lastSeen.toMillis() : typeof lastSeen === "number" ? lastSeen : Date.parse(lastSeen);
+              const diff = Math.floor((Date.now() - ms) / 1000);
+              if (diff < 10) return "À l'instant";
+              if (diff < 60) return `Il y a ${diff}s`;
+              return `Il y a ${Math.floor(diff / 60)}min`;
+            };
+            const statusLabel = (s: string) => s === "busy" ? "Occupé" : s === "online" ? "En ligne" : "Hors ligne";
+            const statusColor = (s: string) => s === "busy" ? "#ff9500" : s === "online" ? "#b8ff00" : "#5a5470";
+            return (
+              <div style={{padding:"28px 24px"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22}}>
+                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:"#f0eeff",letterSpacing:".04em"}}>
+                    🟢 LIVREURS EN LIGNE
+                  </div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                    color: onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",
+                    letterSpacing:".12em",
+                    background: onlineDrivers.length > 0 ? "rgba(184,255,0,.08)" : "rgba(90,84,112,.08)",
+                    border:`1px solid ${onlineDrivers.length > 0 ? "rgba(184,255,0,.25)" : "rgba(90,84,112,.25)"}`,
+                    borderRadius:4,padding:"4px 12px"}}>
+                    {onlineDrivers.length} actif{onlineDrivers.length !== 1 ? "s" : ""}
+                  </div>
+                </div>
+
+                {onlineDrivers.length === 0 ? (
+                  <div style={{textAlign:"center",padding:"60px 20px",
+                    border:"1px dashed rgba(255,255,255,.08)",borderRadius:10}}>
+                    <div style={{fontSize:"2.5rem",marginBottom:12}}>🏍️</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",
+                      color:"#5a5470",letterSpacing:".1em"}}>
+                      Aucun livreur disponible
+                    </div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                      color:"#3a3450",marginTop:6,letterSpacing:".08em"}}>
+                      Les livreurs apparaissent ici lorsqu'ils sont connectés
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{display:"grid",gap:12}}>
+                    {onlineDrivers.map(driver => (
+                      <div key={driver.uid} style={{
+                        background:"#0c0918",
+                        border:"1px solid rgba(184,255,0,.15)",
+                        borderRadius:10,padding:"16px 20px",
+                        display:"flex",alignItems:"center",
+                        justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+                        <div style={{display:"flex",alignItems:"center",gap:14}}>
+                          <div style={{width:42,height:42,borderRadius:"50%",
+                            background:"rgba(184,255,0,.08)",
+                            border:"2px solid rgba(184,255,0,.3)",
+                            display:"flex",alignItems:"center",justifyContent:"center",
+                            fontSize:"1.2rem",flexShrink:0}}>
+                            🏍️
+                          </div>
+                          <div>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                              fontSize:"1rem",color:"#f0eeff",letterSpacing:".04em"}}>
+                              {driver.name || driver.uid}
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginTop:3}}>
+                              <div style={{width:6,height:6,borderRadius:"50%",
+                                background: statusColor(driver.status || "online"),
+                                boxShadow:`0 0 6px ${statusColor(driver.status || "online")}`,
+                                animation:"pulse 1.5s infinite",flexShrink:0}} />
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                                color: statusColor(driver.status || "online"),letterSpacing:".1em"}}>
+                                {statusLabel(driver.status || "online")}
+                              </span>
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                                color:"#5a5470",letterSpacing:".06em"}}>
+                                · {fmtLastSeen(driver.lastSeen)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setAssignDriverModal(driver)}
+                          style={{background:"rgba(255,45,120,.1)",
+                            border:"1px solid rgba(255,45,120,.4)",
+                            color:"#ff2d78",padding:"8px 18px",borderRadius:6,
+                            fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                            fontSize:".82rem",letterSpacing:".08em",
+                            textTransform:"uppercase",cursor:"pointer",
+                            whiteSpace:"nowrap"}}>
+                          📦 Assigner commande
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {tab === "dispatch" && (() => {
             const now = new Date();
             const todayStr = now.toISOString().slice(0, 10);
@@ -2293,6 +2406,88 @@ export default function AdminPage() {
 
         </main>
       </div>
+
+      {/* ── ASSIGN ORDER MODAL ── */}
+      {assignDriverModal && (() => {
+        const pendingOrders = orders.filter(o => o.status === "nouveau");
+        return (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:2000,
+            display:"flex",alignItems:"center",justifyContent:"center",padding:20,
+            backdropFilter:"blur(6px)"}}
+            onClick={e => e.target === e.currentTarget && setAssignDriverModal(null)}>
+            <div style={{background:"#0e0e18",border:"1px solid rgba(0,245,255,.2)",borderRadius:14,
+              padding:"28px 24px",maxWidth:480,width:"100%",maxHeight:"80vh",
+              overflowY:"auto",animation:"fadeUp .2s ease"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+                <div>
+                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
+                    color:"#f0eeff",letterSpacing:".04em"}}>
+                    ASSIGNER UNE COMMANDE
+                  </div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                    color:"#b8ff00",letterSpacing:".1em",marginTop:4}}>
+                    🏍️ {assignDriverModal.name || assignDriverModal.uid}
+                  </div>
+                </div>
+                <button onClick={() => setAssignDriverModal(null)}
+                  style={{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",
+                    color:"#5a5470",width:32,height:32,borderRadius:"50%",
+                    cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  ✕
+                </button>
+              </div>
+
+              {pendingOrders.length === 0 ? (
+                <div style={{textAlign:"center",padding:"32px 0"}}>
+                  <div style={{fontSize:"2rem",marginBottom:10}}>📭</div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",
+                    color:"#5a5470",letterSpacing:".1em"}}>
+                    Aucune commande en attente
+                  </div>
+                </div>
+              ) : (
+                <div style={{display:"grid",gap:10}}>
+                  {pendingOrders.map(order => (
+                    <div key={order.id} style={{background:"rgba(255,255,255,.03)",
+                      border:"1px solid rgba(255,255,255,.08)",borderRadius:10,padding:"14px 16px",
+                      display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                          fontSize:".9rem",color:"#f0eeff",marginBottom:3}}>
+                          #{order.orderNumber || order.id?.slice(-5).toUpperCase()} — {order.name || "Client"}
+                        </div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                          color:"#5a5470",letterSpacing:".06em",
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const}}>
+                          {order.address || order.phone}
+                        </div>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                          fontSize:".88rem",color:"#b8ff00",marginTop:3}}>
+                          {order.total?.toFixed(2)}€
+                        </div>
+                      </div>
+                      <button onClick={async () => {
+                        await updateDoc(doc(db, "orders", order.id!), {
+                          assignedDriver: assignDriverModal.uid,
+                          assignedDriverName: assignDriverModal.name || assignDriverModal.uid,
+                          status: "en_cours",
+                        });
+                        showToast(`Commande #${order.orderNumber || ""} assignée à ${assignDriverModal.name} ✓`);
+                        setAssignDriverModal(null);
+                      }} style={{background:"#ff2d78",border:"none",color:"#000",
+                        padding:"8px 14px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",
+                        fontWeight:700,fontSize:".82rem",letterSpacing:".08em",
+                        textTransform:"uppercase" as const,cursor:"pointer",flexShrink:0}}>
+                        ASSIGNER
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 }
