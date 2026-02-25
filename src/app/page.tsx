@@ -38,7 +38,7 @@ const translateAuthError = (code: string) => {
 type Product = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; isActive?: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
 type Pack = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
 type PickupLocation = { id: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
@@ -53,7 +53,9 @@ const DEFAULT_CATS: Category[] = [
 
 const defaultSettings: Settings = {
   shopOpen: true, deliveryMin: 15, freeDelivery: 50,
-  hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX"
+  hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX",
+  paymentOnlineEnabled: true, paymentCashEnabled: true,
+  fulfillmentDeliveryEnabled: true, fulfillmentPickupEnabled: true,
 };
 
 export default function Home() {
@@ -111,6 +113,19 @@ export default function Home() {
   const [pickupTimeValue, setPickupTimeValue]   = useState<string>('');
   const [pickupLocations, setPickupLocations]   = useState<PickupLocation[]>([]);
   const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string}|null>(null);
+
+  // ── Sync fulfillment/payment avec les settings ──
+  useEffect(() => {
+    const deliveryOk = settings.fulfillmentDeliveryEnabled !== false;
+    const pickupOk   = settings.fulfillmentPickupEnabled   !== false;
+    if (!deliveryOk && pickupOk)   setFulfillmentType('pickup');
+    if (!pickupOk   && deliveryOk) setFulfillmentType('delivery');
+    const onlineOk = settings.paymentOnlineEnabled !== false;
+    const cashOk   = settings.paymentCashEnabled   !== false;
+    if (!onlineOk && cashOk)   setPaymentMethod('cash');
+    if (!cashOk   && onlineOk) setPaymentMethod('online');
+  }, [settings.fulfillmentDeliveryEnabled, settings.fulfillmentPickupEnabled,
+      settings.paymentOnlineEnabled, settings.paymentCashEnabled]);
 
   const toggleLike = (id: string) => {
     setLikes(prev => {
@@ -1479,34 +1494,52 @@ export default function Home() {
                 </div>}
 
                 {/* ── FULFILLMENT TOGGLE ── */}
+                {(settings.fulfillmentDeliveryEnabled !== false || settings.fulfillmentPickupEnabled !== false) && (
                 <div style={{marginBottom:18}}>
                   <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
                     letterSpacing:".12em",marginBottom:8}}>// MODE DE RÉCEPTION</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                    <div onClick={() => setFulfillmentType('delivery')}
-                      style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
-                        border: fulfillmentType === 'delivery' ? "2px solid #ff2d78" : "1px solid rgba(255,255,255,.1)",
-                        background: fulfillmentType === 'delivery' ? "rgba(255,45,120,.08)" : "#080514",
-                        transition:"all .2s"}}>
-                      <div style={{fontSize:"1.3rem",marginBottom:3}}>🚗</div>
-                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",
-                        color: fulfillmentType === 'delivery' ? "#ff2d78" : "#7a7490",letterSpacing:".05em"}}>
-                        LIVRAISON
+                  {settings.fulfillmentDeliveryEnabled !== false && settings.fulfillmentPickupEnabled !== false ? (
+                    /* Les deux activés */
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div onClick={() => setFulfillmentType('delivery')}
+                        style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                          border: fulfillmentType === 'delivery' ? "2px solid #ff2d78" : "1px solid rgba(255,255,255,.1)",
+                          background: fulfillmentType === 'delivery' ? "rgba(255,45,120,.08)" : "#080514",
+                          transition:"all .2s"}}>
+                        <div style={{fontSize:"1.3rem",marginBottom:3}}>🚗</div>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",
+                          color: fulfillmentType === 'delivery' ? "#ff2d78" : "#7a7490",letterSpacing:".05em"}}>
+                          LIVRAISON
+                        </div>
+                      </div>
+                      <div onClick={() => setFulfillmentType('pickup')}
+                        style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                          border: fulfillmentType === 'pickup' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.1)",
+                          background: fulfillmentType === 'pickup' ? "rgba(0,245,255,.08)" : "#080514",
+                          transition:"all .2s"}}>
+                        <div style={{fontSize:"1.3rem",marginBottom:3}}>🏪</div>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",
+                          color: fulfillmentType === 'pickup' ? "#00f5ff" : "#7a7490",letterSpacing:".05em"}}>
+                          CLICK & COLLECT
+                        </div>
                       </div>
                     </div>
-                    <div onClick={() => setFulfillmentType('pickup')}
-                      style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
-                        border: fulfillmentType === 'pickup' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.1)",
-                        background: fulfillmentType === 'pickup' ? "rgba(0,245,255,.08)" : "#080514",
-                        transition:"all .2s"}}>
-                      <div style={{fontSize:"1.3rem",marginBottom:3}}>🏪</div>
+                  ) : (
+                    /* Un seul mode disponible — affichage informatif uniquement */
+                    <div style={{padding:"12px",borderRadius:6,textAlign:"center",
+                      border:`2px solid ${settings.fulfillmentDeliveryEnabled !== false ? "#ff2d78" : "#00f5ff"}`,
+                      background:`rgba(${settings.fulfillmentDeliveryEnabled !== false ? "255,45,120" : "0,245,255"},.06)`}}>
+                      <div style={{fontSize:"1.3rem",marginBottom:3}}>
+                        {settings.fulfillmentDeliveryEnabled !== false ? "🚗" : "🏪"}
+                      </div>
                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",
-                        color: fulfillmentType === 'pickup' ? "#00f5ff" : "#7a7490",letterSpacing:".05em"}}>
-                        CLICK & COLLECT
+                        color: settings.fulfillmentDeliveryEnabled !== false ? "#ff2d78" : "#00f5ff",letterSpacing:".05em"}}>
+                        {settings.fulfillmentDeliveryEnabled !== false ? "LIVRAISON" : "CLICK & COLLECT"}
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
+                )}
 
                 {/* ── TOTALS ── */}
                 <div style={{borderTop:"1px solid rgba(255,45,120,.2)",paddingTop:16,marginBottom:20}}>
@@ -1724,9 +1757,12 @@ export default function Home() {
                     letterSpacing:".12em",marginBottom:10,textTransform:"uppercase"}}>
                     // MODE DE PAIEMENT
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:`${settings.paymentOnlineEnabled !== false && settings.paymentCashEnabled !== false ? "1fr 1fr" : "1fr"}`,gap:8}}>
+                    {settings.paymentOnlineEnabled !== false && (
                     <div onClick={() => setPaymentMethod('online')}
-                      style={{padding:"12px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                      style={{padding:"12px 8px",borderRadius:6,
+                        cursor: settings.paymentCashEnabled !== false ? "pointer" : "default",
+                        textAlign:"center",
                         border: paymentMethod === 'online' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.1)",
                         background: paymentMethod === 'online' ? "rgba(0,245,255,.08)" : "#080514",
                         transition:"all .2s"}}>
@@ -1739,8 +1775,12 @@ export default function Home() {
                         Carte · Apple Pay
                       </div>
                     </div>
+                    )}
+                    {settings.paymentCashEnabled !== false && (
                     <div onClick={() => setPaymentMethod('cash')}
-                      style={{padding:"12px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                      style={{padding:"12px 8px",borderRadius:6,
+                        cursor: settings.paymentOnlineEnabled !== false ? "pointer" : "default",
+                        textAlign:"center",
                         border: paymentMethod === 'cash' ? "2px solid #ff2d78" : "1px solid rgba(255,255,255,.1)",
                         background: paymentMethod === 'cash' ? "rgba(255,45,120,.08)" : "#080514",
                         transition:"all .2s"}}>
@@ -1753,10 +1793,13 @@ export default function Home() {
                         Payer à la réception
                       </div>
                     </div>
+                    )}
                   </div>
                 </div>
 
-                <button onClick={submitOrder} disabled={submitting || cartTotal < settings.deliveryMin}
+                <button onClick={submitOrder} disabled={submitting || cartTotal < settings.deliveryMin
+                    || (settings.paymentOnlineEnabled === false && settings.paymentCashEnabled === false)
+                    || (settings.fulfillmentDeliveryEnabled === false && settings.fulfillmentPickupEnabled === false)}
                   style={{width:"100%",
                     background: submitting ? "#5a5470" : paymentMethod === 'online' ? "#00f5ff" : "#ff2d78",
                     color: submitting ? "#f0eeff" : "#000",
