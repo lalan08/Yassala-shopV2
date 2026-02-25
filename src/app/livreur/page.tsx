@@ -48,6 +48,10 @@ export default function LivreurPage() {
   const [showContract, setShowContract] = useState(false);
   const [contractScrolled, setContractScrolled] = useState(false);
   const contractRef = useRef<HTMLDivElement>(null);
+  const [showPasswordSetup, setShowPasswordSetup] = useState(false);
+  const [newDriverPwd, setNewDriverPwd] = useState("");
+  const [newDriverPwd2, setNewDriverPwd2] = useState("");
+  const [pwdSetupError, setPwdSetupError] = useState("");
 
   const showToast = (msg: string) => {
     setToast({ msg, show: true });
@@ -97,6 +101,10 @@ export default function LivreurPage() {
     if (data.transport) setTransportType(data.transport);
     if (!data.contractAccepted) {
       setShowContract(true);
+    }
+    // Premier login → demander au livreur de créer son propre mot de passe
+    if (!data.passwordSet) {
+      setShowPasswordSetup(true);
     }
     setLoggedIn(true);
     try { localStorage.setItem("yassala_driver", JSON.stringify({ phone: phone.trim() })); } catch {}
@@ -430,6 +438,94 @@ export default function LivreurPage() {
               fontSize:".78rem",textDecoration:"none",letterSpacing:".1em"}}>
               ← RETOUR AU SHOP
             </a>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+
+  // ── Écran de création de mot de passe (premier login) ──
+  if (showPasswordSetup) return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#0a0a12;color:#f0eeff;font-family:'Inter',sans-serif;min-height:100vh;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+      `}</style>
+      <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",
+        justifyContent:"center",padding:"24px 16px",background:"#0a0a12"}}>
+        <div style={{maxWidth:420,width:"100%",animation:"fadeUp .3s both"}}>
+
+          {/* Header */}
+          <div style={{textAlign:"center",marginBottom:28}}>
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2rem",letterSpacing:".04em",
+              background:"linear-gradient(135deg,#00f5ff,#ff2d78)",WebkitBackgroundClip:"text",
+              WebkitTextFillColor:"transparent",marginBottom:6}}>YASSALA</div>
+            <div style={{fontSize:"1.5rem",marginBottom:8}}>🔐</div>
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",color:"#f0eeff",
+              letterSpacing:".04em",marginBottom:8}}>CRÉE TON MOT DE PASSE</div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",
+              lineHeight:1.6}}>
+              L'admin t'a donné un mot de passe temporaire.<br/>
+              Choisis maintenant ton propre mot de passe.
+            </div>
+          </div>
+
+          <div style={{background:"#0c0918",border:"1px solid rgba(0,245,255,.15)",borderRadius:12,
+            padding:"24px 20px",display:"grid",gap:14}}>
+
+            {pwdSetupError && (
+              <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.3)",
+                borderRadius:6,padding:"10px 14px",color:"#ff2d78",
+                fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",textAlign:"center"}}>
+                {pwdSetupError}
+              </div>
+            )}
+
+            <div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470",
+                letterSpacing:".1em",marginBottom:6}}>NOUVEAU MOT DE PASSE</div>
+              <input type="password" value={newDriverPwd}
+                onChange={e => { setNewDriverPwd(e.target.value); setPwdSetupError(""); }}
+                placeholder="Minimum 6 caractères"
+                style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                  borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",
+                  fontFamily:"'Rajdhani',sans-serif"}} />
+            </div>
+
+            <div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470",
+                letterSpacing:".1em",marginBottom:6}}>CONFIRMER LE MOT DE PASSE</div>
+              <input type="password" value={newDriverPwd2}
+                onChange={e => { setNewDriverPwd2(e.target.value); setPwdSetupError(""); }}
+                placeholder="Répète ton mot de passe"
+                style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                  borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",
+                  fontFamily:"'Rajdhani',sans-serif"}} />
+            </div>
+
+            <button onClick={async () => {
+              if (newDriverPwd.length < 6) { setPwdSetupError("Minimum 6 caractères."); return; }
+              if (newDriverPwd !== newDriverPwd2) { setPwdSetupError("Les mots de passe ne correspondent pas."); return; }
+              try {
+                await updateDoc(doc(db, "driver_applications", driverData.id), {
+                  password: newDriverPwd,
+                  passwordSet: true,
+                });
+                setDriverData((d: any) => ({ ...d, password: newDriverPwd, passwordSet: true }));
+                setNewDriverPwd(""); setNewDriverPwd2(""); setPwdSetupError("");
+                setShowPasswordSetup(false);
+                showToast("Mot de passe créé ! Bienvenue 🎉");
+              } catch {
+                setPwdSetupError("Erreur lors de l'enregistrement. Réessaie.");
+              }
+            }}
+              style={{background:"linear-gradient(135deg,#00f5ff,#0090ff)",border:"none",color:"#000",
+                padding:"14px",borderRadius:8,fontFamily:"'Black Ops One',cursive",fontSize:"1rem",
+                letterSpacing:".06em",cursor:"pointer",marginTop:4}}>
+              ✓ ENREGISTRER MON MOT DE PASSE
+            </button>
           </div>
         </div>
       </div>
