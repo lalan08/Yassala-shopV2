@@ -651,9 +651,9 @@ export default function Home() {
           .nav-main{padding:10px 14px !important;}
           .nav-logo{font-size:1.4rem !important;}
           .nav-status{display:none !important;}
-          .nav-driver-btn{display:none !important;}
+          .nav-driver-btn{padding:7px 10px !important;font-size:.75rem !important;}
+          .nav-driver-label{display:none !important;}
           .nav-cart-btn{padding:7px 12px !important;font-size:.78rem !important;gap:5px !important;}
-          .floating-driver-btn{bottom:82px !important;padding:10px 14px !important;border-radius:12px !important;font-size:.75rem !important;}
           .floating-driver-text{display:none !important;}
           .hero-content{padding:36px 16px 72px !important;max-width:100% !important;}
           .hero-content h1{font-size:clamp(2.6rem,14vw,4.5rem) !important;}
@@ -715,7 +715,15 @@ export default function Home() {
             animation: settings.shopOpen ? "pulse 1.5s infinite" : "none"}} />
           {settings.shopOpen ? `OPEN · ${settings.hours}` : "FERMÉ"}
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {/* Devenir livreur — visible en haut sur desktop + mobile */}
+          <button className="nav-driver-btn" onClick={() => setShowDriverForm(true)}
+            style={{background:"rgba(0,245,255,.08)",border:"1px solid rgba(0,245,255,.35)",
+              color:"#00f5ff",padding:"8px 14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+              fontSize:".82rem",letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",
+              display:"flex",alignItems:"center",gap:6,borderRadius:6,whiteSpace:"nowrap"}}>
+            🏍️ <span className="nav-driver-label">LIVREUR</span>
+          </button>
           <button className="nav-cart-btn" onClick={openCart} style={{background:"transparent",border:"1px solid #ff2d78",
             color:"#ff2d78",padding:"8px 18px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
             fontSize:".85rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",
@@ -2228,19 +2236,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* ── FLOATING DRIVER BUTTON ── */}
-      <button className="floating-driver-btn" onClick={() => setShowDriverForm(true)}
-        style={{position:"fixed",bottom:90,left:18,zIndex:900,
-          background:"linear-gradient(135deg,#00f5ff,#0090ff)",
-          border:"none",borderRadius:14,padding:"12px 18px",
-          color:"#000",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-          fontSize:".82rem",letterSpacing:".06em",textTransform:"uppercase",
-          cursor:"pointer",display:"flex",alignItems:"center",gap:8,
-          boxShadow:"0 4px 20px rgba(0,245,255,.35),0 0 40px rgba(0,245,255,.15)",
-          animation:"floatPulse 3s ease-in-out infinite",transition:"transform .2s"}}>
-        <span style={{fontSize:"1.2rem"}}>🏍️</span>
-        <span className="floating-driver-text">Devenir livreur</span>
-      </button>
+      {/* floating-driver-btn retiré — bouton déplacé dans la nav en haut */}
 
       {/* ── DRIVER REGISTRATION MODAL ── */}
       {showDriverForm && (
