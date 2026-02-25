@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, query, where, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
@@ -44,6 +44,7 @@ export default function LivreurPage() {
   const [gpsActive, setGpsActive] = useState(false);
   const [transportType, setTransportType] = useState<"scooter"|"velo"|"voiture">("scooter");
   const watchIdRef = useRef<number | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showContract, setShowContract] = useState(false);
   const [contractScrolled, setContractScrolled] = useState(false);
   const contractRef = useRef<HTMLDivElement>(null);
@@ -91,13 +92,27 @@ export default function LivreurPage() {
       setLoginError("Mot de passe incorrect.");
       return;
     }
-    setDriverData({ id: driverDoc.id, ...data });
+    const driver = { id: driverDoc.id, ...data };
+    setDriverData(driver);
     if (data.transport) setTransportType(data.transport);
     if (!data.contractAccepted) {
       setShowContract(true);
     }
     setLoggedIn(true);
     try { localStorage.setItem("yassala_driver", JSON.stringify({ phone: phone.trim() })); } catch {}
+
+    // ── Marquer EN LIGNE dans la collection "drivers" ──
+    const goOnline = () => setDoc(doc(db, "drivers", driverDoc.id), {
+      uid: driverDoc.id,
+      name: data.name || phone.trim(),
+      status: "online",
+      isOnline: true,
+      lastSeen: serverTimestamp(),
+    }, { merge: true });
+    goOnline();
+    // Heartbeat toutes les 20 secondes pour rester visible dans l'admin
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    heartbeatRef.current = setInterval(goOnline, 20000);
   };
 
   const acceptContract = async () => {
@@ -168,6 +183,8 @@ export default function LivreurPage() {
       assignedDriverName: driverData.name,
       status: "en_cours",
     });
+    // Passer en "busy" dans la collection drivers
+    setDoc(doc(db, "drivers", driverData.id), { status: "busy", lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
     const order = orders.find(o => o.id === orderId);
     if (order?.email) {
       fetch('/api/email', {
@@ -191,6 +208,8 @@ export default function LivreurPage() {
       status: "livre",
       deliveredAt: new Date().toISOString(),
     });
+    // Repasser "online" si plus aucune commande active après livraison
+    setDoc(doc(db, "drivers", driverData.id), { status: "online", lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
     const order = orders.find(o => o.id === orderId);
     if (order?.email) {
       fetch('/api/email', {
@@ -253,7 +272,10 @@ export default function LivreurPage() {
   }, [orders, driverData, gpsActive, startGPS, stopGPS]);
 
   useEffect(() => {
-    return () => { stopGPS(); };
+    return () => {
+      stopGPS();
+      if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+    };
   }, []);
 
   const availableOrders = orders.filter(o => (o.status === "nouveau" || o.status === "en_cours") && !o.assignedDriver);
@@ -641,7 +663,14 @@ export default function LivreurPage() {
             <div style={{fontWeight:600,fontSize:".85rem"}}>{driverData?.name}</div>
             <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470"}}>{driverData?.zone || driverData?.phone}</div>
           </div>
-          <button onClick={() => { stopGPS(); setLoggedIn(false); setDriverData(null); setPhone(""); setPassword(""); localStorage.removeItem("yassala_driver"); }}
+          <button onClick={() => {
+            stopGPS();
+            if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
+            if (driverData?.id) {
+              setDoc(doc(db, "drivers", driverData.id), { isOnline: false, status: "offline", lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
+            }
+            setLoggedIn(false); setDriverData(null); setPhone(""); setPassword(""); localStorage.removeItem("yassala_driver");
+          }}
             style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
               color:"#5a5470",padding:"6px 12px",borderRadius:6,
               fontFamily:"'Inter',sans-serif",fontSize:".78rem",cursor:"pointer"}}>
