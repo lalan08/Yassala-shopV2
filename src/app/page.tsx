@@ -596,7 +596,7 @@ export default function Home() {
           .nav-status{display:none !important;}
           .nav-driver-btn{display:none !important;}
           .nav-cart-btn{padding:7px 12px !important;font-size:.78rem !important;gap:5px !important;}
-          .floating-driver-btn{bottom:24px !important;padding:10px 14px !important;border-radius:12px !important;font-size:.75rem !important;}
+          .floating-driver-btn{bottom:82px !important;padding:10px 14px !important;border-radius:12px !important;font-size:.75rem !important;}
           .floating-driver-text{display:none !important;}
           .hero-content{padding:36px 16px 72px !important;max-width:100% !important;}
           .hero-content h1{font-size:clamp(2.6rem,14vw,4.5rem) !important;}
@@ -618,7 +618,8 @@ export default function Home() {
         .cat-bar{overflow-x:auto;flex-wrap:nowrap !important;scrollbar-width:none;-ms-overflow-style:none;}
         .cat-bar::-webkit-scrollbar{display:none;}
         .cat-btn{flex-shrink:0;}
-        body{padding-bottom:24px;}
+        /* Padding body pour la barre de navigation fixe en bas */
+        body{padding-bottom:90px;}
       `}</style>
 
       <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,
@@ -658,24 +659,6 @@ export default function Home() {
           {settings.shopOpen ? `OPEN · ${settings.hours}` : "FERMÉ"}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={async () => {
-            const newSettings = { ...settings, shopOpen: !settings.shopOpen };
-            setSettings(newSettings);
-            await setDoc(doc(db, "settings", "main"), newSettings);
-            showToast(newSettings.shopOpen ? "Shop ouvert ✓" : "Shop fermé ✓");
-          }} style={{
-            background: settings.shopOpen ? "rgba(255,45,120,.08)" : "rgba(184,255,0,.08)",
-            border: `1px solid ${settings.shopOpen ? "#ff2d78" : "#b8ff00"}`,
-            color: settings.shopOpen ? "#ff2d78" : "#b8ff00",
-            padding:"6px 12px",borderRadius:3,
-            fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
-            letterSpacing:".1em",cursor:"pointer",
-            display:"flex",alignItems:"center",gap:6}}>
-            <div style={{width:5,height:5,borderRadius:"50%",
-              background: settings.shopOpen ? "#ff2d78" : "#b8ff00",
-              animation: settings.shopOpen ? "pulse 1.5s infinite" : "none"}} />
-            {settings.shopOpen ? "FERMER" : "OUVRIR"}
-          </button>
           <button className="nav-cart-btn" onClick={openCart} style={{background:"transparent",border:"1px solid #ff2d78",
             color:"#ff2d78",padding:"8px 18px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
             fontSize:".85rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",
@@ -1763,9 +1746,93 @@ export default function Home() {
         </div>
       )}
 
+      {/* ── BOTTOM NAV BAR ── */}
+      <nav style={{
+        position:"fixed", bottom:0, left:0, right:0, zIndex:800,
+        background:"rgba(4,2,10,0.97)",
+        backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)",
+        paddingTop:10,
+        paddingBottom:"max(14px, env(safe-area-inset-bottom))",
+        paddingLeft:12, paddingRight:12,
+        borderTop:"1px solid rgba(0,245,255,.12)",
+        boxShadow:"0 -8px 40px rgba(0,0,0,.8), 0 -1px 0 rgba(0,245,255,.08)",
+      }}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-evenly",maxWidth:520,margin:"0 auto"}}>
+
+          {/* Accueil */}
+          <button onClick={() => window.scrollTo({top:0,behavior:"smooth"})}
+            style={{width:54,height:54,borderRadius:"50%",
+              background:"rgba(0,245,255,.05)",
+              border:"1px solid rgba(0,245,255,.25)",
+              boxShadow:"0 0 14px rgba(0,245,255,.1), inset 0 1px 0 rgba(255,255,255,.04)",
+              cursor:"pointer",flexShrink:0,
+              display:"flex",alignItems:"center",justifyContent:"center",color:"#00f5ff"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+              <polyline points="9,22 9,12 15,12 15,22"/>
+            </svg>
+          </button>
+
+          {/* Catalogue */}
+          <button onClick={() => document.getElementById("catalogue")?.scrollIntoView({behavior:"smooth"})}
+            style={{width:54,height:54,borderRadius:"50%",
+              background:"rgba(0,245,255,.05)",
+              border:"1px solid rgba(0,245,255,.25)",
+              boxShadow:"0 0 14px rgba(0,245,255,.1), inset 0 1px 0 rgba(255,255,255,.04)",
+              cursor:"pointer",flexShrink:0,
+              display:"flex",alignItems:"center",justifyContent:"center",color:"#00f5ff"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+
+          {/* Panier */}
+          <button onClick={openCart}
+            style={{width:54,height:54,borderRadius:"50%",
+              background:"rgba(0,245,255,.05)",
+              border:"1px solid rgba(0,245,255,.25)",
+              boxShadow:"0 0 14px rgba(0,245,255,.1), inset 0 1px 0 rgba(255,255,255,.04)",
+              cursor:"pointer",flexShrink:0,position:"relative",
+              display:"flex",alignItems:"center",justifyContent:"center",color:"#00f5ff"}}>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/>
+            </svg>
+            {cartCount > 0 && (
+              <span style={{position:"absolute",top:5,right:5,
+                background:"linear-gradient(135deg,#ff2d78,#ff6b9d)",
+                color:"#000",borderRadius:"50%",
+                minWidth:16,height:16,fontSize:".5rem",fontWeight:900,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                border:"1.5px solid rgba(4,2,10,.8)",lineHeight:1,
+                boxShadow:"0 0 8px rgba(255,45,120,.7)"}}>
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </button>
+
+          {/* Compte / Connexion */}
+          <button onClick={() => currentUser ? (setShowHistory(true), fetchHistory()) : setShowAuthModal(true)}
+            style={{width:54,height:54,borderRadius:"50%",
+              background: currentUser ? "rgba(255,45,120,.08)" : "rgba(0,245,255,.05)",
+              border: currentUser ? "1px solid rgba(255,45,120,.4)" : "1px solid rgba(0,245,255,.25)",
+              boxShadow: currentUser ? "0 0 18px rgba(255,45,120,.2), inset 0 1px 0 rgba(255,255,255,.04)" : "0 0 14px rgba(0,245,255,.1), inset 0 1px 0 rgba(255,255,255,.04)",
+              cursor:"pointer",flexShrink:0,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              color: currentUser ? "#ff2d78" : "#00f5ff"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </button>
+
+        </div>
+      </nav>
+
       {/* ── FLOATING DRIVER BUTTON ── */}
       <button className="floating-driver-btn" onClick={() => setShowDriverForm(true)}
-        style={{position:"fixed",bottom:24,left:18,zIndex:900,
+        style={{position:"fixed",bottom:90,left:18,zIndex:900,
           background:"linear-gradient(135deg,#00f5ff,#0090ff)",
           border:"none",borderRadius:14,padding:"12px 18px",
           color:"#000",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
@@ -1903,7 +1970,7 @@ export default function Home() {
       {/* ── SCROLL TO TOP ── */}
       {showScrollTop && (
         <button onClick={() => window.scrollTo({top:0,behavior:"smooth"})}
-          style={{position:"fixed",bottom:24,right:18,width:40,height:40,borderRadius:"50%",
+          style={{position:"fixed",bottom:90,right:18,width:40,height:40,borderRadius:"50%",
             background:"#ff2d78",border:"none",color:"#000",fontSize:"1.1rem",
             cursor:"pointer",zIndex:900,display:"flex",alignItems:"center",justifyContent:"center",
             boxShadow:"0 0 18px rgba(255,45,120,.5)",transition:"opacity .3s",
