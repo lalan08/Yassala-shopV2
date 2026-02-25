@@ -41,6 +41,7 @@ type Pack = { id: string; name: string; tag: string; emoji: string; items: strin
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
+type PickupLocation = { id: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
 
 // Catégories par défaut si Firestore est vide
 const DEFAULT_CATS: Category[] = [
@@ -102,6 +103,14 @@ export default function Home() {
   const [driverForm, setDriverForm]         = useState({name:"",phone:"",email:"",zone:"",vehicle:"moto",message:""});
   const [driverSubmitting, setDriverSubmitting] = useState(false);
   const [driverSuccess, setDriverSuccess]       = useState(false);
+  // ── CLICK & COLLECT ──
+  const [fulfillmentType, setFulfillmentType]   = useState<'delivery'|'pickup'>('delivery');
+  const [pickupType, setPickupType]             = useState<'stock'|'relay'>('stock');
+  const [pickupLocationId, setPickupLocationId] = useState<string>('');
+  const [pickupTimeMode, setPickupTimeMode]     = useState<'asap'|'scheduled'>('asap');
+  const [pickupTimeValue, setPickupTimeValue]   = useState<string>('');
+  const [pickupLocations, setPickupLocations]   = useState<PickupLocation[]>([]);
+  const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string}|null>(null);
 
   const toggleLike = (id: string) => {
     setLikes(prev => {
@@ -148,7 +157,13 @@ export default function Home() {
         setOrderForm(f => ({ ...f, email: f.email || user.email! }));
       }
     });
-    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubBanners(); unsubCats(); unsubAuth(); };
+    const unsubPickupLocs = onSnapshot(collection(db, "pickup_locations_v1"), snap => {
+      setPickupLocations(
+        snap.docs.map(d => ({ id: d.id, ...d.data() } as PickupLocation))
+          .filter(l => l.isActive)
+      );
+    });
+    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubBanners(); unsubCats(); unsubAuth(); unsubPickupLocs(); };
   }, []);
 
   // ── CART PERSISTENCE ──
@@ -250,7 +265,8 @@ export default function Home() {
     return Math.min(coupon.value, cartTotal);
   };
   const discountedTotal = cartTotal - getDiscount();
-  const finalTotal = discountedTotal + (discountedTotal >= settings.freeDelivery ? 0 : 3);
+  const deliveryFeeDisplay = fulfillmentType === 'pickup' ? 0 : (discountedTotal >= settings.freeDelivery ? 0 : 3);
+  const finalTotal = discountedTotal + deliveryFeeDisplay;
 
   const searchAddress = useCallback((q: string) => {
     if (addressTimerRef.current) clearTimeout(addressTimerRef.current);
@@ -287,16 +303,23 @@ export default function Home() {
   };
 
   const submitOrder = async () => {
-    if (!orderForm.name || !orderForm.phone || !orderForm.address) {
-      showToast("Remplis tous les champs !");
+    // ── Validation commune ──
+    if (!orderForm.name || !orderForm.phone) {
+      showToast("Remplis ton nom et téléphone !");
       return;
     }
     if (!orderForm.email) {
-      showToast("L'email est requis pour recevoir les notifications de commande !");
+      showToast("L'email est requis pour recevoir les notifications !");
       return;
     }
-    if (!orderForm.lat || !orderForm.lng) {
-      showToast("Sélectionne une adresse dans la liste pour la localiser 📍");
+    // Validation spécifique livraison
+    if (fulfillmentType === 'delivery') {
+      if (!orderForm.address) { showToast("Remplis l'adresse de livraison !"); return; }
+      if (!orderForm.lat || !orderForm.lng) { showToast("Sélectionne une adresse dans la liste 📍"); return; }
+    }
+    // Validation spécifique click & collect
+    if (fulfillmentType === 'pickup' && pickupType === 'relay' && !pickupLocationId) {
+      showToast("Choisis un point relais !");
       return;
     }
 
@@ -310,32 +333,39 @@ export default function Home() {
     try {
       const orderRef = doc(collection(db, "orders"));
       const orderItems = cart.map(item => `${item.qty}× ${item.name} (${item.price.toFixed(2)}€)`).join("\n");
-      const deliveryFee = discountedTotal >= settings.freeDelivery ? 0 : 3;
+      const deliveryFee = fulfillmentType === 'pickup' ? 0 : (discountedTotal >= settings.freeDelivery ? 0 : 3);
       const totalWithDelivery = discountedTotal + deliveryFee;
       const discount = getDiscount();
+
+      // ── Pickup location snapshot ──
+      const STOCK_LOCATION = { name: "Yassala Stock", address: "Retrait chez Yassala", city: "Cayenne", instructions: "Présente ton numéro de commande à l'accueil." };
+      let pickupSnapshot: any = null;
+      if (fulfillmentType === 'pickup') {
+        if (pickupType === 'relay') {
+          const loc = pickupLocations.find(l => l.id === pickupLocationId);
+          pickupSnapshot = loc ? { name: loc.name, address: loc.address, city: loc.city, instructions: loc.instructions } : STOCK_LOCATION;
+        } else {
+          pickupSnapshot = STOCK_LOCATION;
+        }
+      }
+      const resolvedPickupTime = fulfillmentType === 'pickup' ? (pickupTimeMode === 'asap' ? 'asap' : pickupTimeValue || 'asap') : null;
 
       // Numéro de commande séquentiel (compteur atomique)
       let orderNum = 1;
       const counterRef = doc(db, "settings", "orderCounter");
 
-      // Vérifier le stock, décrémenter, incrémenter le compteur (transaction atomique)
       await runTransaction(db, async (transaction) => {
-        // ── Lectures ──
         const prodRefs = cart.map(item => doc(db, "products", item.id));
         const prodDocs = await Promise.all(prodRefs.map(ref => transaction.get(ref)));
         const counterSnap = await transaction.get(counterRef);
         orderNum = (counterSnap.exists() ? (counterSnap.data().count as number) : 0) + 1;
 
-        // Vérifier stock
         for (let i = 0; i < cart.length; i++) {
-          const item = cart[i];
-          const prodDoc = prodDocs[i];
+          const item = cart[i]; const prodDoc = prodDocs[i];
           if (!prodDoc.exists()) throw new Error(`Produit ${item.name} introuvable`);
           const currentStock = prodDoc.data().stock || 0;
           if (currentStock < item.qty) throw new Error(`Stock insuffisant pour ${item.name} (${currentStock} restant)`);
         }
-
-        // ── Écritures ──
         for (let i = 0; i < cart.length; i++) {
           transaction.update(prodRefs[i], { stock: (prodDocs[i].data().stock || 0) - cart[i].qty });
         }
@@ -344,16 +374,21 @@ export default function Home() {
           items: orderItems,
           total: totalWithDelivery,
           subtotal: cartTotal,
-          discount: discount,
+          discount,
           coupon: coupon?.code || null,
           deliveryFee,
+          fulfillmentType,
+          pickupType: fulfillmentType === 'pickup' ? pickupType : null,
+          pickupLocationId: fulfillmentType === 'pickup' ? (pickupType === 'relay' ? pickupLocationId : 'stock_default') : null,
+          pickupLocationSnapshot: pickupSnapshot,
+          pickupTime: resolvedPickupTime,
           status: "nouveau",
           createdAt: new Date().toISOString(),
           phone: orderForm.phone,
           name: orderForm.name,
-          address: orderForm.address,
-          lat: orderForm.lat || null,
-          lng: orderForm.lng || null,
+          address: fulfillmentType === 'delivery' ? orderForm.address : (pickupSnapshot?.address || ''),
+          lat: fulfillmentType === 'delivery' ? (orderForm.lat || null) : null,
+          lng: fulfillmentType === 'delivery' ? (orderForm.lng || null) : null,
           uid: currentUser?.uid || null,
           email: orderForm.email || null,
           orderNumber: orderNum,
@@ -368,10 +403,11 @@ export default function Home() {
             items: cart.map(item => ({ product: { name: item.name, price: item.price, description: '' }, quantity: item.qty })),
             customerName: orderForm.name,
             customerPhone: orderForm.phone,
-            customerAddress: orderForm.address,
+            customerAddress: fulfillmentType === 'delivery' ? orderForm.address : (pickupSnapshot?.address || 'Click & Collect'),
             deliveryFee,
             orderNum,
             orderId: orderRef.id,
+            fulfillmentType,
           }),
         });
         const data = await res.json();
@@ -385,12 +421,15 @@ export default function Home() {
             orderNumber: orderNum,
             name: orderForm.name,
             phone: orderForm.phone,
-            address: orderForm.address,
+            address: fulfillmentType === 'delivery' ? orderForm.address : `🏪 Click & Collect — ${pickupSnapshot?.name || 'Stock'}`,
             items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
             subtotal: cartTotal,
             deliveryFee,
             total: totalWithDelivery,
             method: 'cash',
+            fulfillmentType,
+            pickupSnapshot,
+            pickupTime: resolvedPickupTime,
           }),
         }).catch(() => {});
 
@@ -404,7 +443,7 @@ export default function Home() {
               orderNumber: orderNum,
               items: orderItems,
               total: totalWithDelivery,
-              address: orderForm.address,
+              address: fulfillmentType === 'delivery' ? orderForm.address : `Click & Collect — ${pickupSnapshot?.name}`,
               method: 'cash',
               trackingUrl: `${window.location.origin}/suivi?id=${orderRef.id}`,
             }),
@@ -414,6 +453,9 @@ export default function Home() {
         setCart([]);
         setOrderForm({ name: "", phone: "", address: "", email: "", lat: 0, lng: 0 });
         setCoupon(null); setCouponInput("");
+        setFulfillmentType('delivery'); setPickupType('stock');
+        setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
+        setLastConfirmPickup(fulfillmentType === 'pickup' ? { type: pickupType, snapshot: pickupSnapshot, time: resolvedPickupTime } : null);
         setShowCart(false);
         setOrderConfirmId(orderRef.id);
         setOrderConfirmNum(orderNum);
@@ -1152,24 +1194,65 @@ export default function Home() {
       {/* ORDER CONFIRMATION OVERLAY */}
       {orderConfirmId && (
         <div style={{position:"fixed",inset:0,background:"rgba(4,2,10,.97)",zIndex:2000,
-          display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div style={{background:"#0c0918",border:"1px solid rgba(184,255,0,.4)",borderRadius:12,
-            padding:"40px 32px",maxWidth:420,width:"100%",textAlign:"center",animation:"fadeUp .4s both"}}>
-            <div style={{fontSize:"3rem",marginBottom:16}}>✅</div>
-            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",color:"#b8ff00",
-              textShadow:"0 0 20px rgba(184,255,0,.5)",marginBottom:8}}>
+          display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflowY:"auto"}}>
+          <div style={{background:"#0c0918",border:`1px solid ${lastConfirmPickup ? "rgba(0,245,255,.4)" : "rgba(184,255,0,.4)"}`,borderRadius:12,
+            padding:"36px 28px",maxWidth:440,width:"100%",textAlign:"center",animation:"fadeUp .4s both"}}>
+            <div style={{fontSize:"3rem",marginBottom:12}}>{lastConfirmPickup ? "🏪" : "✅"}</div>
+            {lastConfirmPickup && (
+              <div style={{display:"inline-flex",alignItems:"center",gap:6,
+                background:"rgba(0,245,255,.1)",border:"1px solid rgba(0,245,255,.3)",
+                borderRadius:20,padding:"4px 14px",marginBottom:12}}>
+                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                  color:"#00f5ff",letterSpacing:".1em"}}>🏪 CLICK & COLLECT</span>
+              </div>
+            )}
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.5rem",
+              color: lastConfirmPickup ? "#00f5ff" : "#b8ff00",
+              textShadow: lastConfirmPickup ? "0 0 20px rgba(0,245,255,.5)" : "0 0 20px rgba(184,255,0,.5)",
+              marginBottom:6}}>
               COMMANDE CONFIRMÉE
             </div>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",marginBottom:24}}>
-              {orderConfirmNum ? `Commande #${orderConfirmNum}` : `Réf : ${orderConfirmId.slice(-8).toUpperCase()}`}
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",marginBottom:16}}>
+              {orderConfirmNum ? `#${orderConfirmNum}` : orderConfirmId.slice(-8).toUpperCase()}
             </div>
+
+            {lastConfirmPickup && (
+              <div style={{background:"rgba(0,245,255,.05)",border:"1px solid rgba(0,245,255,.15)",
+                borderRadius:8,padding:"14px 16px",marginBottom:16,textAlign:"left"}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                  color:"#00f5ff",letterSpacing:".1em",marginBottom:8}}>
+                  {lastConfirmPickup.type === 'relay' ? "📍 POINT RELAIS" : "🏠 RETRAIT STOCK"}
+                </div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
+                  color:"#f0eeff",marginBottom:2}}>
+                  {lastConfirmPickup.snapshot?.name}
+                </div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",marginBottom:6}}>
+                  {lastConfirmPickup.snapshot?.address}{lastConfirmPickup.snapshot?.city ? `, ${lastConfirmPickup.snapshot.city}` : ""}
+                </div>
+                {lastConfirmPickup.snapshot?.instructions && (
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                    color:"#b8ff00",marginBottom:6}}>
+                    ℹ️ {lastConfirmPickup.snapshot.instructions}
+                  </div>
+                )}
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>
+                  🕐 {lastConfirmPickup.time === 'asap' ? 'Dès que possible' : lastConfirmPickup.time}
+                </div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                  color:"#ff2d78",marginTop:8,letterSpacing:".06em"}}>
+                  Présente ton numéro de commande au retrait.
+                </div>
+              </div>
+            )}
+
             <a href={`/suivi?id=${orderConfirmId}`}
-              style={{display:"block",background:"#ff2d78",color:"#000",borderRadius:4,padding:"13px",
-                fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".1em",
-                textDecoration:"none",textTransform:"uppercase",marginBottom:12}}>
+              style={{display:"block",background: lastConfirmPickup ? "#00f5ff" : "#ff2d78",color:"#000",borderRadius:4,
+                padding:"13px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                letterSpacing:".1em",textDecoration:"none",textTransform:"uppercase",marginBottom:12}}>
               🔎 SUIVRE MA COMMANDE
             </a>
-            <button onClick={() => setOrderConfirmId(null)}
+            <button onClick={() => { setOrderConfirmId(null); setLastConfirmPickup(null); }}
               style={{background:"transparent",border:"1px solid rgba(255,255,255,.1)",color:"#5a5470",
                 borderRadius:4,padding:"10px",width:"100%",fontFamily:"'Share Tech Mono',monospace",
                 fontSize:".75rem",cursor:"pointer",letterSpacing:".08em"}}>
@@ -1265,6 +1348,37 @@ export default function Home() {
                     style={{marginLeft:8,background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",fontSize:".8rem"}}>✕</button>
                 </div>}
 
+                {/* ── FULFILLMENT TOGGLE ── */}
+                <div style={{marginBottom:18}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
+                    letterSpacing:".12em",marginBottom:8}}>// MODE DE RÉCEPTION</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <div onClick={() => setFulfillmentType('delivery')}
+                      style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                        border: fulfillmentType === 'delivery' ? "2px solid #ff2d78" : "1px solid rgba(255,255,255,.1)",
+                        background: fulfillmentType === 'delivery' ? "rgba(255,45,120,.08)" : "#080514",
+                        transition:"all .2s"}}>
+                      <div style={{fontSize:"1.3rem",marginBottom:3}}>🚗</div>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",
+                        color: fulfillmentType === 'delivery' ? "#ff2d78" : "#7a7490",letterSpacing:".05em"}}>
+                        LIVRAISON
+                      </div>
+                    </div>
+                    <div onClick={() => setFulfillmentType('pickup')}
+                      style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                        border: fulfillmentType === 'pickup' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.1)",
+                        background: fulfillmentType === 'pickup' ? "rgba(0,245,255,.08)" : "#080514",
+                        transition:"all .2s"}}>
+                      <div style={{fontSize:"1.3rem",marginBottom:3}}>🏪</div>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",
+                        color: fulfillmentType === 'pickup' ? "#00f5ff" : "#7a7490",letterSpacing:".05em"}}>
+                        CLICK & COLLECT
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── TOTALS ── */}
                 <div style={{borderTop:"1px solid rgba(255,45,120,.2)",paddingTop:16,marginBottom:20}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                     <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>SOUS-TOTAL</span>
@@ -1275,10 +1389,11 @@ export default function Home() {
                     <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#b8ff00"}}>-{getDiscount().toFixed(2)}€</span>
                   </div>}
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>LIVRAISON</span>
-                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                      color: discountedTotal >= settings.freeDelivery ? "#b8ff00" : "#f0eeff"}}>
-                      {discountedTotal >= settings.freeDelivery ? "GRATUITE" : "3.00€"}
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>
+                      {fulfillmentType === 'pickup' ? 'RETRAIT' : 'LIVRAISON'}
+                    </span>
+                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#b8ff00"}}>
+                      {fulfillmentType === 'pickup' ? 'GRATUIT' : (discountedTotal >= settings.freeDelivery ? 'GRATUITE' : '3.00€')}
                     </span>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",paddingTop:12,
@@ -1291,6 +1406,7 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* ── ORDER FORM ── */}
                 <div style={{display:"grid",gap:12,marginBottom:20}}>
                   <input placeholder="Nom complet" value={orderForm.name}
                     onChange={e => setOrderForm(f => ({...f, name: e.target.value}))}
@@ -1302,57 +1418,167 @@ export default function Home() {
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Rajdhani',sans-serif"}} />
-                  <input placeholder="Email * (obligatoire pour recevoir les notifications)" value={orderForm.email}
+                  <input placeholder="Email * (obligatoire pour les notifications)" value={orderForm.email}
                     onChange={e => setOrderForm(f => ({...f, email: e.target.value}))}
                     type="email"
                     style={{width:"100%",background:"#080514",
                       border: orderForm.email ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,45,120,.4)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Rajdhani',sans-serif"}} />
-                  <div style={{position:"relative"}}>
+
+                  {/* Delivery: address field */}
+                  {fulfillmentType === 'delivery' && (
                     <div style={{position:"relative"}}>
-                      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>📍</span>
-                      <input placeholder="Tape ton adresse (ex: Rue Schoelcher, Cayenne)" value={orderForm.address}
-                        onChange={e => {
-                          const v = e.target.value;
-                          setOrderForm(f => ({...f, address: v, lat: 0, lng: 0}));
-                          searchAddress(v);
-                        }}
-                        onFocus={() => { if (addressSuggestions.length > 0) setShowSuggestions(true); }}
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                        style={{width:"100%",background:"#080514",
-                          border: orderForm.lat ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
-                          borderRadius:4,padding:"12px 12px 12px 36px",color:"#f0eeff",fontSize:".9rem",
-                          fontFamily:"'Rajdhani',sans-serif"}} />
-                      {orderForm.lat !== 0 && (
-                        <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
-                          color:"#b8ff00",fontSize:".78rem",fontFamily:"'Share Tech Mono',monospace"}}>✓ localisé</span>
+                      <div style={{position:"relative"}}>
+                        <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>📍</span>
+                        <input placeholder="Tape ton adresse (ex: Rue Schoelcher, Cayenne)" value={orderForm.address}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setOrderForm(f => ({...f, address: v, lat: 0, lng: 0}));
+                            searchAddress(v);
+                          }}
+                          onFocus={() => { if (addressSuggestions.length > 0) setShowSuggestions(true); }}
+                          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                          style={{width:"100%",background:"#080514",
+                            border: orderForm.lat ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
+                            borderRadius:4,padding:"12px 12px 12px 36px",color:"#f0eeff",fontSize:".9rem",
+                            fontFamily:"'Rajdhani',sans-serif"}} />
+                        {orderForm.lat !== 0 && (
+                          <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
+                            color:"#b8ff00",fontSize:".78rem",fontFamily:"'Share Tech Mono',monospace"}}>✓ localisé</span>
+                        )}
+                      </div>
+                      {showSuggestions && addressSuggestions.length > 0 && (
+                        <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,
+                          background:"#0c0918",border:"1px solid rgba(0,245,255,.25)",borderRadius:"0 0 6px 6px",
+                          maxHeight:200,overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.6)"}}>
+                          {addressSuggestions.map((s, i) => (
+                            <div key={i}
+                              onMouseDown={() => {
+                                setOrderForm(f => ({...f, address: s.display, lat: s.lat, lng: s.lng}));
+                                setShowSuggestions(false);
+                                showToast("Adresse localisée ✓");
+                              }}
+                              style={{padding:"10px 14px",cursor:"pointer",fontSize:".82rem",
+                                color:"#d0d0e0",borderBottom:"1px solid rgba(255,255,255,.04)",
+                                fontFamily:"'Rajdhani',sans-serif",transition:"background .15s",
+                                display:"flex",alignItems:"center",gap:8}}
+                              onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,245,255,.08)")}
+                              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                              <span style={{color:"#00f5ff",flexShrink:0}}>📍</span>
+                              {s.display}
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    {showSuggestions && addressSuggestions.length > 0 && (
-                      <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,
-                        background:"#0c0918",border:"1px solid rgba(0,245,255,.25)",borderRadius:"0 0 6px 6px",
-                        maxHeight:200,overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.6)"}}>
-                        {addressSuggestions.map((s, i) => (
-                          <div key={i}
-                            onMouseDown={() => {
-                              setOrderForm(f => ({...f, address: s.display, lat: s.lat, lng: s.lng}));
-                              setShowSuggestions(false);
-                              showToast("Adresse localisée ✓");
-                            }}
-                            style={{padding:"10px 14px",cursor:"pointer",fontSize:".82rem",
-                              color:"#d0d0e0",borderBottom:"1px solid rgba(255,255,255,.04)",
-                              fontFamily:"'Rajdhani',sans-serif",transition:"background .15s",
-                              display:"flex",alignItems:"center",gap:8}}
-                            onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,245,255,.08)")}
-                            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                            <span style={{color:"#00f5ff",flexShrink:0}}>📍</span>
-                            {s.display}
+                  )}
+
+                  {/* Pickup: location + time options */}
+                  {fulfillmentType === 'pickup' && (
+                    <div style={{display:"grid",gap:10}}>
+                      {/* Pickup type */}
+                      <div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                          color:"#5a5470",letterSpacing:".1em",marginBottom:8}}>// LIEU DE RETRAIT</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                          <div onClick={() => setPickupType('stock')}
+                            style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                              border: pickupType === 'stock' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.08)",
+                              background: pickupType === 'stock' ? "rgba(0,245,255,.06)" : "#080514",
+                              transition:"all .2s"}}>
+                            <div style={{fontSize:"1.2rem",marginBottom:2}}>🏠</div>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".78rem",
+                              color: pickupType === 'stock' ? "#00f5ff" : "#7a7490"}}>
+                              STOCK YASSALA
+                            </div>
                           </div>
-                        ))}
+                          <div onClick={() => setPickupType('relay')}
+                            style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                              border: pickupType === 'relay' ? "2px solid #b8ff00" : "1px solid rgba(255,255,255,.08)",
+                              background: pickupType === 'relay' ? "rgba(184,255,0,.06)" : "#080514",
+                              transition:"all .2s"}}>
+                            <div style={{fontSize:"1.2rem",marginBottom:2}}>🏪</div>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".78rem",
+                              color: pickupType === 'relay' ? "#b8ff00" : "#7a7490"}}>
+                              POINT RELAIS
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Relay location dropdown */}
+                      {pickupType === 'relay' && (
+                        <select value={pickupLocationId} onChange={e => setPickupLocationId(e.target.value)}
+                          style={{width:"100%",background:"#080514",
+                            border: pickupLocationId ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
+                            borderRadius:4,padding:"12px",color: pickupLocationId ? "#f0eeff" : "#5a5470",
+                            fontSize:".88rem",fontFamily:"'Rajdhani',sans-serif",cursor:"pointer"}}>
+                          <option value="">— Choisir un point relais —</option>
+                          {pickupLocations.map(loc => (
+                            <option key={loc.id} value={loc.id}>{loc.name} — {loc.city}</option>
+                          ))}
+                          {pickupLocations.length === 0 && (
+                            <option disabled>Aucun point relais disponible</option>
+                          )}
+                        </select>
+                      )}
+                      {pickupType === 'relay' && pickupLocationId && (
+                        <div style={{background:"rgba(184,255,0,.04)",border:"1px solid rgba(184,255,0,.15)",
+                          borderRadius:6,padding:"10px 12px"}}>
+                          {(() => {
+                            const loc = pickupLocations.find(l => l.id === pickupLocationId);
+                            return loc ? (
+                              <div>
+                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".88rem",
+                                  color:"#f0eeff",marginBottom:2}}>{loc.address}, {loc.city}</div>
+                                {loc.instructions && (
+                                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                                    color:"#b8ff00"}}>ℹ️ {loc.instructions}</div>
+                                )}
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      )}
+
+                      {/* Pickup time */}
+                      <div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                          color:"#5a5470",letterSpacing:".1em",marginBottom:8}}>// HEURE DE RETRAIT</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                          <div onClick={() => setPickupTimeMode('asap')}
+                            style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                              border: pickupTimeMode === 'asap' ? "2px solid #ff2d78" : "1px solid rgba(255,255,255,.08)",
+                              background: pickupTimeMode === 'asap' ? "rgba(255,45,120,.06)" : "#080514",
+                              transition:"all .2s"}}>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",
+                              color: pickupTimeMode === 'asap' ? "#ff2d78" : "#7a7490"}}>
+                              ⚡ DÈS QUE POSSIBLE
+                            </div>
+                          </div>
+                          <div onClick={() => setPickupTimeMode('scheduled')}
+                            style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",
+                              border: pickupTimeMode === 'scheduled' ? "2px solid #b8ff00" : "1px solid rgba(255,255,255,.08)",
+                              background: pickupTimeMode === 'scheduled' ? "rgba(184,255,0,.06)" : "#080514",
+                              transition:"all .2s"}}>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",
+                              color: pickupTimeMode === 'scheduled' ? "#b8ff00" : "#7a7490"}}>
+                              🕐 CHOISIR L'HEURE
+                            </div>
+                          </div>
+                        </div>
+                        {pickupTimeMode === 'scheduled' && (
+                          <input type="time" value={pickupTimeValue}
+                            onChange={e => setPickupTimeValue(e.target.value)}
+                            style={{width:"100%",background:"#080514",
+                              border:"1px solid rgba(184,255,0,.3)",borderRadius:4,
+                              padding:"12px",color:"#f0eeff",fontSize:".9rem",
+                              fontFamily:"'Rajdhani',sans-serif",cursor:"pointer"}} />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {cartTotal < settings.deliveryMin && (
@@ -1391,7 +1617,7 @@ export default function Home() {
                       <div style={{fontSize:"1.4rem",marginBottom:4}}>💵</div>
                       <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",
                         color: paymentMethod === 'cash' ? "#ff2d78" : "#f0eeff",letterSpacing:".05em"}}>
-                        CASH LIVRAISON
+                        {fulfillmentType === 'pickup' ? 'CASH AU RETRAIT' : 'CASH LIVRAISON'}
                       </div>
                       <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginTop:2}}>
                         Payer à la réception
@@ -1408,10 +1634,9 @@ export default function Home() {
                     fontWeight:700,fontSize:"1rem",letterSpacing:".1em",textTransform:"uppercase",
                     cursor: submitting ? "not-allowed" : "pointer",
                     display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                  {submitting
-                    ? "TRAITEMENT EN COURS..."
-                    : paymentMethod === 'online'
-                    ? "💳 PAYER EN LIGNE"
+                  {submitting ? "TRAITEMENT EN COURS..."
+                    : paymentMethod === 'online' ? "💳 PAYER EN LIGNE"
+                    : fulfillmentType === 'pickup' ? "🏪 CONFIRMER LE RETRAIT"
                     : "💵 COMMANDER — CASH À LA LIVRAISON"}
                 </button>
               </>
