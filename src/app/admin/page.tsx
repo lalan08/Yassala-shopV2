@@ -21,7 +21,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 // ── TYPES ──
-type Product = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; };
+type Product = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; isActive?: boolean; };
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; };
 type PickupLocation = { id?: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
@@ -1110,14 +1110,17 @@ export default function AdminPage() {
                       onDragStart={() => { dragRef.current = idx; }}
                       onDragOver={e => e.preventDefault()}
                       onDrop={() => { if (dragRef.current !== null) reorderProducts(dragRef.current, idx); dragRef.current = null; }}
-                      className="admin-product-row row" style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                      className="admin-product-row row" style={{background:"rgba(255,255,255,.02)",
+                        border: p.isActive === false ? "1px solid rgba(255,255,255,.03)" : "1px solid rgba(255,255,255,.06)",
                         borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",
-                        gap:14,transition:"all .15s ease",cursor:"grab"}}>
+                        gap:14,transition:"all .15s ease",cursor:"grab",
+                        opacity: p.isActive === false ? 0.45 : 1}}>
                       {/* poignée drag */}
                       <span style={{color:"#3a3450",fontSize:"1.1rem",lineHeight:1,flexShrink:0,cursor:"grab"}}
                         title="Glisser pour réordonner">⠿</span>
                       {p.image ? (
-                        <img src={p.image} alt={p.name} style={{width:60,height:60,objectFit:"cover",borderRadius:4}} />
+                        <img src={p.image} alt={p.name} style={{width:60,height:60,objectFit:"cover",borderRadius:4,
+                          filter: p.isActive === false ? "grayscale(1)" : "none"}} />
                       ) : (
                         <div style={{width:60,height:60,background:"#080514",borderRadius:4,
                           display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.5rem"}}>
@@ -1125,8 +1128,15 @@ export default function AdminPage() {
                         </div>
                       )}
                       <div style={{flex:1}}>
-                        <div style={{fontWeight:700,fontSize:"1rem",letterSpacing:".04em",display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{fontWeight:700,fontSize:"1rem",letterSpacing:".04em",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                           {p.name}
+                          {p.isActive === false && (
+                            <span style={{fontSize:".7rem",fontFamily:"'Share Tech Mono',monospace",
+                              background:"rgba(90,84,112,.5)",color:"#5a5470",padding:"2px 7px",borderRadius:3,
+                              letterSpacing:".1em",border:"1px solid rgba(255,255,255,.06)"}}>
+                              INACTIF
+                            </span>
+                          )}
                           {p.badge === "BEST" && (
                             <span style={{fontSize:".78rem",fontFamily:"'Share Tech Mono',monospace",
                               background:"rgba(255,180,0,.9)",color:"#000",padding:"2px 7px",borderRadius:3,
@@ -1145,7 +1155,21 @@ export default function AdminPage() {
                         color:"#b8ff00",textShadow:"0 0 10px rgba(184,255,0,.4)"}}>
                         {Number(p.price).toFixed(2)}€
                       </div>
-                      <div className="admin-prod-actions" style={{display:"flex",gap:8}}>
+                      <div className="admin-prod-actions" style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                        <button onClick={async () => {
+                          const next = p.isActive === false ? true : false;
+                          await updateDoc(doc(db, "products", p.id!), { isActive: next });
+                          showToast(`Produit ${next ? "activé" : "désactivé"} ✓`);
+                        }}
+                          style={{background: p.isActive === false
+                            ? "rgba(184,255,0,.1)" : "rgba(90,84,112,.15)",
+                            border: p.isActive === false
+                            ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
+                            color: p.isActive === false ? "#b8ff00" : "#5a5470",
+                            padding:"8px 12px",borderRadius:6,fontFamily:"'Share Tech Mono',monospace",
+                            fontSize:".78rem",letterSpacing:".06em",cursor:"pointer",transition:"all .2s"}}>
+                          {p.isActive === false ? "✓ ACTIVER" : "⏸ DÉSACTIVER"}
+                        </button>
                         <button onClick={() => { setEditProd(p); setShowProdForm(true); }}
                           style={{background:"transparent",border:"1px solid rgba(0,245,255,.3)",color:"#00f5ff",
                             padding:"8px 18px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,

@@ -35,7 +35,7 @@ const translateAuthError = (code: string) => {
 };
 
 // ── TYPES ──
-type Product = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; };
+type Product = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; isActive?: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
 type Pack = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; };
@@ -469,7 +469,7 @@ export default function Home() {
   };
 
   const filtered = products.filter(p =>
-    activeCat === "all" || p.cat === activeCat
+    p.isActive !== false && (activeCat === "all" || p.cat === activeCat)
   );
 
   const suggestions = selectedProduct
@@ -956,7 +956,7 @@ export default function Home() {
               padding:"60px",fontSize:".85rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
               // aucun produit pour le moment — revenez plus tard !
             </div>
-        ) : (
+        ) : activeCat !== "all" ? (
           <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:14}}>
             {filtered.map(p => (
               <div key={p.id} onClick={() => setSelectedProduct(p)}
@@ -1081,6 +1081,136 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          /* ── Mode "TOUT" : groupement par catégorie ── */
+          <div style={{display:"grid",gap:32}}>
+            {cats.filter(c => c.key !== "all").map(cat => {
+              const catProds = filtered.filter(p => p.cat === cat.key);
+              if (catProds.length === 0) return null;
+              return (
+                <div key={cat.key}>
+                  {/* En-tête de catégorie */}
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,
+                    paddingBottom:10,borderBottom:`1px solid ${catColor(cat.key)}22`}}>
+                    <span style={{fontSize:"1.3rem"}}>{cat.emoji}</span>
+                    <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
+                      letterSpacing:".06em",color:catColor(cat.key)}}>
+                      {cat.label.toUpperCase()}
+                    </span>
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                      color:"#5a5470",letterSpacing:".1em",marginLeft:4}}>
+                      {catProds.length} produit{catProds.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:14}}>
+                    {catProds.map(p => (
+                      <div key={p.id} onClick={() => setSelectedProduct(p)}
+                        style={{background:"#0c0918",
+                          border: lastAddedId===p.id ? "1px solid #b8ff00" : p.cat === "snack_peyi" ? "1px solid rgba(255,140,0,.25)" : "1px solid rgba(255,255,255,.06)",
+                          borderRadius:8,overflow:"hidden",cursor:"pointer",position:"relative",
+                          opacity: p.stock === 0 ? 0.55 : 1,
+                          transition:"border-color .3s, box-shadow .3s",
+                          boxShadow: lastAddedId===p.id ? "0 0 14px rgba(184,255,0,.35)" : "none"}}>
+                        <div style={{position:"relative",aspectRatio:"16/9",overflow:"hidden",
+                          background:"linear-gradient(135deg,rgba(255,45,120,.05),rgba(0,245,255,.04))"}}>
+                          {p.image ? (
+                            <img src={p.image} alt={p.name}
+                              style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+                          ) : (
+                            <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",
+                              justifyContent:"center",fontSize:"3.5rem",opacity:.4}}>📷</div>
+                          )}
+                          <div style={{position:"absolute",bottom:0,left:0,right:0,height:"55%",
+                            background:"linear-gradient(to top,rgba(12,9,24,.96),transparent)",
+                            pointerEvents:"none"}} />
+                          <div style={{position:"absolute",bottom:10,left:12,
+                            fontFamily:"'Black Ops One',cursive",fontSize:"1.35rem",
+                            color:"#b8ff00",textShadow:"0 0 14px rgba(184,255,0,.55)",lineHeight:1}}>
+                            {Number(p.price).toFixed(2)}€
+                          </div>
+                          <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",flexDirection:"column",gap:5}}>
+                            <button onClick={e => { e.stopPropagation(); toggleLike(p.id); }}
+                              style={{width:32,height:32,background:"rgba(4,2,10,.72)",backdropFilter:"blur(6px)",
+                                border: likes.has(p.id) ? "1px solid rgba(255,45,120,.55)" : "1px solid rgba(255,255,255,.15)",
+                                borderRadius:6,cursor:"pointer",fontSize:".95rem",
+                                display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+                              <span style={{color: likes.has(p.id) ? "#ff2d78" : "#5a5470",
+                                filter: likes.has(p.id) ? "drop-shadow(0 0 5px rgba(255,45,120,.8))" : "none",lineHeight:1}}>
+                                {likes.has(p.id) ? "♥" : "♡"}
+                              </span>
+                            </button>
+                            <button onClick={e => { e.stopPropagation(); shareProduct(p); }}
+                              style={{width:32,height:32,background:"rgba(4,2,10,.72)",backdropFilter:"blur(6px)",
+                                border:"1px solid rgba(255,255,255,.15)",borderRadius:6,
+                                cursor:"pointer",fontSize:".72rem",color:"#5a5470",
+                                display:"flex",alignItems:"center",justifyContent:"center"}}>
+                              ↗
+                            </button>
+                          </div>
+                          {p.stock === 0 ? (
+                            <span style={{position:"absolute",top:8,left:8,
+                              fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".12em",
+                              textTransform:"uppercase",padding:"3px 9px",borderRadius:3,zIndex:4,
+                              background:"rgba(90,84,112,.9)",color:"#f0eeff",fontWeight:700,
+                              backdropFilter:"blur(4px)",border:"1px solid rgba(255,255,255,.15)"}}>
+                              RUPTURE
+                            </span>
+                          ) : p.badge ? (
+                            <span style={{position:"absolute",top:8,left:8,
+                              fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".12em",
+                              textTransform:"uppercase",padding:"3px 9px",borderRadius:3,zIndex:4,fontWeight:700,
+                              backdropFilter:"blur(4px)",
+                              background: getBadgeType(p.badge)==="hot" ? "rgba(255,45,120,.9)"
+                                : getBadgeType(p.badge)==="new" ? "rgba(184,255,0,.9)"
+                                : getBadgeType(p.badge)==="best" ? "rgba(255,180,0,.95)"
+                                : "rgba(0,245,255,.9)",
+                              color:"#000",
+                              boxShadow: getBadgeType(p.badge)==="hot" ? "0 0 12px rgba(255,45,120,.6)"
+                                : getBadgeType(p.badge)==="new" ? "0 0 10px rgba(184,255,0,.5)"
+                                : getBadgeType(p.badge)==="best" ? "0 0 12px rgba(255,180,0,.6)"
+                                : "0 0 10px rgba(0,245,255,.5)"}}>
+                              {p.badge === "BEST" ? "⭐ BEST" : p.badge}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div style={{padding:"12px 14px 14px"}}>
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                            color:catColor(p.cat),letterSpacing:".15em",textTransform:"uppercase",marginBottom:5}}>
+                            {catLabel(p.cat)}
+                          </div>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                            letterSpacing:".04em",textTransform:"uppercase",color:"#f0eeff",marginBottom:4}}>
+                            {p.name}
+                          </div>
+                          <div style={{fontSize:".78rem",color:"#5a5470",lineHeight:1.5,marginBottom:10,
+                            display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>
+                            {p.desc}
+                          </div>
+                          {p.stock > 0 && p.stock < 10 && (
+                            <div style={{fontSize:".68rem",color:"#b8ff00",fontFamily:"'Share Tech Mono',monospace",marginBottom:8}}>
+                              Plus que {p.stock} en stock !
+                            </div>
+                          )}
+                          <button onClick={e => { e.stopPropagation(); addToCart(p.id, p.name, p.price); }}
+                            disabled={p.stock === 0}
+                            style={{width:"100%",padding:"10px 0",borderRadius:3,
+                              fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",
+                              letterSpacing:".12em",textTransform:"uppercase",
+                              border: p.stock === 0 ? "1px solid #5a5470" : lastAddedId===p.id ? "1px solid #b8ff00" : "1px solid #ff2d78",
+                              background: p.stock === 0 ? "transparent" : lastAddedId===p.id ? "rgba(184,255,0,.08)" : "rgba(255,45,120,.08)",
+                              color: p.stock === 0 ? "#5a5470" : lastAddedId===p.id ? "#b8ff00" : "#ff2d78",
+                              cursor: p.stock === 0 ? "not-allowed" : "pointer",
+                              transition:"all .3s"}}>
+                            {p.stock === 0 ? "ÉPUISÉ" : lastAddedId===p.id ? "✓ AJOUTÉ" : "AJOUTER →"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
