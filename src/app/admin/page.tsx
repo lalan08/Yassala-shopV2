@@ -60,8 +60,11 @@ export default function AdminPage() {
   const [auth, setAuth]           = useState(false);
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dispatchFilter, setDispatchFilter] = useState<"available"|"mine"|"delivered">("available");
+  const [driverLocations, setDriverLocations] = useState<any[]>([]);
+  const [dispatchConfirm, setDispatchConfirm] = useState<{id:string;type:"take"|"deliver"}|null>(null);
   const [products, setProducts]   = useState<Product[]>([]);
   const [packs, setPacks]         = useState<Pack[]>([]);
   const [orders, setOrders]       = useState<Order[]>([]);
@@ -221,8 +224,11 @@ export default function AdminPage() {
       setDriverApps(snap.docs.map(d => ({ id: d.id, ...d.data() } as any))
         .sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || "")));
     });
+    const unsubDriverLocs = onSnapshot(collection(db, "driver_locations"), snap => {
+      setDriverLocations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
 
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); };
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -329,6 +335,27 @@ export default function AdminPage() {
     if (!confirm("Supprimer cette commande ?")) return;
     await deleteDoc(doc(db, "orders", id));
     showToast("Commande supprimée");
+  };
+
+  const adminTakeOrder = async (orderId: string) => {
+    await updateDoc(doc(db, "orders", orderId), {
+      assignedDriver: "admin",
+      assignedDriverName: "ADMIN",
+      status: "en_cours",
+    });
+    showToast("Commande prise en charge ✓");
+    setDispatchConfirm(null);
+    setDispatchFilter("mine");
+  };
+
+  const adminMarkDelivered = async (orderId: string) => {
+    await updateDoc(doc(db, "orders", orderId), {
+      status: "livre",
+      deliveredAt: new Date().toISOString(),
+    });
+    showToast("Commande livrée ✓");
+    setDispatchConfirm(null);
+    setDispatchFilter("delivered");
   };
 
   const purgeArchivedOrders = async () => {
@@ -747,7 +774,7 @@ export default function AdminPage() {
       <div className="admin-breadcrumb" style={{padding:"10px 24px",fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:400,color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(10,10,18,.85)"}}>
         <span style={{color:"#5a5470"}}>🏠 Accueil</span>
         <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
-        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",settings:"Paramètres"}[tab]}</span>
+        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",dispatch:"Dispatch",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",settings:"Paramètres"}[tab]}</span>
       </div>
 
       {/* ── Drawer overlay (mobile) ── */}
@@ -778,6 +805,7 @@ export default function AdminPage() {
             { section:"OPÉRATIONS", items:[
               { key:"dashboard",  label:"TABLEAU DE BORD", icon:"📊" },
               { key:"orders",     label:"COMMANDES",       icon:"📦" },
+              { key:"dispatch",   label:"DISPATCH",        icon:"🗺️" },
               { key:"users",      label:"CLIENTS",         icon:"👥" },
               { key:"drivers",    label:"LIVREURS",        icon:"🏍️" },
             ]},
@@ -1928,6 +1956,247 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+          {tab === "dispatch" && (() => {
+            const now = new Date();
+            const todayStr = now.toISOString().slice(0, 10);
+            const availableOrders  = orders.filter(o => o.status === "nouveau");
+            const inProgressOrders = orders.filter(o => o.status === "en_cours");
+            const deliveredOrders  = orders.filter(o => o.status === "livre");
+            const todayDelivered   = deliveredOrders.filter(o => (o as any).deliveredAt?.slice(0,10) === todayStr);
+            const displayOrders    = dispatchFilter === "available" ? availableOrders : dispatchFilter === "mine" ? inProgressOrders : deliveredOrders;
+
+            return (
+              <div className="admin-tab-content">
+                {/* ── Header ── */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:22,flexWrap:"wrap",gap:12}}>
+                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
+                    🗺️ <span style={{color:"#00f5ff"}}>DISPATCH</span>
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#5a5470",marginLeft:12,letterSpacing:".1em"}}>VUE OPÉRATIONNELLE</span>
+                  </div>
+                </div>
+
+                {/* ── Confirmation modal ── */}
+                {dispatchConfirm && (
+                  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+                    <div style={{background:"#0e0e18",border:"1px solid rgba(255,255,255,.1)",borderRadius:14,padding:"28px 24px",maxWidth:360,width:"100%",textAlign:"center",animation:"fadeUp .2s ease"}}>
+                      <div style={{fontSize:"2.2rem",marginBottom:14}}>{dispatchConfirm.type === "take" ? "🚀" : "✅"}</div>
+                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.1rem",marginBottom:8}}>
+                        {dispatchConfirm.type === "take" ? "Prendre cette commande ?" : "Marquer comme livrée ?"}
+                      </div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",marginBottom:24}}>
+                        {dispatchConfirm.type === "take" ? "Vous serez assigné comme livreur." : "Cette action est irréversible."}
+                      </div>
+                      <div style={{display:"flex",gap:10}}>
+                        <button onClick={() => setDispatchConfirm(null)}
+                          style={{flex:1,padding:"11px",background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,color:"#7a7490",fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".88rem",cursor:"pointer"}}>
+                          ANNULER
+                        </button>
+                        <button onClick={() => dispatchConfirm.type === "take" ? adminTakeOrder(dispatchConfirm.id) : adminMarkDelivered(dispatchConfirm.id)}
+                          style={{flex:1,padding:"11px",background: dispatchConfirm.type === "take" ? "#00f5ff" : "#b8ff00",border:"none",borderRadius:8,color:"#000",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",cursor:"pointer"}}>
+                          CONFIRMER
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Stats row ── */}
+                <div className="admin-kpi-grid" style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+                  <div style={{background:"rgba(0,245,255,.06)",border:"1px solid rgba(0,245,255,.2)",borderRadius:10,padding:"14px 18px",flex:1,minWidth:130}}>
+                    <div style={{fontSize:"1.4rem",marginBottom:4}}>📋</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".72rem",color:"#5a5470",letterSpacing:".1em",textTransform:"uppercase" as const}}>Disponibles</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.6rem",color:"#00f5ff"}}>{availableOrders.length}</div>
+                  </div>
+                  <div style={{background:"rgba(255,149,0,.06)",border:"1px solid rgba(255,149,0,.2)",borderRadius:10,padding:"14px 18px",flex:1,minWidth:130}}>
+                    <div style={{fontSize:"1.4rem",marginBottom:4}}>🚚</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".72rem",color:"#5a5470",letterSpacing:".1em",textTransform:"uppercase" as const}}>En cours</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.6rem",color:"#ff9500"}}>{inProgressOrders.length}</div>
+                  </div>
+                  <div style={{background:"rgba(184,255,0,.06)",border:"1px solid rgba(184,255,0,.2)",borderRadius:10,padding:"14px 18px",flex:1,minWidth:130}}>
+                    <div style={{fontSize:"1.4rem",marginBottom:4}}>✅</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".72rem",color:"#5a5470",letterSpacing:".1em",textTransform:"uppercase" as const}}>Livrées auj.</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.6rem",color:"#b8ff00"}}>{todayDelivered.length}</div>
+                  </div>
+                </div>
+
+                {/* ── Livreurs actifs (GPS) ── */}
+                {driverLocations.length > 0 && (
+                  <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(184,255,0,.2)",borderRadius:10,padding:"14px 16px",marginBottom:20}}>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#b8ff00",letterSpacing:".12em",marginBottom:10}}>
+                      📡 LIVREURS GPS ACTIFS ({driverLocations.length})
+                    </div>
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      {driverLocations.map((loc: any) => (
+                        <a key={loc.id} href={`https://maps.google.com/?q=${loc.lat},${loc.lng}`} target="_blank" rel="noreferrer"
+                          style={{display:"flex",alignItems:"center",gap:10,background:"rgba(184,255,0,.06)",border:"1px solid rgba(184,255,0,.2)",borderRadius:8,padding:"9px 14px",textDecoration:"none",transition:"background .2s"}}>
+                          <div style={{width:8,height:8,borderRadius:"50%",background:"#b8ff00",boxShadow:"0 0 8px #b8ff00",flexShrink:0}} />
+                          <div>
+                            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".88rem",color:"#f0eeff"}}>
+                              {loc.transport === "moto" || loc.transport === "scooter" ? "🏍️" : loc.transport === "voiture" ? "🚗" : "🚲"} {loc.driverName || loc.id}
+                            </div>
+                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470"}}>
+                              {loc.updatedAt ? `màj ${new Date(loc.updatedAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}` : "GPS actif"}
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Filtres ── */}
+                <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+                  {([
+                    {val:"available", label:"DISPONIBLES", color:"#ff2d78",  count: availableOrders.length},
+                    {val:"mine",      label:"EN COURS",    color:"#ff9500",  count: inProgressOrders.length},
+                    {val:"delivered", label:"LIVRÉES",     color:"#b8ff00",  count: deliveredOrders.length},
+                  ] as const).map(f => (
+                    <button key={f.val} onClick={() => setDispatchFilter(f.val)}
+                      style={{background: dispatchFilter===f.val ? `${f.color}22` : "transparent",
+                        border:`1px solid ${dispatchFilter===f.val ? f.color : "rgba(255,255,255,.1)"}`,
+                        color: dispatchFilter===f.val ? f.color : "#5a5470",
+                        padding:"7px 16px",borderRadius:20,cursor:"pointer",
+                        fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".82rem",letterSpacing:".06em",
+                        transition:"all .2s",display:"flex",alignItems:"center",gap:8}}>
+                      {f.label}
+                      <span style={{background: dispatchFilter===f.val ? f.color : "rgba(255,255,255,.08)",
+                        color: dispatchFilter===f.val ? "#000" : "#5a5470",
+                        borderRadius:10,padding:"1px 7px",fontSize:".75rem",fontWeight:700,fontFamily:"'Share Tech Mono',monospace"}}>
+                        {f.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ── Liste des commandes ── */}
+                {displayOrders.length === 0 ? (
+                  <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                    padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:10}}>
+                    // aucune commande dans cette catégorie
+                  </div>
+                ) : (
+                  <div style={{display:"grid",gap:10}}>
+                    {displayOrders.map(o => {
+                      const isMyOrder  = (o as any).assignedDriver === "admin";
+                      const driverName = (o as any).assignedDriverName;
+                      return (
+                        <div key={o.id} style={{background:"rgba(255,255,255,.02)",
+                          border:`1px solid ${dispatchFilter==="available" ? "rgba(0,245,255,.2)" : isMyOrder ? "rgba(255,149,0,.25)" : "rgba(255,255,255,.06)"}`,
+                          borderRadius:10,padding:"16px 18px",transition:"border .2s"}}>
+
+                          {/* En-tête : n° + heure + badges + total */}
+                          <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:10}}>
+                            <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.05rem",color:"#ff2d78",letterSpacing:".04em"}}>
+                              #{(o as any).orderNumber ?? o.id.slice(-6).toUpperCase()}
+                            </span>
+                            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem",color:"#5a5470"}}>
+                              {new Date(o.createdAt).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+                            </span>
+                            {(o as any).paidOnline && (
+                              <span style={{background:"rgba(184,255,0,.15)",color:"#b8ff00",borderRadius:4,padding:"2px 8px",fontSize:".7rem",fontFamily:"'Share Tech Mono',monospace"}}>💳 STRIPE</span>
+                            )}
+                            {driverName && (
+                              <span style={{background: isMyOrder ? "rgba(255,149,0,.15)" : "rgba(0,245,255,.12)",
+                                color: isMyOrder ? "#ff9500" : "#00f5ff",
+                                borderRadius:4,padding:"2px 8px",fontSize:".72rem",fontFamily:"'Inter',sans-serif",fontWeight:600}}>
+                                {isMyOrder ? "👤 VOUS" : `🏍️ ${driverName}`}
+                              </span>
+                            )}
+                            <span style={{marginLeft:"auto",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",color:"#f0eeff"}}>
+                              {Number(o.total).toFixed(2)} €
+                            </span>
+                          </div>
+
+                          {/* Client */}
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8}}>
+                            <div>
+                              <div style={{fontWeight:700,fontSize:".95rem",marginBottom:2}}>{(o as any).name || o.phone}</div>
+                              {(o as any).name && (
+                                <a href={`tel:${o.phone}`} style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#00f5ff",textDecoration:"none"}}>
+                                  📞 {o.phone}
+                                </a>
+                              )}
+                            </div>
+                            {(o as any).name && (
+                              <a href={`https://wa.me/${o.phone?.replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
+                                style={{flexShrink:0,background:"rgba(37,211,102,.12)",border:"1px solid rgba(37,211,102,.3)",color:"#25d366",
+                                  padding:"6px 12px",borderRadius:8,textDecoration:"none",fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".78rem"}}>
+                                WhatsApp
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Adresse + navigation */}
+                          {(o as any).address && (
+                            <div style={{marginBottom:10}}>
+                              <div style={{fontSize:".82rem",color:"#7a7490",marginBottom:6}}>📍 {(o as any).address}</div>
+                              {(o as any).lat && (o as any).lng && (
+                                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                                  <a href={`https://maps.google.com/?q=${(o as any).lat},${(o as any).lng}`} target="_blank" rel="noreferrer"
+                                    style={{background:"rgba(66,133,244,.12)",border:"1px solid rgba(66,133,244,.3)",color:"#4285f4",padding:"5px 11px",borderRadius:6,textDecoration:"none",fontSize:".75rem",fontFamily:"'Inter',sans-serif",fontWeight:600}}>
+                                    Google Maps
+                                  </a>
+                                  <a href={`https://waze.com/ul?ll=${(o as any).lat},${(o as any).lng}&navigate=yes`} target="_blank" rel="noreferrer"
+                                    style={{background:"rgba(0,173,210,.12)",border:"1px solid rgba(0,173,210,.3)",color:"#00add2",padding:"5px 11px",borderRadius:6,textDecoration:"none",fontSize:".75rem",fontFamily:"'Inter',sans-serif",fontWeight:600}}>
+                                    Waze
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Articles */}
+                          <div style={{background:"rgba(255,255,255,.02)",borderRadius:6,padding:"8px 10px",marginBottom:12}}>
+                            {o.items.split("\n").filter(Boolean).map((line: string, i: number) => (
+                              <div key={i} style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem",color:"#7a7490",
+                                marginBottom: i < o.items.split("\n").filter(Boolean).length - 1 ? 3 : 0}}>
+                                {line}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Actions */}
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                            {dispatchFilter === "available" && (
+                              <button onClick={() => setDispatchConfirm({id: o.id, type:"take"})}
+                                style={{flex:1,background:"rgba(0,245,255,.15)",border:"1px solid rgba(0,245,255,.5)",color:"#00f5ff",
+                                  borderRadius:8,padding:"10px 16px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",
+                                  letterSpacing:".06em",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                                🚀 JE PRENDS CETTE LIVRAISON
+                              </button>
+                            )}
+                            {dispatchFilter === "mine" && isMyOrder && (
+                              <button onClick={() => setDispatchConfirm({id: o.id, type:"deliver"})}
+                                style={{flex:1,background:"rgba(184,255,0,.15)",border:"1px solid rgba(184,255,0,.5)",color:"#b8ff00",
+                                  borderRadius:8,padding:"10px 16px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",
+                                  letterSpacing:".06em",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                                ✅ MARQUER LIVRÉ
+                              </button>
+                            )}
+                            {dispatchFilter === "mine" && !isMyOrder && driverName && (
+                              <div style={{flex:1,background:"rgba(0,245,255,.05)",border:"1px solid rgba(0,245,255,.15)",borderRadius:8,
+                                padding:"10px 16px",fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".85rem",color:"#00f5ff",textAlign:"center"}}>
+                                🏍️ En cours par {driverName}
+                              </div>
+                            )}
+                            {dispatchFilter === "delivered" && (
+                              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#b8ff00",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                                <span style={{width:6,height:6,borderRadius:"50%",background:"#b8ff00",display:"inline-block",flexShrink:0}} />
+                                Livré {(o as any).deliveredAt ? `le ${new Date((o as any).deliveredAt).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}` : ""}
+                                {driverName && <span style={{color:"#5a5470"}}>— par {driverName}</span>}
+                              </div>
+                            )}
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {tab === "settings" && (
             <div>
