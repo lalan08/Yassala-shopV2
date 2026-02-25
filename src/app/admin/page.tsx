@@ -25,7 +25,7 @@ type Product = { id?: string; name: string; desc: string; price: number; image: 
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; };
 type PickupLocation = { id?: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
@@ -55,7 +55,9 @@ async function getCroppedImg(
 
 const defaultSettings: Settings = {
   shopOpen: true, deliveryMin: 15, freeDelivery: 50,
-  hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX"
+  hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX",
+  paymentOnlineEnabled: true, paymentCashEnabled: true,
+  fulfillmentDeliveryEnabled: true, fulfillmentPickupEnabled: true,
 };
 
 export default function AdminPage() {
@@ -2441,6 +2443,66 @@ export default function AdminPage() {
                   onChange={v => setSettings(s => ({...s, deliveryMin: Number(v)}))} />
                 <Field label="LIVRAISON GRATUITE À PARTIR DE (€)" value={String(settings.freeDelivery)} type="number"
                   onChange={v => setSettings(s => ({...s, freeDelivery: Number(v)}))} />
+
+                {/* ── Modes de réception ── */}
+                <div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",
+                    letterSpacing:".1em",marginBottom:12}}>MODES DE RÉCEPTION</div>
+                  <div style={{display:"grid",gap:10}}>
+                    {([
+                      { key:"fulfillmentDeliveryEnabled", label:"🚗 Livraison à domicile", color:"#ff2d78" },
+                      { key:"fulfillmentPickupEnabled",   label:"🏪 Click & Collect",      color:"#00f5ff" },
+                    ] as const).map(opt => (
+                      <label key={opt.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                        background:"#080514",border:`1px solid ${settings[opt.key] ? opt.color + "44" : "rgba(255,255,255,.06)"}`,
+                        borderRadius:6,padding:"12px 16px",cursor:"pointer",transition:"all .2s"}}>
+                        <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:600,fontSize:".95rem",
+                          color: settings[opt.key] ? "#f0eeff" : "#5a5470",letterSpacing:".04em"}}>
+                          {opt.label}
+                        </span>
+                        <div onClick={() => setSettings(s => ({...s, [opt.key]: !s[opt.key]}))}
+                          style={{width:44,height:24,borderRadius:12,position:"relative",cursor:"pointer",flexShrink:0,
+                            background: settings[opt.key] ? opt.color : "rgba(255,255,255,.1)",
+                            transition:"background .2s",border:`1px solid ${settings[opt.key] ? opt.color : "rgba(255,255,255,.1)"}`}}>
+                          <div style={{position:"absolute",top:2,
+                            left: settings[opt.key] ? 22 : 2,
+                            width:18,height:18,borderRadius:"50%",background:"#fff",
+                            transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.4)"}} />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Modes de paiement ── */}
+                <div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",
+                    letterSpacing:".1em",marginBottom:12}}>MODES DE PAIEMENT</div>
+                  <div style={{display:"grid",gap:10}}>
+                    {([
+                      { key:"paymentOnlineEnabled", label:"💳 Paiement en ligne (Stripe)", color:"#b8ff00" },
+                      { key:"paymentCashEnabled",   label:"💵 Cash à la livraison / retrait", color:"#ff9500" },
+                    ] as const).map(opt => (
+                      <label key={opt.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                        background:"#080514",border:`1px solid ${settings[opt.key] ? opt.color + "44" : "rgba(255,255,255,.06)"}`,
+                        borderRadius:6,padding:"12px 16px",cursor:"pointer",transition:"all .2s"}}>
+                        <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:600,fontSize:".95rem",
+                          color: settings[opt.key] ? "#f0eeff" : "#5a5470",letterSpacing:".04em"}}>
+                          {opt.label}
+                        </span>
+                        <div onClick={() => setSettings(s => ({...s, [opt.key]: !s[opt.key]}))}
+                          style={{width:44,height:24,borderRadius:12,position:"relative",cursor:"pointer",flexShrink:0,
+                            background: settings[opt.key] ? opt.color : "rgba(255,255,255,.1)",
+                            transition:"background .2s",border:`1px solid ${settings[opt.key] ? opt.color : "rgba(255,255,255,.1)"}`}}>
+                          <div style={{position:"absolute",top:2,
+                            left: settings[opt.key] ? 22 : 2,
+                            width:18,height:18,borderRadius:"50%",background:"#fff",
+                            transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.4)"}} />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
                 <button onClick={saveSettings}
                   style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:4,
