@@ -482,11 +482,14 @@ export default function AdminPage() {
   const moveCat = async (idx: number, direction: -1 | 1) => {
     const targetIdx = idx + direction;
     if (targetIdx < 0 || targetIdx >= dbCats.length) return;
-    const a = dbCats[idx];
-    const b = dbCats[targetIdx];
+    // Swap in a copy of the array, then write sequential order values for all
+    // (avoids the bug where duplicate order values make swapping a no-op)
+    const reordered = [...dbCats];
+    [reordered[idx], reordered[targetIdx]] = [reordered[targetIdx], reordered[idx]];
     const batch = writeBatch(db);
-    batch.update(doc(db, "categories", a.id!), { order: b.order ?? targetIdx });
-    batch.update(doc(db, "categories", b.id!), { order: a.order ?? idx });
+    reordered.forEach((c, i) => {
+      batch.update(doc(db, "categories", c.id!), { order: i });
+    });
     await batch.commit();
   };
 
