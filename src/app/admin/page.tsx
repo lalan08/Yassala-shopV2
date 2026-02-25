@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Cropper from "react-easy-crop";
 
@@ -476,6 +476,18 @@ export default function AdminPage() {
     if (!confirm("Supprimer cette catégorie ?")) return;
     await deleteDoc(doc(db, "categories", id));
     showToast("Catégorie supprimée");
+  };
+
+  // Déplace une catégorie d'une position (direction: -1 = monter, +1 = descendre)
+  const moveCat = async (idx: number, direction: -1 | 1) => {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= dbCats.length) return;
+    const a = dbCats[idx];
+    const b = dbCats[targetIdx];
+    const batch = writeBatch(db);
+    batch.update(doc(db, "categories", a.id!), { order: b.order ?? targetIdx });
+    batch.update(doc(db, "categories", b.id!), { order: a.order ?? idx });
+    await batch.commit();
   };
 
   const printOrder = (o: Order) => {
@@ -1303,31 +1315,54 @@ export default function AdminPage() {
                   // aucune catégorie — ajoutez-en une ci-dessus
                 </div>
               ) : (
-                <div style={{display:"grid",gap:10}}>
-                  {dbCats.map(c => (
+                <div style={{display:"grid",gap:8}}>
+                  {dbCats.map((c, idx) => (
                     <div key={c.id} style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
-                      borderRadius:10,padding:"16px 22px",display:"flex",alignItems:"center",gap:16,transition:"all .15s ease"}}>
-                      <span style={{fontSize:"2rem",minWidth:44,textAlign:"center"}}>{c.emoji}</span>
-                      <div style={{flex:1}}>
-                        <div style={{fontWeight:700,fontSize:"1.05rem",letterSpacing:".04em"}}>{c.label}</div>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",marginTop:3}}>
+                      borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:10,transition:"all .15s ease"}}>
+
+                      {/* Boutons monter / descendre — grands pour le tactile */}
+                      <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+                        <button onClick={() => moveCat(idx, -1)} disabled={idx === 0}
+                          style={{width:36,height:36,borderRadius:6,border:"1px solid rgba(255,255,255,.15)",
+                            background: idx === 0 ? "rgba(255,255,255,.03)" : "rgba(255,255,255,.07)",
+                            color: idx === 0 ? "rgba(255,255,255,.2)" : "#f0eeff",
+                            cursor: idx === 0 ? "default" : "pointer",
+                            fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center",
+                            lineHeight:1,userSelect:"none",WebkitUserSelect:"none"}}>
+                          ▲
+                        </button>
+                        <button onClick={() => moveCat(idx, 1)} disabled={idx === dbCats.length - 1}
+                          style={{width:36,height:36,borderRadius:6,border:"1px solid rgba(255,255,255,.15)",
+                            background: idx === dbCats.length - 1 ? "rgba(255,255,255,.03)" : "rgba(255,255,255,.07)",
+                            color: idx === dbCats.length - 1 ? "rgba(255,255,255,.2)" : "#f0eeff",
+                            cursor: idx === dbCats.length - 1 ? "default" : "pointer",
+                            fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center",
+                            lineHeight:1,userSelect:"none",WebkitUserSelect:"none"}}>
+                          ▼
+                        </button>
+                      </div>
+
+                      <span style={{fontSize:"1.8rem",minWidth:38,textAlign:"center"}}>{c.emoji}</span>
+
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:"1rem",letterSpacing:".03em",
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",marginTop:2}}>
                           clé : <span style={{color:"#00f5ff"}}>{c.key}</span>
                         </div>
                       </div>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem",color:"#5a5470",minWidth:40,textAlign:"right"}}>
-                        #{c.order ?? 0}
-                      </div>
-                      <div style={{display:"flex",gap:8}}>
+
+                      <div style={{display:"flex",gap:6,flexShrink:0}}>
                         <button onClick={() => setEditCat(c)}
                           style={{background:"transparent",border:"1px solid rgba(0,245,255,.3)",color:"#00f5ff",
-                            padding:"8px 18px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                            fontSize:".9rem",cursor:"pointer"}}>
-                          ✏️ ÉDITER
+                            padding:"10px 14px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                            fontSize:".85rem",cursor:"pointer",whiteSpace:"nowrap",minHeight:44}}>
+                          ✏️
                         </button>
                         <button onClick={() => deleteCat(c.id!)}
                           style={{background:"transparent",border:"1px solid rgba(255,45,120,.3)",color:"#ff2d78",
-                            padding:"8px 14px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                            fontSize:".9rem",cursor:"pointer"}}>
+                            padding:"10px 14px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                            fontSize:".85rem",cursor:"pointer",minHeight:44}}>
                           ✕
                         </button>
                       </div>
