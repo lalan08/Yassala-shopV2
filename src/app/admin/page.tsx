@@ -986,15 +986,18 @@ export default function AdminPage() {
             });
             const maxCa = Math.max(...last7.map(d => d.ca), 1);
 
-            const card = (icon: string, label: string, value: string, sub?: string, color = "#00f5ff", onClick?: () => void) => (
-              <div onClick={onClick} style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",
-                borderRadius:12,padding:"18px 20px",borderLeft:`3px solid ${color}`,flex:1,minWidth:150,
-                boxShadow:"0 2px 8px rgba(0,0,0,.15)",cursor:onClick?"pointer":"default"}}>
-                <div style={{fontSize:"1.4rem",marginBottom:5}}>{icon}</div>
-                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".7rem",color:"#6b7280",
-                  letterSpacing:".1em",textTransform:"uppercase" as const,marginBottom:3}}>{label}</div>
-                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.5rem",color}}>{value}</div>
-                {sub && <div style={{fontSize:".78rem",color:"#5a5470",marginTop:3,fontFamily:"'Share Tech Mono',monospace"}}>{sub}</div>}
+            const statRow = (icon: string, label: string, value: string, sub?: string, color = "#00f5ff", onClick?: () => void) => (
+              <div onClick={onClick} style={{
+                display:"flex",alignItems:"center",gap:10,padding:"7px 0",
+                borderBottom:"1px solid rgba(255,255,255,.04)",cursor:onClick?"pointer":"default",
+              }}>
+                <span style={{fontSize:".9rem",width:18,flexShrink:0,textAlign:"center"}}>{icon}</span>
+                <span style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",color:"#5a5470",
+                  letterSpacing:".07em",textTransform:"uppercase" as const,flex:"0 0 138px"}}>{label}</span>
+                <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",color,flex:"0 0 58px"}}>{value}</span>
+                {sub && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
+                  flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sub}</span>}
+                {onClick && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#ff2d78",flexShrink:0,marginLeft:"auto"}}>→</span>}
               </div>
             );
 
@@ -1035,27 +1038,38 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* KPI Row 1 — Opérations */}
-                <div className="admin-kpi-grid" style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:14}}>
-                  {card("🗓️", `COMMANDES ${periodLabel}`, String(periodOrders.length), `CA : ${sum(periodOrders).toFixed(2)} €`, "#00f5ff")}
-                  {card("🔔", "EN ATTENTE", String(pending.length), pending.length > 0 ? "→ traiter" : "aucune", "#ff2d78", pending.length > 0 ? () => setTab("orders") : undefined)}
-                  {card("🚚", "EN COURS", String(inProgress.length), "livraison / retrait", "#ff9500", inProgress.length > 0 ? () => { setOrderFilter("en_cours"); setTab("orders"); } : undefined)}
-                  {card("✅", "LIVRÉES / RETIRÉES", String(delivered.length), `sur ${orders.length} commandes`, "#b8ff00")}
-                  {successRate !== null && card("📊", "TAUX RÉUSSITE", `${successRate}%`, `${cancelled.length} annulée${cancelled.length>1?"s":""}`, successRate >= 80 ? "#b8ff00" : successRate >= 60 ? "#ff9500" : "#ff2d78")}
-                  {card("💶", "PANIER MOYEN", `${avg(periodOrders).toFixed(2)} €`, "sur la période", "#a855f7")}
-                </div>
+                {/* Stats compactes — 2 panneaux côte à côte */}
+                <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:18}}>
 
-                {/* KPI Row 2 — Vue globale */}
-                <div className="admin-kpi-grid" style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:20}}>
-                  {card("📦", "CA TOTAL", `${sum(orders).toFixed(2)} €`, `${orders.length} commandes`, "#a855f7")}
-                  {card("👥", "CLIENTS", String(usersCount), `${activeUids.size} actifs · ${usersCount > 0 ? Math.round(activeUids.size/usersCount*100) : 0}% adoption`, "#00f5ff")}
-                  {card("🏍️", "LIVREURS EN LIGNE", String(onlineDrivers.length),
-                    onlineDrivers.length > 0 ? onlineDrivers.map(d=>d.name).join(", ").slice(0,32) : "aucun actif",
-                    onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",
-                    onlineDrivers.length > 0 ? () => setTab("online_drivers") : undefined)}
-                  {todayOrders.length > 0
-                    ? card("📅", "AUJOURD'HUI", `${todayOrders.length} cmd`, `🚚 ${todayDelivery} livraison · 🏪 ${todayPickup} retrait`, "#ff9500")
-                    : card("📅", "AUJOURD'HUI", "0 cmd", "aucune commande", "#5a5470")}
+                  {/* Panneau Opérations */}
+                  <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                    borderRadius:10,padding:"12px 16px",flex:1,minWidth:280}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".7rem",
+                      letterSpacing:".1em",color:"#5a5470",marginBottom:8}}>OPÉRATIONS</div>
+                    {statRow("🗓️", `Commandes ${periodLabel}`, String(periodOrders.length), `CA ${sum(periodOrders).toFixed(0)} €`, "#00f5ff")}
+                    {statRow("🔔", "En attente", String(pending.length), pending.length > 0 ? "traiter" : "aucune", "#ff2d78", pending.length > 0 ? () => setTab("orders") : undefined)}
+                    {statRow("🚚", "En cours", String(inProgress.length), "livraison / retrait", "#ff9500", inProgress.length > 0 ? () => { setOrderFilter("en_cours"); setTab("orders"); } : undefined)}
+                    {statRow("✅", "Livrées / retirées", String(delivered.length), `sur ${orders.length} total`, "#b8ff00")}
+                    {successRate !== null && statRow("📊", "Taux réussite", `${successRate}%`, `${cancelled.length} annulée${cancelled.length>1?"s":""}`, successRate >= 80 ? "#b8ff00" : successRate >= 60 ? "#ff9500" : "#ff2d78")}
+                    {statRow("💶", "Panier moyen", `${avg(periodOrders).toFixed(2)} €`, "sur la période", "#a855f7")}
+                  </div>
+
+                  {/* Panneau Aperçu global */}
+                  <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                    borderRadius:10,padding:"12px 16px",flex:1,minWidth:240}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".7rem",
+                      letterSpacing:".1em",color:"#5a5470",marginBottom:8}}>APERÇU GLOBAL</div>
+                    {statRow("📦", "CA total", `${sum(orders).toFixed(0)} €`, `${orders.length} commandes`, "#a855f7")}
+                    {statRow("👥", "Clients", String(usersCount), `${activeUids.size} actifs · ${usersCount > 0 ? Math.round(activeUids.size/usersCount*100) : 0}% adoption`, "#00f5ff")}
+                    {statRow("🏍️", "Livreurs en ligne", String(onlineDrivers.length),
+                      onlineDrivers.length > 0 ? onlineDrivers.map(d=>d.name).join(", ").slice(0,28) : "aucun actif",
+                      onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",
+                      onlineDrivers.length > 0 ? () => setTab("online_drivers") : undefined)}
+                    {statRow("📅", "Aujourd'hui", `${todayOrders.length} cmd`,
+                      todayOrders.length > 0 ? `🚚 ${todayDelivery} livr · 🏪 ${todayPickup} retrait` : "aucune commande",
+                      todayOrders.length > 0 ? "#ff9500" : "#5a5470")}
+                  </div>
+
                 </div>
 
                 {/* Graphique 7 jours */}
