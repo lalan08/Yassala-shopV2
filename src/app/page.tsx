@@ -1855,28 +1855,39 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div style={{marginBottom:20,maxHeight:250,overflowY:"auto"}}>
+                <div style={{marginBottom:20}}>
                   {cart.map(item => (
-                    <div key={item.id} style={{display:"flex",alignItems:"center",gap:12,
+                    <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
                       padding:"12px",background:"#080514",borderRadius:6,marginBottom:8}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontWeight:700,fontSize:".95rem",marginBottom:4}}>{item.name}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:".9rem",marginBottom:4,
+                          whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.name}</div>
                         <div style={{fontSize:".78rem",color:"#b8ff00",fontFamily:"'Black Ops One',cursive"}}>
                           {item.price.toFixed(2)}€
                         </div>
                       </div>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <button onClick={() => updateQty(item.id, -1)}
-                          style={{width:28,height:28,border:"1px solid #ff2d78",background:"transparent",
-                            color:"#ff2d78",borderRadius:3,cursor:"pointer",fontSize:"1.2rem"}}>−</button>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                        <button
+                          onClick={e => { e.stopPropagation(); updateQty(item.id, -1); }}
+                          style={{width:30,height:30,border:"1px solid #ff2d78",background:"transparent",
+                            color:"#ff2d78",borderRadius:4,cursor:"pointer",fontSize:"1.2rem",
+                            display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
                         <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
                           minWidth:20,textAlign:"center"}}>{item.qty}</span>
-                        <button onClick={() => updateQty(item.id, 1)}
-                          style={{width:28,height:28,border:"1px solid #ff2d78",background:"transparent",
-                            color:"#ff2d78",borderRadius:3,cursor:"pointer",fontSize:"1.2rem"}}>+</button>
+                        <button
+                          onClick={e => { e.stopPropagation(); updateQty(item.id, 1); }}
+                          style={{width:30,height:30,border:"1px solid #ff2d78",background:"transparent",
+                            color:"#ff2d78",borderRadius:4,cursor:"pointer",fontSize:"1.2rem",
+                            display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                        <button
+                          onClick={e => { e.stopPropagation(); setCart(prev => prev.filter(i => i.id !== item.id)); }}
+                          title="Retirer du panier"
+                          style={{width:30,height:30,border:"1px solid rgba(255,255,255,.15)",background:"transparent",
+                            color:"#5a5470",borderRadius:4,cursor:"pointer",fontSize:".9rem",
+                            display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>
                       </div>
-                      <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",color:"#b8ff00",
-                        minWidth:70,textAlign:"right"}}>
+                      <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",color:"#b8ff00",
+                        minWidth:60,textAlign:"right",flexShrink:0}}>
                         {(item.price * item.qty).toFixed(2)}€
                       </div>
                     </div>
