@@ -33,6 +33,10 @@ export type Delivery = {
   cashStatus: "unsettled" | "settled";
   cashSettledAt?: string;
   cashSettledBy?: string;
+  // ── bonus pluie ──────────────────────────────────────────────
+  rainBonus?: number;                                       // 0 | 1.50 | 3.00 €
+  weatherCondition?: "clear" | "rain" | "heavy_rain" | "unknown";
+  precipitationLevel?: number;                             // mm
 };
 
 export type DriverProfile = {
@@ -44,6 +48,9 @@ export type DriverProfile = {
   paymentMethod?: "bank" | "cash" | "other";
   role?: "driver" | "admin";
   createdAt?: string;
+  // ── bonus pluie & performance ─────────────────────────────────
+  rainDeliveriesCount?: number;  // nb de livraisons avec bonus pluie
+  performanceScore?: number;     // 0-100
 };
 
 export type Payout = {

@@ -71,6 +71,12 @@ export default function DriverPayoutDetail() {
   const [cashModal,  setCashModal]  = useState<CashModal>(null);
   const [settling,   setSettling]   = useState(false);
 
+  /* météo */
+  const [weather, setWeather] = useState<{ condition: string; precipitation: number; isRaining: boolean; isHeavyRain: boolean } | null>(null);
+
+  /* validation en cours */
+  const [validating, setValidating] = useState<string | null>(null); // deliveryId
+
   /* ── auth ── */
   useEffect(() => {
     (async () => {
@@ -169,6 +175,33 @@ export default function DriverPayoutDetail() {
     setSettling(false);
   };
 
+  /* ── météo fetch (poll toutes les 5 min) ── */
+  useEffect(() => {
+    const load = () => fetch('/api/weather').then(r => r.json()).then(setWeather).catch(() => {});
+    load();
+    const id = setInterval(load, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  /* ── valider une livraison (pending → validated + rain bonus) ── */
+  const validateDelivery = async (deliveryId: string) => {
+    setValidating(deliveryId);
+    try {
+      const res = await fetch('/api/validate-delivery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': 'yassala2025' },
+        body: JSON.stringify({ deliveryId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Erreur validation : ' + (err.error ?? res.statusText));
+      }
+    } catch (e: any) {
+      alert('Erreur réseau : ' + e.message);
+    }
+    setValidating(null);
+  };
+
   /* ── render ── */
   if (checking) return null;
   if (!authed) return (
@@ -221,6 +254,28 @@ export default function DriverPayoutDetail() {
           <div style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 600, color: "#5a5470", fontSize: ".88rem" }}>
             {driverName}
           </div>
+          {/* indicateur météo live */}
+          {weather && (
+            <div style={{
+              marginLeft: "auto",
+              display: "flex", alignItems: "center", gap: 6,
+              background: weather.isHeavyRain
+                ? "rgba(96,165,250,.12)"
+                : weather.isRaining
+                  ? "rgba(147,197,253,.1)"
+                  : "rgba(250,204,21,.08)",
+              border: `1px solid ${weather.isHeavyRain ? "rgba(96,165,250,.4)" : weather.isRaining ? "rgba(147,197,253,.3)" : "rgba(250,204,21,.25)"}`,
+              borderRadius: 6, padding: "4px 10px",
+              fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem",
+              color: weather.isHeavyRain ? "#60a5fa" : weather.isRaining ? "#93c5fd" : "#facc15",
+            }}>
+              {weather.isHeavyRain ? "⛈" : weather.isRaining ? "🌧" : "☀️"}
+              <span>{weather.isHeavyRain ? "+3€/livr." : weather.isRaining ? "+1.50€/livr." : "Pas de pluie"}</span>
+              {(weather.isRaining || weather.isHeavyRain) && (
+                <span style={{ color: "#5a5470" }}>{weather.precipitation.toFixed(1)}mm</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ padding: "20px 22px", maxWidth: 720, margin: "0 auto", animation: "fadeUp .3s both" }}>
@@ -320,6 +375,9 @@ export default function DriverPayoutDetail() {
                   <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".72rem", color: "#5a5470" }}>
                     base {fmt(d.basePay)}
                     {d.bonusPay > 0 && <> + bonus {fmt(d.bonusPay)}</>}
+                    {(d.rainBonus ?? 0) > 0 && (
+                      <span style={{ color: "#93c5fd" }}> + 🌧 {fmt(d.rainBonus!)}</span>
+                    )}
                   </span>
                   <span style={{ fontFamily: "'Black Ops One',cursive", fontSize: ".88rem", color: "#b8ff00", marginLeft: "auto" }}>
                     {fmt(d.totalPay)}
@@ -332,6 +390,16 @@ export default function DriverPayoutDetail() {
                   }}>
                     {d.status}
                   </span>
+
+                  {/* bouton valider (pending uniquement) */}
+                  {d.status === "pending" && (
+                    <button className="btn"
+                      onClick={() => validateDelivery(d.id)}
+                      disabled={validating === d.id}
+                      style={{ background: "rgba(0,245,255,.12)", color: "#00f5ff", padding: "4px 10px", fontSize: ".7rem" }}>
+                      {validating === d.id ? "…" : "✓ Valider"}
+                    </button>
+                  )}
 
                   {/* cash status */}
                   {d.paymentType === "CASH" && (
