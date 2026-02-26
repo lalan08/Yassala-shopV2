@@ -37,6 +37,10 @@ export type Delivery = {
   rainBonus?: number;                                       // 0 | 1.50 | 3.00 €
   weatherCondition?: "clear" | "rain" | "heavy_rain" | "unknown";
   precipitationLevel?: number;                             // mm
+  // ── boost automatique ────────────────────────────────────────
+  boostPay?: number;       // 0 | 1.50 | 3.00 | 5.00 €
+  boostApplied?: boolean;
+  boostAmount?: number;    // montant boost au moment de la validation
 };
 
 export type DriverProfile = {

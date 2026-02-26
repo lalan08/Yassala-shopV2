@@ -378,6 +378,9 @@ export default function DriverPayoutDetail() {
                     {(d.rainBonus ?? 0) > 0 && (
                       <span style={{ color: "#93c5fd" }}> + 🌧 {fmt(d.rainBonus!)}</span>
                     )}
+                    {(d.boostPay ?? 0) > 0 && (
+                      <span style={{ color: "#a855f7" }}> + 🚀 {fmt(d.boostPay!)}</span>
+                    )}
                   </span>
                   <span style={{ fontFamily: "'Black Ops One',cursive", fontSize: ".88rem", color: "#b8ff00", marginLeft: "auto" }}>
                     {fmt(d.totalPay)}
