@@ -12,6 +12,133 @@ import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
 import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+// ── Stripe client (initialisé une seule fois au module level) ──
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
+
+// ── Thème sombre Stripe (dark neon) ──
+const STRIPE_APPEARANCE = {
+  theme: "night" as const,
+  variables: {
+    colorPrimary:     "#00f5ff",
+    colorBackground:  "#0c0918",
+    colorText:        "#f0eeff",
+    colorDanger:      "#ff2d78",
+    fontFamily:       "'Rajdhani', sans-serif",
+    borderRadius:     "4px",
+  },
+  rules: {
+    ".Input": {
+      border:     "1px solid rgba(255,255,255,.15)",
+      padding:    "12px",
+      fontSize:   ".9rem",
+      background: "#080514",
+      color:      "#f0eeff",
+    },
+    ".Label": {
+      color:         "#7a7490",
+      fontSize:      ".72rem",
+      fontFamily:    "'Share Tech Mono', monospace",
+      letterSpacing: ".08em",
+      textTransform: "uppercase",
+    },
+    ".Tab": { border: "1px solid rgba(255,255,255,.1)", background: "#080514" },
+    ".Tab--selected": { border: "1px solid #00f5ff", background: "rgba(0,245,255,.06)" },
+  },
+} as const;
+
+// ── Composant formulaire Stripe (doit être DANS un <Elements>) ──
+function CheckoutPaymentForm({
+  onSuccess,
+  onCancel,
+}: {
+  onSuccess: () => void;
+  onCancel:  () => void;
+}) {
+  const stripe   = useStripe();
+  const elements = useElements();
+  const [error,      setError]      = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!stripe || !elements) return;
+    setConfirming(true);
+    setError(null);
+
+    const { error: stripeError } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: `${window.location.origin}/succes` },
+      redirect: "if_required",
+    });
+
+    if (stripeError) {
+      setError(stripeError.message || "Erreur lors du paiement.");
+      setConfirming(false);
+    } else {
+      onSuccess();
+    }
+  };
+
+  return (
+    <div>
+      <div style={{
+        fontFamily: "'Share Tech Mono',monospace", fontSize: ".68rem",
+        color: "#5a5470", letterSpacing: ".1em", marginBottom: 12,
+        textTransform: "uppercase",
+      }}>
+        // DÉTAILS DE PAIEMENT
+      </div>
+
+      <PaymentElement options={{ layout: "tabs" }} />
+
+      {error && (
+        <div style={{
+          marginTop: 12, padding: "10px 14px",
+          background: "rgba(255,45,120,.08)", border: "1px solid rgba(255,45,120,.3)",
+          borderRadius: 4, fontFamily: "'Share Tech Mono',monospace",
+          fontSize: ".75rem", color: "#ff2d78",
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      <button
+        onClick={handleConfirm}
+        disabled={confirming || !stripe}
+        style={{
+          width: "100%", marginTop: 16,
+          background: confirming ? "#5a5470" : "#00f5ff",
+          color: "#000", border: "none", borderRadius: 4,
+          padding: "16px", fontFamily: "'Rajdhani',sans-serif",
+          fontWeight: 700, fontSize: "1rem", letterSpacing: ".1em",
+          textTransform: "uppercase",
+          cursor: confirming ? "not-allowed" : "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+        }}
+      >
+        {confirming ? "⏳ CONFIRMATION EN COURS..." : "🔒 CONFIRMER LE PAIEMENT"}
+      </button>
+
+      <button
+        onClick={onCancel}
+        disabled={confirming}
+        style={{
+          width: "100%", marginTop: 10,
+          background: "transparent", border: "1px solid rgba(255,255,255,.12)",
+          color: "#5a5470", borderRadius: 4, padding: "12px",
+          fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem",
+          cursor: confirming ? "not-allowed" : "pointer", letterSpacing: ".05em",
+        }}
+      >
+        ← MODIFIER MA COMMANDE
+      </button>
+    </div>
+  );
+}
 
 // ── FIREBASE CONFIG ──
 const firebaseConfig = {
@@ -124,6 +251,9 @@ export default function Home() {
   // ── DYNAMIC DELIVERY PRICING ──
   const [distanceKm, setDistanceKm]       = useState(0);
   const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 1, availableDrivers: 1 });
+
+  // ── STRIPE PAYMENT ELEMENT ──
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
 
   // ── FLASH DEALS ──
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -556,23 +686,44 @@ export default function Home() {
       }
 
       if (paymentMethod === 'online') {
-        const res = await fetch('/api/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            items: cart.map(item => ({ product: { name: item.name, price: item.price, description: '' }, quantity: item.qty })),
-            customerName: orderForm.name,
-            customerPhone: orderForm.phone,
-            customerAddress: fulfillmentType === 'delivery' ? orderForm.address : (pickupSnapshot?.address || 'Click & Collect'),
-            deliveryFee,
-            orderNum,
-            orderId: orderRef.id,
-            fulfillmentType,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.url) throw new Error(data.error || 'Erreur paiement');
-        window.location.href = data.url;
+        if (stripePromise) {
+          // ── Nouveau flow : Payment Element inline ──────────────────────────
+          const res = await fetch('/api/create-payment-intent', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items:           cart.map(i => ({ name: i.name, price: i.price, qty: i.qty })),
+              deliveryFee,
+              orderId:         orderRef.id,
+              orderNum,
+              fulfillmentType,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Erreur paiement');
+          setStripeClientSecret(data.clientSecret);
+          setSubmitting(false);
+          return; // On attend la confirmation dans le Payment Element
+        } else {
+          // ── Fallback : ancien flow redirect Stripe Checkout ────────────────
+          const res = await fetch('/api/checkout', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: cart.map(item => ({ product: { name: item.name, price: item.price, description: '' }, quantity: item.qty })),
+              customerName:    orderForm.name,
+              customerPhone:   orderForm.phone,
+              customerAddress: fulfillmentType === 'delivery' ? orderForm.address : (pickupSnapshot?.address || 'Click & Collect'),
+              deliveryFee,
+              orderNum,
+              orderId: orderRef.id,
+              fulfillmentType,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.url) throw new Error(data.error || 'Erreur paiement');
+          window.location.href = data.url;
+        }
       } else {
         fetch('/api/notify', {
           method: 'POST',
@@ -627,6 +778,22 @@ export default function Home() {
 
     setSubmitting(false);
   };
+
+  // ── Callbacks Payment Element ──────────────────────────────────────────
+  const handlePaymentSuccess = useCallback(() => {
+    setStripeClientSecret(null);
+    setCart([]);
+    setOrderForm({ name: "", phone: "", address: "", email: "", lat: 0, lng: 0 });
+    setCoupon(null); setCouponInput("");
+    setFulfillmentType('delivery'); setPickupType('stock');
+    setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
+    setShowCart(false);
+    window.location.href = '/succes';
+  }, []);
+
+  const handlePaymentCancel = useCallback(() => {
+    setStripeClientSecret(null);
+  }, []);
 
   const filtered = products.filter(p =>
     p.isActive !== false && (activeCat === "all" || p.cat === activeCat)
@@ -2042,66 +2209,89 @@ export default function Home() {
                   </div>
                 )}
 
-                <div style={{marginBottom:16}}>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
-                    letterSpacing:".12em",marginBottom:10,textTransform:"uppercase"}}>
-                    // MODE DE PAIEMENT
+                {/* ── Si le Payment Element est actif → afficher le formulaire Stripe ── */}
+                {stripeClientSecret && stripePromise ? (
+                  <div style={{animation:"fadeUp .3s both"}}>
+                    <div style={{
+                      background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+                      borderRadius:8,padding:"16px",marginBottom:4,
+                    }}>
+                      <Elements
+                        stripe={stripePromise}
+                        options={{ clientSecret: stripeClientSecret, appearance: STRIPE_APPEARANCE }}
+                      >
+                        <CheckoutPaymentForm
+                          onSuccess={handlePaymentSuccess}
+                          onCancel={handlePaymentCancel}
+                        />
+                      </Elements>
+                    </div>
                   </div>
-                  <div style={{display:"grid",gridTemplateColumns:`${settings.paymentOnlineEnabled !== false && settings.paymentCashEnabled !== false ? "1fr 1fr" : "1fr"}`,gap:8}}>
-                    {settings.paymentOnlineEnabled !== false && (
-                    <div onClick={() => setPaymentMethod('online')}
-                      style={{padding:"12px 8px",borderRadius:6,
-                        cursor: settings.paymentCashEnabled !== false ? "pointer" : "default",
-                        textAlign:"center",
-                        border: paymentMethod === 'online' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.1)",
-                        background: paymentMethod === 'online' ? "rgba(0,245,255,.08)" : "#080514",
-                        transition:"all .2s"}}>
-                      <div style={{fontSize:"1.4rem",marginBottom:4}}>💳</div>
-                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",
-                        color: paymentMethod === 'online' ? "#00f5ff" : "#f0eeff",letterSpacing:".05em"}}>
-                        PAYER EN LIGNE
+                ) : (
+                  <>
+                    {/* ── MODE DE PAIEMENT ── */}
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
+                        letterSpacing:".12em",marginBottom:10,textTransform:"uppercase"}}>
+                        // MODE DE PAIEMENT
                       </div>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginTop:2}}>
-                        Carte · Apple Pay
+                      <div style={{display:"grid",gridTemplateColumns:`${settings.paymentOnlineEnabled !== false && settings.paymentCashEnabled !== false ? "1fr 1fr" : "1fr"}`,gap:8}}>
+                        {settings.paymentOnlineEnabled !== false && (
+                        <div onClick={() => setPaymentMethod('online')}
+                          style={{padding:"12px 8px",borderRadius:6,
+                            cursor: settings.paymentCashEnabled !== false ? "pointer" : "default",
+                            textAlign:"center",
+                            border: paymentMethod === 'online' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.1)",
+                            background: paymentMethod === 'online' ? "rgba(0,245,255,.08)" : "#080514",
+                            transition:"all .2s"}}>
+                          <div style={{fontSize:"1.4rem",marginBottom:4}}>💳</div>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",
+                            color: paymentMethod === 'online' ? "#00f5ff" : "#f0eeff",letterSpacing:".05em"}}>
+                            PAYER EN LIGNE
+                          </div>
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginTop:2}}>
+                            Carte · Apple Pay
+                          </div>
+                        </div>
+                        )}
+                        {settings.paymentCashEnabled !== false && (
+                        <div onClick={() => setPaymentMethod('cash')}
+                          style={{padding:"12px 8px",borderRadius:6,
+                            cursor: settings.paymentOnlineEnabled !== false ? "pointer" : "default",
+                            textAlign:"center",
+                            border: paymentMethod === 'cash' ? "2px solid #ff2d78" : "1px solid rgba(255,255,255,.1)",
+                            background: paymentMethod === 'cash' ? "rgba(255,45,120,.08)" : "#080514",
+                            transition:"all .2s"}}>
+                          <div style={{fontSize:"1.4rem",marginBottom:4}}>💵</div>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",
+                            color: paymentMethod === 'cash' ? "#ff2d78" : "#f0eeff",letterSpacing:".05em"}}>
+                            {fulfillmentType === 'pickup' ? 'CASH AU RETRAIT' : 'CASH LIVRAISON'}
+                          </div>
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginTop:2}}>
+                            Payer à la réception
+                          </div>
+                        </div>
+                        )}
                       </div>
                     </div>
-                    )}
-                    {settings.paymentCashEnabled !== false && (
-                    <div onClick={() => setPaymentMethod('cash')}
-                      style={{padding:"12px 8px",borderRadius:6,
-                        cursor: settings.paymentOnlineEnabled !== false ? "pointer" : "default",
-                        textAlign:"center",
-                        border: paymentMethod === 'cash' ? "2px solid #ff2d78" : "1px solid rgba(255,255,255,.1)",
-                        background: paymentMethod === 'cash' ? "rgba(255,45,120,.08)" : "#080514",
-                        transition:"all .2s"}}>
-                      <div style={{fontSize:"1.4rem",marginBottom:4}}>💵</div>
-                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",
-                        color: paymentMethod === 'cash' ? "#ff2d78" : "#f0eeff",letterSpacing:".05em"}}>
-                        {fulfillmentType === 'pickup' ? 'CASH AU RETRAIT' : 'CASH LIVRAISON'}
-                      </div>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginTop:2}}>
-                        Payer à la réception
-                      </div>
-                    </div>
-                    )}
-                  </div>
-                </div>
 
-                <button onClick={submitOrder} disabled={submitting || cartTotal < settings.deliveryMin
-                    || (settings.paymentOnlineEnabled === false && settings.paymentCashEnabled === false)
-                    || (settings.fulfillmentDeliveryEnabled === false && settings.fulfillmentPickupEnabled === false)}
-                  style={{width:"100%",
-                    background: submitting ? "#5a5470" : paymentMethod === 'online' ? "#00f5ff" : "#ff2d78",
-                    color: submitting ? "#f0eeff" : "#000",
-                    border:"none",borderRadius:4,padding:"16px",fontFamily:"'Rajdhani',sans-serif",
-                    fontWeight:700,fontSize:"1rem",letterSpacing:".1em",textTransform:"uppercase",
-                    cursor: submitting ? "not-allowed" : "pointer",
-                    display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                  {submitting ? "TRAITEMENT EN COURS..."
-                    : paymentMethod === 'online' ? "💳 PAYER EN LIGNE"
-                    : fulfillmentType === 'pickup' ? "🏪 CONFIRMER LE RETRAIT"
-                    : "💵 COMMANDER — CASH À LA LIVRAISON"}
-                </button>
+                    <button onClick={submitOrder} disabled={submitting || cartTotal < settings.deliveryMin
+                        || (settings.paymentOnlineEnabled === false && settings.paymentCashEnabled === false)
+                        || (settings.fulfillmentDeliveryEnabled === false && settings.fulfillmentPickupEnabled === false)}
+                      style={{width:"100%",
+                        background: submitting ? "#5a5470" : paymentMethod === 'online' ? "#00f5ff" : "#ff2d78",
+                        color: submitting ? "#f0eeff" : "#000",
+                        border:"none",borderRadius:4,padding:"16px",fontFamily:"'Rajdhani',sans-serif",
+                        fontWeight:700,fontSize:"1rem",letterSpacing:".1em",textTransform:"uppercase",
+                        cursor: submitting ? "not-allowed" : "pointer",
+                        display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                      {submitting ? "TRAITEMENT EN COURS..."
+                        : paymentMethod === 'online' ? "💳 PAYER EN LIGNE"
+                        : fulfillmentType === 'pickup' ? "🏪 CONFIRMER LE RETRAIT"
+                        : "💵 COMMANDER — CASH À LA LIVRAISON"}
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>{/* fin scrollable */}
