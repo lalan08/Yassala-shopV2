@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { computeDeliveryPrice, haversineKm, SHOP_LAT, SHOP_LNG, type PricingResult } from "@/utils/pricing";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
@@ -113,6 +114,9 @@ export default function Home() {
   const [pickupTimeValue, setPickupTimeValue]   = useState<string>('');
   const [pickupLocations, setPickupLocations]   = useState<PickupLocation[]>([]);
   const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string}|null>(null);
+  // ── DYNAMIC DELIVERY PRICING ──
+  const [distanceKm, setDistanceKm]       = useState(0);
+  const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 1, availableDrivers: 1 });
 
   // ── Sync fulfillment/payment avec les settings ──
   useEffect(() => {
@@ -126,6 +130,24 @@ export default function Home() {
     if (!cashOk   && onlineOk) setPaymentMethod('online');
   }, [settings.fulfillmentDeliveryEnabled, settings.fulfillmentPickupEnabled,
       settings.paymentOnlineEnabled, settings.paymentCashEnabled]);
+
+  // Calcule la distance shop→client dès que l'adresse est localisée
+  useEffect(() => {
+    if (orderForm.lat && orderForm.lng) {
+      setDistanceKm(haversineKm(SHOP_LAT, SHOP_LNG, orderForm.lat, orderForm.lng));
+    } else {
+      setDistanceKm(0);
+    }
+  }, [orderForm.lat, orderForm.lng]);
+
+  // Récupère les stats de demande quand le panier s'ouvre (livraison uniquement)
+  useEffect(() => {
+    if (!showCart || fulfillmentType !== 'delivery') return;
+    fetch('/api/delivery-stats')
+      .then(r => r.json())
+      .then(data => setDeliveryStats(data))
+      .catch(() => {});
+  }, [showCart, fulfillmentType]);
 
   const toggleLike = (id: string) => {
     setLikes(prev => {
@@ -280,7 +302,14 @@ export default function Home() {
     return Math.min(coupon.value, cartTotal);
   };
   const discountedTotal = cartTotal - getDiscount();
-  const deliveryFeeDisplay = fulfillmentType === 'pickup' ? 0 : (discountedTotal >= settings.freeDelivery ? 0 : 3);
+  const pricingResult: PricingResult | null =
+    fulfillmentType === 'delivery' && distanceKm > 0 && discountedTotal < settings.freeDelivery
+      ? computeDeliveryPrice({ distanceKm, ...deliveryStats, hour: new Date().getHours() })
+      : null;
+  const deliveryFeeDisplay =
+    fulfillmentType === 'pickup' ? 0
+    : discountedTotal >= settings.freeDelivery ? 0
+    : (pricingResult?.total ?? 3);
   const finalTotal = discountedTotal + deliveryFeeDisplay;
 
   const searchAddress = useCallback((q: string) => {
@@ -348,7 +377,7 @@ export default function Home() {
     try {
       const orderRef = doc(collection(db, "orders"));
       const orderItems = cart.map(item => `${item.qty}× ${item.name} (${item.price.toFixed(2)}€)`).join("\n");
-      const deliveryFee = fulfillmentType === 'pickup' ? 0 : (discountedTotal >= settings.freeDelivery ? 0 : 3);
+      const deliveryFee = deliveryFeeDisplay;
       const totalWithDelivery = discountedTotal + deliveryFee;
       const discount = getDiscount();
 
@@ -1571,11 +1600,30 @@ export default function Home() {
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                     <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>
                       {fulfillmentType === 'pickup' ? 'RETRAIT' : 'LIVRAISON'}
+                      {pricingResult?.isSurge && (
+                        <span style={{marginLeft:6,color:"#ff6b35",fontSize:".7rem"}} title="Forte demande">🔥 SURGE</span>
+                      )}
+                      {pricingResult?.isNight && (
+                        <span style={{marginLeft:6,color:"#a78bfa",fontSize:".7rem"}} title="Tarif nocturne">🌙 NUIT</span>
+                      )}
                     </span>
                     <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#b8ff00"}}>
-                      {fulfillmentType === 'pickup' ? 'GRATUIT' : (discountedTotal >= settings.freeDelivery ? 'GRATUITE' : '3.00€')}
+                      {fulfillmentType === 'pickup'
+                        ? 'GRATUIT'
+                        : discountedTotal >= settings.freeDelivery
+                        ? 'GRATUITE'
+                        : `${deliveryFeeDisplay.toFixed(2)}€`}
                     </span>
                   </div>
+                  {pricingResult && distanceKm > 0 && (
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,opacity:.65}}>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470"}}>
+                        {distanceKm.toFixed(1)} km · base {pricingResult.base.toFixed(2)}€ + dist {pricingResult.distanceFee.toFixed(2)}€
+                        {pricingResult.surgeFee > 0 && ` + surge ${pricingResult.surgeFee.toFixed(2)}€`}
+                        {pricingResult.nightFee > 0 && ` + nuit ${pricingResult.nightFee.toFixed(2)}€`}
+                      </span>
+                    </div>
+                  )}
                   <div style={{display:"flex",justifyContent:"space-between",paddingTop:12,
                     borderTop:"1px solid rgba(255,45,120,.2)"}}>
                     <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",color:"#ff2d78"}}>TOTAL</span>
