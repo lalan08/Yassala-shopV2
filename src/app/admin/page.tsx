@@ -954,6 +954,17 @@ export default function AdminPage() {
               <span>PAIEMENTS</span>
               <span style={{marginLeft:"auto",fontSize:".75rem",opacity:.6}}>↗</span>
             </a>
+            <a href="/admin/analytics"
+              style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
+                background:"rgba(0,245,255,.06)",border:"none",borderLeft:"2px solid #00f5ff",
+                color:"#00f5ff",fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".88rem",
+                textDecoration:"none",cursor:"pointer",marginTop:2}}
+              onMouseEnter={e=>(e.currentTarget.style.background="rgba(0,245,255,.12)")}
+              onMouseLeave={e=>(e.currentTarget.style.background="rgba(0,245,255,.06)")}>
+              <span style={{fontSize:"1.1rem"}}>🔮</span>
+              <span>PRÉVISIONS</span>
+              <span style={{marginLeft:"auto",fontSize:".75rem",opacity:.6}}>↗</span>
+            </a>
           </div>
 
         </aside>
