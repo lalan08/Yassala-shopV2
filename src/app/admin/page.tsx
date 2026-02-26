@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useAdminAlerts, type AdminAlert } from "@/hooks/useAdminAlerts";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -115,6 +116,15 @@ export default function AdminPage() {
   const prevOrderIdsRef  = useRef<Set<string>>(new Set());
   const dragRef          = useRef<number | null>(null);
   const isFirstLoadRef   = useRef(true);
+
+  // ── Alertes opérationnelles ──
+  const {
+    alerts: adminAlerts,
+    unresolvedCount: alertCount,
+    resolveAlert,
+    soundEnabled: alertSound,
+    setSoundEnabled: setAlertSound,
+  } = useAdminAlerts({ orders, onlineDrivers });
 
   const playOrderSound = useCallback(() => {
     try {
@@ -957,6 +967,14 @@ export default function AdminPage() {
                       {newOrdersCount}
                     </span>
                   )}
+                  {item.key === "dashboard" && alertCount > 0 && (
+                    <span className="admin-badge-dot" style={{marginLeft:"auto",background:"#ff6b35",color:"#000",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",fontWeight:700,
+                      minWidth:20,height:20,borderRadius:10,display:"flex",alignItems:"center",
+                      justifyContent:"center",padding:"0 5px"}}>
+                      {alertCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -1078,6 +1096,169 @@ export default function AdminPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* ── ALERTES OPÉRATIONNELLES ── */}
+                {(() => {
+                  const unresolved = adminAlerts.filter(a => !a.resolved);
+                  const ALERT_META: Record<string, { icon: string; label: string }> = {
+                    driver_shortage: { icon: "🏍️", label: "Manque livreurs"  },
+                    demand_spike:    { icon: "📈", label: "Pic de demande"    },
+                    payment_failed:  { icon: "💳", label: "Erreur paiement"  },
+                    cash_pending:    { icon: "💵", label: "Cash en attente"  },
+                  };
+                  const SEVERITY_STYLE: Record<string, { border: string; bg: string; color: string; badge: string }> = {
+                    critical: { border:"rgba(255,45,120,.5)",  bg:"rgba(255,45,120,.07)",  color:"#ff2d78", badge:"#ff2d78"  },
+                    warning:  { border:"rgba(255,107,53,.5)",  bg:"rgba(255,107,53,.07)",  color:"#ff6b35", badge:"#ff6b35"  },
+                    info:     { border:"rgba(0,245,255,.3)",   bg:"rgba(0,245,255,.05)",   color:"#00f5ff", badge:"#00f5ff"  },
+                  };
+
+                  return (
+                    <div style={{marginBottom:20}}>
+                      {/* Header row */}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                            letterSpacing:".12em",color:"#5a5470"}}>// ALERTES</span>
+                          {unresolved.length > 0 && (
+                            <span style={{background:"#ff6b35",color:"#000",fontFamily:"'Share Tech Mono',monospace",
+                              fontSize:".7rem",fontWeight:700,minWidth:20,height:20,borderRadius:10,
+                              display:"flex",alignItems:"center",justifyContent:"center",padding:"0 5px"}}>
+                              {unresolved.length}
+                            </span>
+                          )}
+                        </div>
+                        {/* Son toggle */}
+                        <button
+                          onClick={() => setAlertSound(!alertSound)}
+                          title={alertSound ? "Son activé — cliquer pour désactiver" : "Son désactivé — cliquer pour activer"}
+                          style={{background:"none",border:`1px solid ${alertSound ? "rgba(184,255,0,.3)" : "rgba(255,255,255,.08)"}`,
+                            borderRadius:6,padding:"4px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:6,
+                            color: alertSound ? "#b8ff00" : "#5a5470",
+                            fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                          }}>
+                          {alertSound ? "🔔 SON ON" : "🔕 SON OFF"}
+                        </button>
+                      </div>
+
+                      {/* Alert cards */}
+                      {unresolved.length === 0 ? (
+                        <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 16px",
+                          background:"rgba(184,255,0,.04)",border:"1px solid rgba(184,255,0,.12)",
+                          borderRadius:10,fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                          color:"#5a5470"}}>
+                          <span>✅</span>
+                          <span>Aucune alerte active — opérations normales</span>
+                        </div>
+                      ) : (
+                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                          {unresolved.map((alert: AdminAlert) => {
+                            const meta  = ALERT_META[alert.type]  ?? { icon:"⚠️", label: alert.type };
+                            const style = SEVERITY_STYLE[alert.severity] ?? SEVERITY_STYLE.warning;
+                            return (
+                              <div key={alert.id} style={{
+                                display:"flex",alignItems:"flex-start",gap:12,
+                                background: style.bg,
+                                border:`1px solid ${style.border}`,
+                                borderRadius:10,padding:"11px 14px",
+                              }}>
+                                <span style={{fontSize:"1.2rem",flexShrink:0,marginTop:1}}>{meta.icon}</span>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,
+                                      fontSize:".82rem",color: style.color}}>
+                                      {meta.label}
+                                    </span>
+                                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",
+                                      background: style.badge,color:"#000",borderRadius:4,
+                                      padding:"1px 6px",fontWeight:700,letterSpacing:".06em"}}>
+                                      {alert.severity.toUpperCase()}
+                                    </span>
+                                    {alert.count != null && (
+                                      <span style={{marginLeft:"auto",fontFamily:"'Black Ops One',cursive",
+                                        fontSize:"1rem",color: style.color}}>
+                                        ×{alert.count}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",
+                                    color:"#d0d0e0",lineHeight:1.4,marginBottom:6}}>
+                                    {alert.message}
+                                  </div>
+                                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470"}}>
+                                      {new Date(alert.createdAt).toLocaleString("fr-FR",{
+                                        day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",
+                                      })}
+                                    </span>
+                                    {alert.type === "driver_shortage" && (
+                                      <button onClick={() => setTab("online_drivers" as any)}
+                                        style={{background:"none",border:"none",cursor:"pointer",
+                                          fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                                          color:"#00f5ff",padding:0,textDecoration:"underline"}}>
+                                        Voir livreurs →
+                                      </button>
+                                    )}
+                                    {(alert.type === "payment_failed" || alert.type === "cash_pending") && (
+                                      <button onClick={() => setTab("orders")}
+                                        style={{background:"none",border:"none",cursor:"pointer",
+                                          fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                                          color:"#00f5ff",padding:0,textDecoration:"underline"}}>
+                                        Voir commandes →
+                                      </button>
+                                    )}
+                                    <button onClick={() => resolveAlert(alert.id)}
+                                      style={{marginLeft:"auto",background:"rgba(255,255,255,.05)",
+                                        border:"1px solid rgba(255,255,255,.1)",
+                                        borderRadius:5,padding:"3px 10px",cursor:"pointer",
+                                        fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                                        color:"#5a5470",transition:"background .15s"}}
+                                      onMouseEnter={e => (e.currentTarget.style.background="rgba(184,255,0,.08)")}
+                                      onMouseLeave={e => (e.currentTarget.style.background="rgba(255,255,255,.05)")}>
+                                      ✓ Résoudre
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Resolved history (collapsed) */}
+                      {adminAlerts.filter(a => a.resolved).length > 0 && (
+                        <details style={{marginTop:8}}>
+                          <summary style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                            color:"#3a3450",cursor:"pointer",letterSpacing:".06em",userSelect:"none"}}>
+                            {adminAlerts.filter(a => a.resolved).length} alerte{adminAlerts.filter(a => a.resolved).length > 1 ? "s" : ""} résolue{adminAlerts.filter(a => a.resolved).length > 1 ? "s" : ""} (historique)
+                          </summary>
+                          <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:6}}>
+                            {adminAlerts.filter(a => a.resolved).slice(0,5).map((alert: AdminAlert) => {
+                              const meta = ALERT_META[alert.type] ?? { icon:"✅", label: alert.type };
+                              return (
+                                <div key={alert.id} style={{display:"flex",alignItems:"center",gap:10,
+                                  padding:"8px 12px",background:"rgba(255,255,255,.02)",
+                                  border:"1px solid rgba(255,255,255,.05)",borderRadius:8,opacity:.6}}>
+                                  <span>{meta.icon}</span>
+                                  <span style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",
+                                    color:"#5a5470",flex:1,overflow:"hidden",textOverflow:"ellipsis",
+                                    whiteSpace:"nowrap"}}>
+                                    {alert.message}
+                                  </span>
+                                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                                    color:"#3a3450",flexShrink:0}}>
+                                    ✓ {alert.resolvedAt
+                                      ? new Date(alert.resolvedAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})
+                                      : ""}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Alerte commandes en attente */}
                 {pending.length > 0 && (
