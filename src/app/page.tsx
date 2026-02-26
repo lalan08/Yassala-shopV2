@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { computeDeliveryPrice, haversineKm, SHOP_LAT, SHOP_LNG, type PricingResult } from "@/utils/pricing";
 import { computeETA, formatETA } from "@/utils/estimateDelivery";
 import UpsellCarousel from "@/components/UpsellCarousel";
+import SmartThresholdSuggestions from "@/components/SmartThresholdSuggestions";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
@@ -1535,7 +1536,7 @@ export default function Home() {
                   ))}
                 </div>
 
-                {/* ── UPSELL ── */}
+                {/* ── UPSELL COMPLÉMENTAIRE ── */}
                 <UpsellCarousel
                   source="cart"
                   cartItems={cart}
@@ -1543,6 +1544,15 @@ export default function Home() {
                   onAddToCart={p => addToCart(p.id, p.name, p.price)}
                   cartTotal={cartTotal}
                   deliveryMin={settings.deliveryMin}
+                />
+
+                {/* ── SEUIL LIVRAISON GRATUITE ── */}
+                <SmartThresholdSuggestions
+                  cartItems={cart}
+                  allProducts={products}
+                  cartTotal={cartTotal}
+                  threshold={settings.freeDelivery}
+                  onAddToCart={p => addToCart(p.id, p.name, p.price)}
                 />
 
                 {/* Coupon */}
