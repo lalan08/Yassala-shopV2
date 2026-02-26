@@ -17,6 +17,9 @@ export const storage = getStorage(app);
 
 // --- Shared types ---
 
+export type GeoPoint = { lat: number; lng: number };
+export type GeoPointWithAcc = GeoPoint & { accuracy?: number }; // accuracy en mètres
+
 export type Delivery = {
   id: string;
   driverId: string;
@@ -29,18 +32,36 @@ export type Delivery = {
   basePay: number;
   bonusPay: number;
   totalPay: number;
-  status: "pending" | "validated" | "paid";
+  status: "pending" | "assigned" | "picked_up" | "delivered" | "validated" | "paid";
   cashStatus: "unsettled" | "settled";
   cashSettledAt?: string;
   cashSettledBy?: string;
   // ── bonus pluie ──────────────────────────────────────────────
-  rainBonus?: number;                                       // 0 | 1.50 | 3.00 €
+  rainBonus?: number;
   weatherCondition?: "clear" | "rain" | "heavy_rain" | "unknown";
-  precipitationLevel?: number;                             // mm
+  precipitationLevel?: number;
   // ── boost automatique ────────────────────────────────────────
-  boostPay?: number;       // 0 | 1.50 | 3.00 | 5.00 €
+  boostPay?: number;
   boostApplied?: boolean;
-  boostAmount?: number;    // montant boost au moment de la validation
+  boostAmount?: number;
+  // ── timestamps de statut ─────────────────────────────────────
+  acceptedAt?: string;
+  pickedUpAt?: string;
+  deliveredAt?: string;
+  updatedAt?: string;
+  // ── positions GPS ─────────────────────────────────────────────
+  pickupLocation?: GeoPoint;
+  dropoffLocation?: GeoPoint;
+  driverLocationAtAccept?: GeoPointWithAcc;
+  driverLocationAtPickup?: GeoPointWithAcc;
+  driverLocationAtDropoff?: GeoPointWithAcc;
+  distanceKmEstimated?: number;
+  distanceKmReported?: number;
+  // ── anti-fraude ───────────────────────────────────────────────
+  fraudFlags?: string[];
+  fraudScore?: number;
+  reviewedByAdmin?: boolean;
+  reviewStatus?: "ok" | "warning" | "blocked" | "chargeback";
 };
 
 export type DriverProfile = {
@@ -53,8 +74,30 @@ export type DriverProfile = {
   role?: "driver" | "admin";
   createdAt?: string;
   // ── bonus pluie & performance ─────────────────────────────────
-  rainDeliveriesCount?: number;  // nb de livraisons avec bonus pluie
+  rainDeliveriesCount?: number;
   performanceScore?: number;     // 0-100
+  // ── anti-fraude ───────────────────────────────────────────────
+  riskScore?: number;            // 0-100 (moyenne pondérée fraudScore)
+  strikesCount?: number;         // nb de flags "high" cumulés
+  isBlocked?: boolean;
+  lastKnownLocation?: GeoPoint & { updatedAt: string };
+  deviceFingerprint?: string;
+  suspiciousEventsCount?: number;
+};
+
+export type FraudEvent = {
+  id: string;
+  driverId: string;
+  deliveryId?: string;
+  orderId?: string;
+  type: string;
+  severity: "low" | "medium" | "high";
+  scoreImpact: number;
+  details: Record<string, unknown>;
+  createdAt: string;
+  resolved: boolean;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
 };
 
 export type Payout = {
