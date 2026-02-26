@@ -15,10 +15,8 @@ import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
-// ── Stripe client (initialisé une seule fois au module level) ──
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  : null;
+// ── Stripe client (chargé dynamiquement depuis le serveur) ──
+// Ne pas initialiser ici pour éviter les problèmes de build-time env vars
 
 // ── Thème sombre Stripe (dark neon) ──
 const STRIPE_APPEARANCE = {
@@ -254,6 +252,7 @@ export default function Home() {
 
   // ── STRIPE PAYMENT ELEMENT ──
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
 
   // ── FLASH DEALS ──
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -352,9 +351,12 @@ export default function Home() {
             const p = snap.data();
             setOrderForm(f => ({
               ...f,
-              name:  f.name  || p.name  || user.displayName || "",
-              phone: f.phone || p.phone || "",
-              email: f.email || user.email || "",
+              name:    f.name    || p.name    || user.displayName || "",
+              phone:   f.phone   || p.phone   || "",
+              email:   f.email   || user.email || "",
+              address: f.address || p.address || "",
+              lat:     f.lat     || p.lat     || 0,
+              lng:     f.lng     || p.lng     || 0,
             }));
           } else if (user.displayName) {
             setOrderForm(f => ({ ...f, name: f.name || user.displayName || "" }));
@@ -378,6 +380,21 @@ export default function Home() {
   useEffect(() => {
     try { const s = localStorage.getItem("yassala_cart"); if (s) setCart(JSON.parse(s)); } catch {}
     try { const l = localStorage.getItem("yassala_likes"); if (l) setLikes(new Set(JSON.parse(l))); } catch {}
+    try {
+      const p = localStorage.getItem("yassala_profile");
+      if (p) {
+        const d = JSON.parse(p);
+        setOrderForm(f => ({
+          ...f,
+          name:    f.name    || d.name    || "",
+          phone:   f.phone   || d.phone   || "",
+          email:   f.email   || d.email   || "",
+          address: f.address || d.address || "",
+          lat:     f.lat     || d.lat     || 0,
+          lng:     f.lng     || d.lng     || 0,
+        }));
+      }
+    } catch {}
     setCartReady(true);
   }, []);
   useEffect(() => {
@@ -701,54 +718,51 @@ export default function Home() {
         }).catch(() => {});
       }
 
-      // ── Sauvegarde du profil client (name + phone) pour prérempl. future ──
+      // ── Sauvegarde du profil client pour prérempl. future ──
+      const savedAddress = fulfillmentType === 'delivery' ? orderForm.address : "";
+      const savedLat     = fulfillmentType === 'delivery' ? orderForm.lat : 0;
+      const savedLng     = fulfillmentType === 'delivery' ? orderForm.lng : 0;
       if (currentUser) {
         setDoc(doc(db, "users", currentUser.uid), {
-          name:  orderForm.name  || null,
-          phone: orderForm.phone || null,
+          name:    orderForm.name    || null,
+          phone:   orderForm.phone   || null,
+          address: savedAddress      || null,
+          lat:     savedLat          || null,
+          lng:     savedLng          || null,
           updatedAt: new Date().toISOString(),
         }, { merge: true }).catch(() => {});
       }
+      try {
+        localStorage.setItem("yassala_profile", JSON.stringify({
+          name:    orderForm.name,
+          phone:   orderForm.phone,
+          email:   orderForm.email,
+          address: savedAddress,
+          lat:     savedLat,
+          lng:     savedLng,
+        }));
+      } catch {}
 
       if (paymentMethod === 'online') {
-        if (stripePromise) {
-          // ── Nouveau flow : Payment Element inline ──────────────────────────
-          const res = await fetch('/api/create-payment-intent', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items:           cart.map(i => ({ name: i.name, price: i.price, qty: i.qty })),
-              deliveryFee,
-              orderId:         orderRef.id,
-              orderNum,
-              fulfillmentType,
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Erreur paiement');
-          setStripeClientSecret(data.clientSecret);
-          setSubmitting(false);
-          return; // On attend la confirmation dans le Payment Element
-        } else {
-          // ── Fallback : ancien flow redirect Stripe Checkout ────────────────
-          const res = await fetch('/api/checkout', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: cart.map(item => ({ product: { name: item.name, price: item.price, description: '' }, quantity: item.qty })),
-              customerName:    orderForm.name,
-              customerPhone:   orderForm.phone,
-              customerAddress: fulfillmentType === 'delivery' ? orderForm.address : (pickupSnapshot?.address || 'Click & Collect'),
-              deliveryFee,
-              orderNum,
-              orderId: orderRef.id,
-              fulfillmentType,
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.url) throw new Error(data.error || 'Erreur paiement');
-          window.location.href = data.url;
-        }
+        // ── Payment Element inline (clé chargée dynamiquement depuis le serveur) ──
+        const res = await fetch('/api/create-payment-intent', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items:           cart.map(i => ({ name: i.name, price: i.price, qty: i.qty })),
+            deliveryFee,
+            orderId:         orderRef.id,
+            orderNum,
+            fulfillmentType,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Erreur paiement');
+        if (!data.publishableKey) throw new Error('Paiement non configuré (clé publique manquante)');
+        setStripePromise(loadStripe(data.publishableKey));
+        setStripeClientSecret(data.clientSecret);
+        setSubmitting(false);
+        return; // On attend la confirmation dans le Payment Element
       } else {
         fetch('/api/notify', {
           method: 'POST',
@@ -787,14 +801,14 @@ export default function Home() {
         }
 
         setCart([]);
-        // Si connecté, on garde nom/tel/email pour la prochaine commande
+        // On garde toutes les infos pour la prochaine commande
         setOrderForm(f => ({
-          name:    currentUser ? f.name  : "",
-          phone:   currentUser ? f.phone : "",
-          email:   currentUser ? f.email : "",
-          address: "",
-          lat:     0,
-          lng:     0,
+          name:    f.name,
+          phone:   f.phone,
+          email:   f.email,
+          address: f.address,
+          lat:     f.lat,
+          lng:     f.lng,
         }));
         setCoupon(null); setCouponInput("");
         setFulfillmentType('delivery'); setPickupType('stock');
@@ -816,21 +830,21 @@ export default function Home() {
   const handlePaymentSuccess = useCallback(() => {
     setStripeClientSecret(null);
     setCart([]);
-    // Si connecté, on garde nom/tel/email pour la prochaine commande
+    // On garde toutes les infos pour la prochaine commande
     setOrderForm(f => ({
-      name:    currentUser ? f.name  : "",
-      phone:   currentUser ? f.phone : "",
-      email:   currentUser ? f.email : "",
-      address: "",
-      lat:     0,
-      lng:     0,
+      name:    f.name,
+      phone:   f.phone,
+      email:   f.email,
+      address: f.address,
+      lat:     f.lat,
+      lng:     f.lng,
     }));
     setCoupon(null); setCouponInput("");
     setFulfillmentType('delivery'); setPickupType('stock');
     setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
     setShowCart(false);
     window.location.href = '/succes';
-  }, [currentUser]);
+  }, []);
 
   const handlePaymentCancel = useCallback(() => {
     setStripeClientSecret(null);
