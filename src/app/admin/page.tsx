@@ -940,21 +940,28 @@ export default function AdminPage() {
         <main className="admin-main" style={{flex:1,padding:"28px",overflowY:"auto",animation:"fadeUp .3s both"}}>
 
           {tab === "dashboard" && (() => {
-            const now   = new Date();
-            const todayStr  = now.toISOString().slice(0, 10);
-            const monthStr  = now.toISOString().slice(0, 7);
+            const now        = new Date();
+            const todayStr   = now.toISOString().slice(0, 10);
+            const monthStr   = now.toISOString().slice(0, 7);
 
             const todayOrders  = orders.filter(o => o.createdAt.slice(0,10) === todayStr);
             const monthOrders  = orders.filter(o => o.createdAt.slice(0,7) === monthStr);
             const weekOrders   = orders.filter(o => new Date(o.createdAt) >= new Date(now.getTime() - 7*24*60*60*1000));
             const periodOrders = dashPeriod === "24h" ? todayOrders : dashPeriod === "7j" ? weekOrders : monthOrders;
-            const periodLabel  = dashPeriod === "24h" ? "AUJOURD'HUI" : dashPeriod === "7j" ? "7 DERNIERS JOURS" : "CE MOIS";
-            const pending      = orders.filter(o => o.status === "nouveau");
-            const inProgress   = orders.filter(o => o.status === "en_cours");
+            const periodLabel  = dashPeriod === "24h" ? "AUJOURD'HUI" : dashPeriod === "7j" ? "7 JOURS" : "CE MOIS";
 
-            const sum = (list: Order[]) => list.reduce((acc, o) => acc + Number(o.total), 0);
+            const pending    = orders.filter(o => o.status === "nouveau");
+            const inProgress = orders.filter(o => o.status === "en_cours");
+            const delivered  = orders.filter(o => o.status === "livre");
+            const cancelled  = orders.filter(o => o.status === "annule");
 
-            // Top products by mention in items text
+            const sum  = (list: Order[]) => list.reduce((acc, o) => acc + Number(o.total), 0);
+            const avg  = (list: Order[]) => list.length ? sum(list) / list.length : 0;
+
+            const doneCount   = delivered.length + cancelled.length;
+            const successRate = doneCount > 0 ? Math.round(delivered.length / doneCount * 100) : null;
+            const activeUids  = new Set(orders.map((o: any) => o.uid).filter(Boolean));
+
             const prodCount: Record<string, number> = {};
             orders.forEach(o => {
               o.items.split("\n").forEach(line => {
@@ -962,26 +969,43 @@ export default function AdminPage() {
                 if (name) prodCount[name] = (prodCount[name] || 0) + 1;
               });
             });
-            const topProd = Object.entries(prodCount).sort((a,b) => b[1]-a[1])[0];
+            const top3 = Object.entries(prodCount).sort((a,b) => b[1]-a[1]).slice(0,3);
 
-            const card = (icon: string, label: string, value: string, sub?: string, color = "#00f5ff") => (
-              <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",borderRadius:12,padding:"22px 26px",
-                borderLeft:`3px solid ${color}`,minWidth:180,flex:1,boxShadow:"0 2px 8px rgba(0,0,0,.15)"}}>
-                <div style={{fontSize:"1.6rem",marginBottom:8}}>{icon}</div>
-                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".78rem",color:"#6b7280",
-                  letterSpacing:".1em",textTransform:"uppercase" as const,marginBottom:4}}>{label}</div>
-                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.6rem",color}}>{value}</div>
-                {sub && <div style={{fontSize:".88rem",color:"#5a5470",marginTop:4,fontFamily:"'Share Tech Mono',monospace"}}>{sub}</div>}
+            const todayDelivery = todayOrders.filter(o => !o.fulfillmentType || o.fulfillmentType === "delivery").length;
+            const todayPickup   = todayOrders.filter(o => o.fulfillmentType === "pickup").length;
+
+            const last7 = Array.from({length:7}, (_,i) => {
+              const d = new Date(); d.setDate(d.getDate() - (6-i));
+              const str = d.toISOString().slice(0,10);
+              const dayOrds = orders.filter(o => o.createdAt.slice(0,10) === str);
+              return {
+                label: d.toLocaleDateString("fr-FR",{weekday:"short"}),
+                count: dayOrds.length,
+                ca: dayOrds.reduce((s,o) => s+Number(o.total), 0),
+              };
+            });
+            const maxCa = Math.max(...last7.map(d => d.ca), 1);
+
+            const card = (icon: string, label: string, value: string, sub?: string, color = "#00f5ff", onClick?: () => void) => (
+              <div onClick={onClick} style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.06)",
+                borderRadius:12,padding:"18px 20px",borderLeft:`3px solid ${color}`,flex:1,minWidth:150,
+                boxShadow:"0 2px 8px rgba(0,0,0,.15)",cursor:onClick?"pointer":"default"}}>
+                <div style={{fontSize:"1.4rem",marginBottom:5}}>{icon}</div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".7rem",color:"#6b7280",
+                  letterSpacing:".1em",textTransform:"uppercase" as const,marginBottom:3}}>{label}</div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.5rem",color}}>{value}</div>
+                {sub && <div style={{fontSize:".78rem",color:"#5a5470",marginTop:3,fontFamily:"'Share Tech Mono',monospace"}}>{sub}</div>}
               </div>
             );
 
             return (
               <div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28,flexWrap:"wrap",gap:12}}>
-                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.5rem",letterSpacing:".04em"}}>
-                    <span style={{color:"#ff2d78"}}>Tableau de bord</span>
+                {/* Header */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
+                  <div>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.5rem",color:"#ff2d78"}}>Tableau de bord</span>
                     <span className="admin-dash-date" style={{fontFamily:"'Inter',sans-serif",fontWeight:400,fontSize:".82rem",color:"#5a5470",
-                      marginLeft:16,letterSpacing:".1em"}}>{now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
+                      marginLeft:14,letterSpacing:".1em"}}>{now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     {(["24h","7j","30j"] as const).map(p => (
@@ -996,102 +1020,132 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="admin-kpi-grid" style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
+                {/* Alerte commandes en attente */}
+                {pending.length > 0 && (
+                  <div onClick={() => setTab("orders")} style={{
+                    display:"flex",alignItems:"center",gap:12,
+                    background:"rgba(255,45,120,.07)",border:"1px solid rgba(255,45,120,.4)",
+                    borderRadius:10,padding:"11px 18px",marginBottom:18,cursor:"pointer",
+                  }}>
+                    <span style={{fontSize:"1.1rem"}}>🔔</span>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".88rem",color:"#ff2d78"}}>
+                      {pending.length} commande{pending.length > 1 ? "s" : ""} en attente de traitement
+                    </span>
+                    <span style={{marginLeft:"auto",fontFamily:"'Share Tech Mono',monospace",color:"#5a5470",fontSize:".78rem"}}>traiter →</span>
+                  </div>
+                )}
+
+                {/* KPI Row 1 — Opérations */}
+                <div className="admin-kpi-grid" style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:14}}>
                   {card("🗓️", `COMMANDES ${periodLabel}`, String(periodOrders.length), `CA : ${sum(periodOrders).toFixed(2)} €`, "#00f5ff")}
-                  {card("📅", "COMMANDES CE MOIS", String(monthOrders.length), `CA : ${sum(monthOrders).toFixed(2)} €`, "#b8ff00")}
-                  {card("🔔", "EN ATTENTE", String(pending.length), "statut : nouveau", "#ff2d78")}
-                  {card("🚚", "EN COURS", String(inProgress.length), "statut : en_cours", "#ff9500")}
+                  {card("🔔", "EN ATTENTE", String(pending.length), pending.length > 0 ? "→ traiter" : "aucune", "#ff2d78", pending.length > 0 ? () => setTab("orders") : undefined)}
+                  {card("🚚", "EN COURS", String(inProgress.length), "livraison / retrait", "#ff9500", inProgress.length > 0 ? () => { setOrderFilter("en_cours"); setTab("orders"); } : undefined)}
+                  {card("✅", "LIVRÉES / RETIRÉES", String(delivered.length), `sur ${orders.length} commandes`, "#b8ff00")}
+                  {successRate !== null && card("📊", "TAUX RÉUSSITE", `${successRate}%`, `${cancelled.length} annulée${cancelled.length>1?"s":""}`, successRate >= 80 ? "#b8ff00" : successRate >= 60 ? "#ff9500" : "#ff2d78")}
+                  {card("💶", "PANIER MOYEN", `${avg(periodOrders).toFixed(2)} €`, "sur la période", "#a855f7")}
                 </div>
 
-                <div className="admin-kpi-grid" style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
-                  {card("📦", "TOTAL COMMANDES", String(orders.length), `CA total : ${sum(orders).toFixed(2)} €`, "#a855f7")}
-                  {topProd && card("🏆", "PRODUIT POPULAIRE", topProd[0].slice(0,18), `${topProd[1]} mention(s)`, "#b8ff00")}
+                {/* KPI Row 2 — Vue globale */}
+                <div className="admin-kpi-grid" style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:20}}>
+                  {card("📦", "CA TOTAL", `${sum(orders).toFixed(2)} €`, `${orders.length} commandes`, "#a855f7")}
+                  {card("👥", "CLIENTS", String(usersCount), `${activeUids.size} actifs · ${usersCount > 0 ? Math.round(activeUids.size/usersCount*100) : 0}% adoption`, "#00f5ff")}
+                  {card("🏍️", "LIVREURS EN LIGNE", String(onlineDrivers.length),
+                    onlineDrivers.length > 0 ? onlineDrivers.map(d=>d.name).join(", ").slice(0,32) : "aucun actif",
+                    onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",
+                    onlineDrivers.length > 0 ? () => setTab("online_drivers") : undefined)}
+                  {todayOrders.length > 0
+                    ? card("📅", "AUJOURD'HUI", `${todayOrders.length} cmd`, `🚚 ${todayDelivery} livraison · 🏪 ${todayPickup} retrait`, "#ff9500")
+                    : card("📅", "AUJOURD'HUI", "0 cmd", "aucune commande", "#5a5470")}
                 </div>
 
-                {/* Stats clients */}
-                {(() => {
-                  const activeUids = new Set(orders.map((o:any) => o.uid).filter(Boolean));
-                  return (
-                    <div className="admin-kpi-grid" style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:24}}>
-                      {card("👥", "CLIENTS INSCRITS", String(usersCount), "comptes créés sur la boutique", "#00f5ff")}
-                      {card("🛒", "CLIENTS ACTIFS", String(activeUids.size), "ont passé au moins 1 commande", "#ff2d78")}
-                      {usersCount > 0 && card("📈", "TAUX D'ADOPTION", `${Math.round(activeUids.size/usersCount*100)}%`, "inscrits ayant commandé", "#b8ff00")}
+                {/* Graphique 7 jours */}
+                <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,
+                  padding:"18px 22px",marginBottom:18}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".83rem",letterSpacing:".08em",color:"#5a5470"}}>
+                      CA 7 DERNIERS JOURS
                     </div>
-                  );
-                })()}
-
-                {/* 7-day chart */}
-                {(() => {
-                  const last7 = Array.from({length:7}, (_,i) => {
-                    const d = new Date(); d.setDate(d.getDate() - (6-i));
-                    const str = d.toISOString().slice(0,10);
-                    const dayOrders = orders.filter(o => o.createdAt.slice(0,10) === str);
-                    return {
-                      label: d.toLocaleDateString("fr-FR",{weekday:"short"}),
-                      count: dayOrders.length,
-                      ca: dayOrders.reduce((s,o) => s+Number(o.total), 0),
-                    };
-                  });
-                  const maxCa = Math.max(...last7.map(d => d.ca), 1);
-                  return (
-                    <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,
-                      padding:"20px 24px",marginBottom:24}}>
-                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".85rem",
-                        letterSpacing:".08em",color:"#5a5470",marginBottom:16}}>CA 7 DERNIERS JOURS</div>
-                      <div style={{display:"flex",alignItems:"flex-end",gap:8,height:80}}>
-                        {last7.map((d, i) => (
-                          <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#b8ff00"}}>
-                              {d.ca > 0 ? d.ca.toFixed(0) : ""}
-                            </div>
-                            <div style={{
-                              width:"100%",
-                              height: d.ca === 0 ? 4 : Math.max(6, Math.round((d.ca/maxCa)*60)),
-                              background: i === 6 ? "#ff2d78" : "#b8ff00",
-                              borderRadius:"3px 3px 0 0",
-                              opacity: d.ca === 0 ? .2 : 1,
-                              transition:"height .4s",
-                              boxShadow: d.ca > 0 ? (i === 6 ? "0 0 8px rgba(255,45,120,.4)" : "0 0 8px rgba(184,255,0,.3)") : "none"
-                            }} />
-                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#5a5470"}}>
-                              {d.label}
-                            </div>
-                            {d.count > 0 && <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".55rem",color:"#5a5470"}}>
-                              {d.count}cmd
-                            </div>}
-                          </div>
-                        ))}
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#5a5470"}}>
+                      semaine : <span style={{color:"#b8ff00"}}>{sum(weekOrders).toFixed(0)} €</span>
+                      <span style={{marginLeft:10}}>{weekOrders.length} cmd</span>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"flex-end",gap:8,height:86}}>
+                    {last7.map((d, i) => (
+                      <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#b8ff00",minHeight:15,textAlign:"center"}}>
+                          {d.ca > 0 ? `${d.ca.toFixed(0)}€` : ""}
+                        </div>
+                        <div style={{
+                          width:"100%",
+                          height: d.ca === 0 ? 3 : Math.max(6, Math.round((d.ca/maxCa)*62)),
+                          background: i === 6 ? "#ff2d78" : "#b8ff00",
+                          borderRadius:"3px 3px 0 0",
+                          opacity: d.ca === 0 ? .2 : 1,
+                          transition:"height .4s",
+                          boxShadow: d.ca > 0 ? (i === 6 ? "0 0 8px rgba(255,45,120,.5)" : "0 0 8px rgba(184,255,0,.35)") : "none"
+                        }} />
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>{d.label}</div>
+                        {d.count > 0 && <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".55rem",color:"#5a5470"}}>{d.count}cmd</div>}
                       </div>
-                    </div>
-                  );
-                })()}
+                    ))}
+                  </div>
+                </div>
 
-                <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",borderRadius:10,padding:"20px 24px"}}>
-                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".85rem",
-                    letterSpacing:".08em",color:"#5a5470",marginBottom:16}}>DERNIÈRES COMMANDES</div>
-                  {orders.slice(0,5).map(o => (
-                    <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",
-                      borderBottom:"1px solid rgba(255,255,255,.04)"}}>
-                      <span style={{fontFamily:"'Black Ops One',cursive",fontSize:".85rem",color:"#ff2d78",minWidth:40}}>
-                        #{(o as any).orderNumber ?? o.id.slice(-4).toUpperCase()}
-                      </span>
-                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#5a5470",minWidth:72}}>
-                        {new Date(o.createdAt).toLocaleDateString("fr-FR")}
-                      </span>
-                      <span style={{flex:1,fontSize:".85rem"}}>{(o as any).name || o.phone}</span>
-                      <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",color:"#b8ff00"}}>
-                        {Number(o.total).toFixed(2)} €
-                      </span>
-                      <span style={{fontSize:".88rem",padding:"4px 10px",borderRadius:20,fontFamily:"'Share Tech Mono',monospace",
-                        background: o.status==="nouveau" ? "rgba(255,45,120,.15)" : o.status==="en_cours" ? "rgba(255,149,0,.15)" : o.status==="livre" ? "rgba(184,255,0,.15)" : "rgba(90,84,112,.2)",
-                        color: o.status==="nouveau" ? "#ff2d78" : o.status==="en_cours" ? "#ff9500" : o.status==="livre" ? "#b8ff00" : "#5a5470"}}>
-                        {o.status}
-                      </span>
+                {/* Bas de page : Top produits + Dernières commandes */}
+                <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                  {top3.length > 0 && (
+                    <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                      borderRadius:10,padding:"16px 20px",minWidth:200,flex:"0 0 auto"}}>
+                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".83rem",
+                        letterSpacing:".08em",color:"#5a5470",marginBottom:14}}>TOP PRODUITS</div>
+                      {top3.map(([name, count], i) => (
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:i < top3.length-1 ? 10 : 0}}>
+                          <span style={{fontFamily:"'Black Ops One',cursive",fontSize:".82rem",
+                            color: i===0 ? "#b8ff00" : i===1 ? "#00f5ff" : "#a855f7",minWidth:22}}>#{i+1}</span>
+                          <span style={{flex:1,fontSize:".82rem",fontFamily:"'Inter',sans-serif",
+                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name.slice(0,24)}</span>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem",color:"#5a5470"}}>{count}×</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {orders.length === 0 && (
-                    <div style={{color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem"}}>// aucune commande</div>
                   )}
+                  <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                    borderRadius:10,padding:"16px 20px",flex:1,minWidth:280}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".83rem",
+                        letterSpacing:".08em",color:"#5a5470"}}>DERNIÈRES COMMANDES</div>
+                      <button onClick={() => setTab("orders")} style={{background:"none",border:"none",color:"#ff2d78",
+                        fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",cursor:"pointer",padding:0}}>
+                        voir tout →
+                      </button>
+                    </div>
+                    {orders.slice(0,8).map(o => (
+                      <div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",
+                        borderBottom:"1px solid rgba(255,255,255,.04)"}}>
+                        <span style={{fontFamily:"'Black Ops One',cursive",fontSize:".78rem",color:"#ff2d78",minWidth:44}}>
+                          #{(o as any).orderNumber ?? o.id?.slice(-4).toUpperCase()}
+                        </span>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem",color:"#5a5470",minWidth:64}}>
+                          {new Date(o.createdAt).toLocaleDateString("fr-FR")}
+                        </span>
+                        <span style={{flex:1,fontSize:".82rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {(o as any).name || o.phone}
+                        </span>
+                        <span style={{fontFamily:"'Black Ops One',cursive",fontSize:".88rem",color:"#b8ff00",whiteSpace:"nowrap"}}>
+                          {Number(o.total).toFixed(2)} €
+                        </span>
+                        <span style={{fontSize:".73rem",padding:"3px 8px",borderRadius:20,fontFamily:"'Share Tech Mono',monospace",flexShrink:0,
+                          background: o.status==="nouveau" ? "rgba(255,45,120,.15)" : o.status==="en_cours" ? "rgba(255,149,0,.15)" : o.status==="livre" ? "rgba(184,255,0,.15)" : "rgba(90,84,112,.2)",
+                          color: o.status==="nouveau" ? "#ff2d78" : o.status==="en_cours" ? "#ff9500" : o.status==="livre" ? "#b8ff00" : "#5a5470"}}>
+                          {o.status}
+                        </span>
+                      </div>
+                    ))}
+                    {orders.length === 0 && (
+                      <div style={{color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem"}}>// aucune commande</div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
