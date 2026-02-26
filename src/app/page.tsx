@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { computeDeliveryPrice, haversineKm, SHOP_LAT, SHOP_LNG, type PricingResult } from "@/utils/pricing";
 import { computeETA, formatETA } from "@/utils/estimateDelivery";
 import UpsellCarousel from "@/components/UpsellCarousel";
 import SmartThresholdSuggestions from "@/components/SmartThresholdSuggestions";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc, updateDoc, increment } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
 import type { User } from "firebase/auth";
+import FlashDealBanner from "@/components/FlashDealBanner";
+import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
 
 // ── FIREBASE CONFIG ──
 const firebaseConfig = {
@@ -121,6 +123,9 @@ export default function Home() {
   const [distanceKm, setDistanceKm]       = useState(0);
   const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 1, availableDrivers: 1 });
 
+  // ── FLASH DEALS ──
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+
   // ── Sync fulfillment/payment avec les settings ──
   useEffect(() => {
     const deliveryOk = settings.fulfillmentDeliveryEnabled !== false;
@@ -215,7 +220,10 @@ export default function Home() {
           .filter(l => l.isActive)
       );
     });
-    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubBanners(); unsubCats(); unsubAuth(); unsubPickupLocs(); };
+    const unsubPromos = onSnapshot(collection(db, "promotions"), snap => {
+      setPromotions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Promotion)));
+    });
+    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubBanners(); unsubCats(); unsubAuth(); unsubPickupLocs(); unsubPromos(); };
   }, []);
 
   // ── CART PERSISTENCE ──
@@ -316,7 +324,15 @@ export default function Home() {
     if (coupon.type === "percent") return Math.round(cartTotal * coupon.value) / 100;
     return Math.min(coupon.value, cartTotal);
   };
-  const discountedTotal = cartTotal - getDiscount();
+
+  // ── FLASH DEAL ──
+  const activePromo = useMemo(
+    () => promotions.find(isPromoActive) ?? null,
+    [promotions]
+  );
+  const promoDiscount = computePromoDiscount(activePromo, cart);
+
+  const discountedTotal = cartTotal - getDiscount() - promoDiscount;
   const pricingResult: PricingResult | null =
     fulfillmentType === 'delivery' && distanceKm > 0 && discountedTotal < settings.freeDelivery
       ? computeDeliveryPrice({ distanceKm, ...deliveryStats, hour: new Date().getHours() })
@@ -398,6 +414,7 @@ export default function Home() {
       const deliveryFee = deliveryFeeDisplay;
       const totalWithDelivery = discountedTotal + deliveryFee;
       const discount = getDiscount();
+      const promoDiscountSnap = promoDiscount;
 
       // ── Pickup location snapshot ──
       const STOCK_LOCATION = { name: "Yassala Stock", address: "Retrait chez Yassala", city: "Cayenne", instructions: "Présente ton numéro de commande à l'accueil." };
@@ -422,6 +439,26 @@ export default function Home() {
         const counterSnap = await transaction.get(counterRef);
         orderNum = (counterSnap.exists() ? (counterSnap.data().count as number) : 0) + 1;
 
+        // ── Revalider la promo Flash ──────────────────────────
+        let validatedPromoId: string | null = null;
+        if (activePromo) {
+          const promoRef = doc(db, "promotions", activePromo.id);
+          const promoSnap = await transaction.get(promoRef);
+          if (promoSnap.exists()) {
+            const pd = promoSnap.data() as Omit<Promotion, "id">;
+            const now = Date.now();
+            const stillValid =
+              pd.isActive &&
+              now >= new Date(pd.startAt).getTime() &&
+              now <= new Date(pd.endAt).getTime() &&
+              (pd.maxUses === undefined || pd.maxUses === null || pd.usesCount < pd.maxUses);
+            if (stillValid) {
+              transaction.update(promoRef, { usesCount: increment(1), updatedAt: new Date().toISOString() });
+              validatedPromoId = activePromo.id;
+            }
+          }
+        }
+
         for (let i = 0; i < cart.length; i++) {
           const item = cart[i]; const prodDoc = prodDocs[i];
           if (!prodDoc.exists()) throw new Error(`Produit ${item.name} introuvable`);
@@ -437,6 +474,8 @@ export default function Home() {
           total: totalWithDelivery,
           subtotal: cartTotal,
           discount,
+          promoDiscount: promoDiscountSnap > 0 ? promoDiscountSnap : null,
+          promoId: validatedPromoId,
           coupon: coupon?.code || null,
           deliveryFee,
           fulfillmentType,
@@ -456,6 +495,17 @@ export default function Home() {
           orderNumber: orderNum,
         });
       });
+
+      // ── Tracking promotion_events ─────────────────────────
+      if (activePromo) {
+        addDoc(collection(db, "promotion_events"), {
+          promoId:   activePromo.id,
+          eventType: "checkout_success",
+          userId:    currentUser?.uid || null,
+          orderId:   orderRef.id,
+          createdAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
 
       // Auto-assign nearest available driver (fire-and-forget)
       if (fulfillmentType === 'delivery') {
@@ -693,6 +743,7 @@ export default function Home() {
         @keyframes gridScroll{from{background-position:0 0;}to{background-position:50px 50px;}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
         @keyframes bannerIn{from{opacity:0;transform:translateX(22px);}to{opacity:1;transform:translateX(0);}}
+        @keyframes flashPulse{0%,100%{box-shadow:0 0 10px rgba(255,45,120,.6);}50%{box-shadow:0 0 20px rgba(255,45,120,.9),0 0 30px rgba(255,100,0,.4);}}
         @keyframes bgShift{from{opacity:.7;}to{opacity:1;}}
         @keyframes floatPulse{0%,100%{box-shadow:0 4px 20px rgba(0,245,255,.35),0 0 40px rgba(0,245,255,.15);}50%{box-shadow:0 4px 28px rgba(0,245,255,.5),0 0 50px rgba(0,245,255,.25);}}
         .flicker{animation:flicker 6s infinite;}
@@ -947,6 +998,18 @@ export default function Home() {
 
       <section id="catalogue" style={{padding:"48px 16px 48px 16px",position:"relative",zIndex:1}}>
         {/* ── Header titre + compteur ── */}
+        {/* ── FLASH DEAL BANNER ── */}
+        {activePromo && (
+          <div style={{padding:"0 12px",marginBottom:8}}>
+            <FlashDealBanner
+              promo={activePromo}
+              products={products}
+              source="home"
+              onAddToCart={addToCart}
+            />
+          </div>
+        )}
+
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px"}}>
           <div className="section-title" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",letterSpacing:".05em"}}>
             🛒 <span style={{color:"#ff2d78",textShadow:"0 0 20px rgba(255,45,120,.6)"}}>CATALOGUE</span>
@@ -1063,11 +1126,24 @@ export default function Home() {
                     pointerEvents:"none"}} />
 
                   {/* Prix en overlay bas-gauche */}
-                  <div style={{position:"absolute",bottom:10,left:12,
-                    fontFamily:"'Black Ops One',cursive",fontSize:"1.35rem",
-                    color:"#b8ff00",textShadow:"0 0 14px rgba(184,255,0,.55)",lineHeight:1}}>
-                    {Number(p.price).toFixed(2)}€
-                  </div>
+                  {(() => {
+                    const pp = getProductPromoPrice(p.id, p.price, activePromo);
+                    return (
+                      <div style={{position:"absolute",bottom:10,left:12,lineHeight:1}}>
+                        {pp !== null && (
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                            color:"#5a5470",textDecoration:"line-through",marginBottom:1}}>
+                            {Number(p.price).toFixed(2)}€
+                          </div>
+                        )}
+                        <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.35rem",
+                          color: pp !== null ? "#ff2d78" : "#b8ff00",
+                          textShadow: pp !== null ? "0 0 14px rgba(255,45,120,.55)" : "0 0 14px rgba(184,255,0,.55)"}}>
+                          {(pp ?? Number(p.price)).toFixed(2)}€
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Boutons haut-droite : like + partage */}
                   <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",flexDirection:"column",gap:5}}>
@@ -1100,6 +1176,16 @@ export default function Home() {
                       background:"rgba(90,84,112,.9)",color:"#f0eeff",fontWeight:700,
                       backdropFilter:"blur(4px)",border:"1px solid rgba(255,255,255,.15)"}}>
                       RUPTURE
+                    </span>
+                  ) : activePromo && activePromo.productIds.includes(p.id) ? (
+                    <span style={{position:"absolute",top:8,left:8,
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".12em",
+                      textTransform:"uppercase",padding:"3px 9px",borderRadius:3,zIndex:4,fontWeight:700,
+                      backdropFilter:"blur(4px)",
+                      background:"rgba(255,45,120,.9)",color:"#000",
+                      boxShadow:"0 0 10px rgba(255,45,120,.6)",
+                      animation:"flashPulse 1.2s ease-in-out infinite"}}>
+                      🔥 FLASH
                     </span>
                   ) : p.badge ? (
                     <span style={{position:"absolute",top:8,left:8,
@@ -1624,6 +1710,15 @@ export default function Home() {
                 </div>
                 )}
 
+                {/* ── FLASH DEAL COMPACTE ── */}
+                {activePromo && (
+                  <FlashDealBanner
+                    promo={activePromo}
+                    products={products}
+                    source="cart"
+                  />
+                )}
+
                 {/* ── TOTALS ── */}
                 <div style={{borderTop:"1px solid rgba(255,45,120,.2)",paddingTop:16,marginBottom:20}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
@@ -1634,6 +1729,12 @@ export default function Home() {
                     <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#b8ff00"}}>RÉDUCTION</span>
                     <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#b8ff00"}}>-{getDiscount().toFixed(2)}€</span>
                   </div>}
+                  {activePromo && promoDiscount > 0 && (
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#ff6b35"}}>🔥 PROMO FLASH</span>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#ff6b35"}}>-{promoDiscount.toFixed(2)}€</span>
+                    </div>
+                  )}
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                     <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>
                       {fulfillmentType === 'pickup' ? 'RETRAIT' : 'LIVRAISON'}
