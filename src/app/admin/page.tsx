@@ -61,7 +61,10 @@ const defaultSettings: Settings = {
 };
 
 export default function AdminPage() {
-  const [auth, setAuth]           = useState(false);
+  const [auth, setAuth]           = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("yassala_admin_auth");
+  });
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
   const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations">("dashboard");
@@ -823,7 +826,7 @@ export default function AdminPage() {
             color:"#6b7280",letterSpacing:".1em",textDecoration:"none"}}>
             VOIR LE SITE →
           </a>
-          <button className="admin-disconnect-btn" onClick={() => setAuth(false)} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
+          <button className="admin-disconnect-btn" onClick={() => { setAuth(false); localStorage.removeItem("yassala_admin_auth"); }} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",
             color:"#6b7280",padding:"6px 14px",borderRadius:6,fontFamily:"'Inter',sans-serif",
             fontSize:".82rem",fontWeight:500,letterSpacing:".1em",cursor:"pointer"}}>
             <span className="admin-disconnect-full">DÉCONNEXION</span>
