@@ -29,7 +29,7 @@ type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; 
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
-type OnlineDriver = { uid: string; name: string; status: "online"|"offline"|"busy"; isOnline: boolean; lastSeen: any; };
+type OnlineDriver = { uid: string; name: string; status: "online"|"offline"|"busy"; isOnline: boolean; lastSeen: any; performanceScore?: number; };
 
 const ADMIN_PASSWORD = "yassala2025";
 
@@ -2301,17 +2301,44 @@ export default function AdminPage() {
                             </div>
                           </div>
                         </div>
-                        <button
-                          onClick={() => setAssignDriverModal(driver)}
-                          style={{background:"rgba(255,45,120,.1)",
-                            border:"1px solid rgba(255,45,120,.4)",
-                            color:"#ff2d78",padding:"8px 18px",borderRadius:6,
-                            fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                            fontSize:".82rem",letterSpacing:".08em",
-                            textTransform:"uppercase",cursor:"pointer",
-                            whiteSpace:"nowrap"}}>
-                          📦 Assigner commande
-                        </button>
+                        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                          {driver.performanceScore !== undefined && (
+                            <div style={{
+                              display:"flex",alignItems:"center",gap:6,
+                              background:"rgba(0,0,0,.3)",
+                              border:`1px solid ${driver.performanceScore > 80 ? "rgba(34,197,94,.4)" : driver.performanceScore >= 60 ? "rgba(249,115,22,.4)" : "rgba(239,68,68,.4)"}`,
+                              borderRadius:6,padding:"5px 10px",
+                            }}>
+                              <div style={{
+                                width:8,height:8,borderRadius:"50%",flexShrink:0,
+                                background: driver.performanceScore > 80 ? "#22c55e" : driver.performanceScore >= 60 ? "#f97316" : "#ef4444",
+                                boxShadow:`0 0 5px ${driver.performanceScore > 80 ? "#22c55e" : driver.performanceScore >= 60 ? "#f97316" : "#ef4444"}`,
+                              }} />
+                              <span style={{
+                                fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
+                                color: driver.performanceScore > 80 ? "#22c55e" : driver.performanceScore >= 60 ? "#f97316" : "#ef4444",
+                              }}>
+                                {driver.performanceScore > 80 ? "EXCELLENT" : driver.performanceScore >= 60 ? "BON" : "FAIBLE"}
+                              </span>
+                              <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",
+                                color: driver.performanceScore > 80 ? "#22c55e" : driver.performanceScore >= 60 ? "#f97316" : "#ef4444",
+                              }}>
+                                {driver.performanceScore}
+                              </span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => setAssignDriverModal(driver)}
+                            style={{background:"rgba(255,45,120,.1)",
+                              border:"1px solid rgba(255,45,120,.4)",
+                              color:"#ff2d78",padding:"8px 18px",borderRadius:6,
+                              fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                              fontSize:".82rem",letterSpacing:".08em",
+                              textTransform:"uppercase",cursor:"pointer",
+                              whiteSpace:"nowrap"}}>
+                            📦 Assigner commande
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

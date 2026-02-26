@@ -237,6 +237,13 @@ export default function LivreurPage() {
         }),
       }).catch(() => {});
     }
+    // Recalcul du score de performance (fire-and-forget)
+    fetch('/api/update-driver-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId: driverData.id }),
+    }).catch(() => {});
+
     showToast("Commande marquée comme livrée !");
     setConfirmAction(null);
     setFilter("available");

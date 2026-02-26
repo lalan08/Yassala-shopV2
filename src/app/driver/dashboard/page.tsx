@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { initializeApp, getApps } from "firebase/app";
 import {
   getFirestore, collection, query, where, getDocs,
-  Timestamp,
+  doc, getDoc, Timestamp,
 } from "firebase/firestore";
 import { firebaseConfig, type DriverProfile, type Delivery } from "@/lib/firebase";
+import { scoreColor, scoreLabel } from "@/utils/scoring";
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db  = getFirestore(app);
@@ -19,6 +20,7 @@ export default function DriverDashboard() {
   const [driver,  setDriver]  = useState<DriverProfile | null>(null);
   const [stats,   setStats]   = useState({ today: 0, week: 0, weekEarnings: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
+  const [perfScore, setPerfScore] = useState<number | null>(null);
 
   /* ── auth ── */
   useEffect(() => {
@@ -57,6 +59,10 @@ export default function DriverDashboard() {
           weekEarnings: weekD.reduce((s, d) => s + d.totalPay, 0),
           pending:      pendingD.length,
         });
+        // Score de performance
+        const driverSnap = await getDoc(doc(db, "drivers", driver.uid));
+        const ps = driverSnap.data()?.performanceScore;
+        if (typeof ps === "number") setPerfScore(ps);
       } catch { /* ignore */ }
       setLoading(false);
     })();
@@ -122,6 +128,50 @@ export default function DriverDashboard() {
               {driver.name}
             </div>
           </div>
+
+          {/* performance score */}
+          {perfScore !== null && (
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "rgba(0,0,0,.35)",
+              border: `1px solid ${scoreColor(perfScore)}44`,
+              borderRadius: 12, padding: "16px 20px", marginBottom: 20,
+            }}>
+              <div>
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".68rem", color: "#5a5470", marginBottom: 4, letterSpacing: ".1em" }}>
+                  SCORE PERFORMANCE
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontFamily: "'Black Ops One',cursive", fontSize: "2.2rem", color: scoreColor(perfScore), lineHeight: 1 }}>
+                    {perfScore}
+                  </span>
+                  <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".72rem", color: "#5a5470" }}>/100</span>
+                </div>
+              </div>
+              <div style={{
+                display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6,
+              }}>
+                <div style={{
+                  background: `${scoreColor(perfScore)}18`,
+                  border: `1px solid ${scoreColor(perfScore)}55`,
+                  borderRadius: 6, padding: "6px 14px",
+                  fontFamily: "'Rajdhani',sans-serif", fontWeight: 700,
+                  fontSize: ".85rem", letterSpacing: ".1em",
+                  color: scoreColor(perfScore),
+                }}>
+                  {scoreLabel(perfScore)}
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[20, 40, 60, 80, 100].map(step => (
+                    <div key={step} style={{
+                      width: 18, height: 6, borderRadius: 3,
+                      background: perfScore >= step ? scoreColor(perfScore) : "rgba(255,255,255,.06)",
+                    }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* quick stats */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
