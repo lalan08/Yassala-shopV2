@@ -327,6 +327,10 @@ export default function AdminAnalytics() {
   } | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [countdown,   setCountdown]   = useState(REFRESH_MS / 1000);
+  const [upsellStats, setUpsellStats] = useState<{
+    impressions: number; adds: number;
+    topProducts: { id: string; name: string; adds: number }[];
+  } | null>(null);
 
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const countRef    = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -375,6 +379,36 @@ export default function AdminAnalytics() {
           headers: { 'x-admin-secret': 'yassala2025' },
         });
         if (boostRes.ok) setBoostState(await boostRes.json());
+      } catch { /* non-bloquant */ }
+
+      // ── Upsell stats (today only) ──────────────────────────────────────
+      try {
+        const todayLocal = utcToLocal(new Date().toISOString()).toISOString().slice(0, 10);
+        const evSnap = await getDocs(collection(db, "upsell_events"));
+        const todayEvs = evSnap.docs
+          .map(d => ({ id: d.id, ...d.data() } as any))
+          .filter((e: any) => e.createdAt && localDateStr(e.createdAt) === todayLocal);
+
+        const impressions = todayEvs.filter((e: any) => e.type === "impression").length;
+        const adds        = todayEvs.filter((e: any) => e.type === "add_to_cart").length;
+
+        // top products by add_to_cart today
+        const addCounts: Record<string, number> = {};
+        todayEvs.filter((e: any) => e.type === "add_to_cart").forEach((e: any) => {
+          if (e.productId) addCounts[e.productId] = (addCounts[e.productId] ?? 0) + 1;
+        });
+        const topProductIds = Object.entries(addCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4);
+
+        const allProdMap = new Map(
+          prodSnap.docs.map(d => [d.id, (d.data() as any).name ?? d.id]),
+        );
+        const topProducts = topProductIds.map(([id, count]) => ({
+          id, name: allProdMap.get(id) ?? id, adds: count,
+        }));
+
+        setUpsellStats({ impressions, adds, topProducts });
       } catch { /* non-bloquant */ }
     } catch (e: any) {
       setLoadErr("Erreur chargement : " + e.message);
@@ -690,6 +724,78 @@ export default function AdminAnalytics() {
               </div>
 
             </div>
+
+            {/* ── Upsell stats ── */}
+            {upsellStats && (
+              <div className="card" style={{ marginTop:16 }}>
+                <div className="section-title">UPSELL — AUJOURD'HUI</div>
+                <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:14 }}>
+                  {[
+                    { label:"Impressions",  value: String(upsellStats.impressions), color:"#00f5ff", icon:"👁️" },
+                    { label:"Ajouts panier", value: String(upsellStats.adds),        color:"#b8ff00", icon:"🛒" },
+                    {
+                      label:"Conversion",
+                      value: upsellStats.impressions > 0
+                        ? `${((upsellStats.adds / upsellStats.impressions) * 100).toFixed(1)} %`
+                        : "—",
+                      color: upsellStats.impressions > 0 && upsellStats.adds / upsellStats.impressions >= 0.1
+                        ? "#b8ff00" : "#ff9500",
+                      icon:"📈",
+                    },
+                  ].map(kpi => (
+                    <div key={kpi.label} style={{
+                      flex:"1 1 80px", minWidth:80,
+                      background:"rgba(255,255,255,.03)",
+                      border:"1px solid rgba(255,255,255,.07)",
+                      borderRadius:8, padding:"10px 14px",
+                    }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                        <span style={{ fontSize:".9rem" }}>{kpi.icon}</span>
+                        <span style={{
+                          fontFamily:"'Black Ops One',cursive",
+                          fontSize:"1.2rem", color: kpi.color,
+                        }}>{kpi.value}</span>
+                      </div>
+                      <div style={{
+                        fontFamily:"'Share Tech Mono',monospace",
+                        fontSize:".65rem", color:"#5a5470", letterSpacing:".06em",
+                      }}>{kpi.label.toUpperCase()}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {upsellStats.topProducts.length > 0 && (
+                  <>
+                    <div style={{
+                      fontFamily:"'Share Tech Mono',monospace",
+                      fontSize:".65rem", color:"#5a5470", letterSpacing:".1em",
+                      marginBottom:8,
+                    }}>TOP UPSELL PRODUCTS</div>
+                    {upsellStats.topProducts.map((p, i) => (
+                      <div key={p.id} style={{
+                        display:"flex", alignItems:"center", gap:10,
+                        padding:"7px 0", borderBottom:"1px solid rgba(255,255,255,.04)",
+                      }}>
+                        <span style={{
+                          fontFamily:"'Black Ops One',cursive", fontSize:".78rem",
+                          color: i === 0 ? "#b8ff00" : i === 1 ? "#00f5ff" : "#a855f7",
+                          minWidth:22,
+                        }}>#{i + 1}</span>
+                        <span style={{
+                          flex:1, fontSize:".82rem",
+                          fontFamily:"'Inter',sans-serif",
+                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                        }}>{p.name}</span>
+                        <span style={{
+                          fontFamily:"'Share Tech Mono',monospace",
+                          fontSize:".75rem", color:"#b8ff00",
+                        }}>{p.adds}×</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* ── methodology note ── */}
             <div style={{

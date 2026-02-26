@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { computeDeliveryPrice, haversineKm, SHOP_LAT, SHOP_LNG, type PricingResult } from "@/utils/pricing";
 import { computeETA, formatETA } from "@/utils/estimateDelivery";
+import UpsellCarousel from "@/components/UpsellCarousel";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
@@ -1533,6 +1534,16 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+
+                {/* ── UPSELL ── */}
+                <UpsellCarousel
+                  source="cart"
+                  cartItems={cart}
+                  allProducts={products}
+                  onAddToCart={p => addToCart(p.id, p.name, p.price)}
+                  cartTotal={cartTotal}
+                  deliveryMin={settings.deliveryMin}
+                />
 
                 {/* Coupon */}
                 <div style={{display:"flex",gap:8,marginBottom:8}}>
