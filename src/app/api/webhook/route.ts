@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
 
     let orderEmail: string | null = null;
     let orderItems: string = '';
+    let cartItems: { name: string; qty: number; price: number }[] = [];
     if (m.orderId) {
       try {
         const orderSnap = await getDoc(doc(db, 'orders', m.orderId));
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
           const orderData = orderSnap.data();
           orderEmail = orderData.email || null;
           orderItems = orderData.items || '';
+          cartItems = orderData.cartItems || [];
         }
         await updateDoc(doc(db, 'orders', m.orderId), { status: 'en_cours', paidOnline: true });
       } catch {}
@@ -66,7 +68,7 @@ export async function POST(req: NextRequest) {
         name:        m.customerName    || 'Inconnu',
         phone:       m.customerPhone   || '—',
         address:     m.customerAddress || '—',
-        items:       [],
+        items:       cartItems,
         subtotal,
         deliveryFee,
         total:       amountTotal,

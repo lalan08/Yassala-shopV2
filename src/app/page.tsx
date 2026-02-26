@@ -509,6 +509,7 @@ export default function Home() {
         transaction.set(counterRef, { count: orderNum });
         transaction.set(orderRef, {
           items: orderItems,
+          cartItems: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
           total: totalWithDelivery,
           subtotal: cartTotal,
           discount,
