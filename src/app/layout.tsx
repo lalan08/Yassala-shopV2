@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const ChatWidget = dynamic(() => import("@/components/ChatWidget"), { ssr: false });
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body>
         {children}
         <ChatWidget />
+        <SpeedInsights />
         <script dangerouslySetInnerHTML={{__html:`
           if('serviceWorker' in navigator){
             navigator.serviceWorker.getRegistrations().then(function(regs){
