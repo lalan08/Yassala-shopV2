@@ -6,7 +6,7 @@ import { computeETA, formatETA } from "@/utils/estimateDelivery";
 import UpsellCarousel from "@/components/UpsellCarousel";
 import SmartThresholdSuggestions from "@/components/SmartThresholdSuggestions";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc, updateDoc, increment } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, getDoc, query, where, setDoc, updateDoc, increment } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
 import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
@@ -340,10 +340,26 @@ export default function Home() {
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       setDbCats(loaded);
     });
-    const unsubAuth = onAuthStateChanged(auth, user => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user?.email) {
-        setOrderForm(f => ({ ...f, email: f.email || user.email! }));
+      if (user) {
+        // Prefill email immédiatement depuis Firebase Auth
+        setOrderForm(f => ({ ...f, email: f.email || user.email || "" }));
+        // Prefill name + phone depuis le profil Firestore
+        try {
+          const snap = await getDoc(doc(db, "users", user.uid));
+          if (snap.exists()) {
+            const p = snap.data();
+            setOrderForm(f => ({
+              ...f,
+              name:  f.name  || p.name  || user.displayName || "",
+              phone: f.phone || p.phone || "",
+              email: f.email || user.email || "",
+            }));
+          } else if (user.displayName) {
+            setOrderForm(f => ({ ...f, name: f.name || user.displayName || "" }));
+          }
+        } catch {}
       }
     });
     const unsubPickupLocs = onSnapshot(collection(db, "pickup_locations_v1"), snap => {
@@ -685,6 +701,15 @@ export default function Home() {
         }).catch(() => {});
       }
 
+      // ── Sauvegarde du profil client (name + phone) pour prérempl. future ──
+      if (currentUser) {
+        setDoc(doc(db, "users", currentUser.uid), {
+          name:  orderForm.name  || null,
+          phone: orderForm.phone || null,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true }).catch(() => {});
+      }
+
       if (paymentMethod === 'online') {
         if (stripePromise) {
           // ── Nouveau flow : Payment Element inline ──────────────────────────
@@ -762,7 +787,15 @@ export default function Home() {
         }
 
         setCart([]);
-        setOrderForm({ name: "", phone: "", address: "", email: "", lat: 0, lng: 0 });
+        // Si connecté, on garde nom/tel/email pour la prochaine commande
+        setOrderForm(f => ({
+          name:    currentUser ? f.name  : "",
+          phone:   currentUser ? f.phone : "",
+          email:   currentUser ? f.email : "",
+          address: "",
+          lat:     0,
+          lng:     0,
+        }));
         setCoupon(null); setCouponInput("");
         setFulfillmentType('delivery'); setPickupType('stock');
         setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
@@ -783,13 +816,21 @@ export default function Home() {
   const handlePaymentSuccess = useCallback(() => {
     setStripeClientSecret(null);
     setCart([]);
-    setOrderForm({ name: "", phone: "", address: "", email: "", lat: 0, lng: 0 });
+    // Si connecté, on garde nom/tel/email pour la prochaine commande
+    setOrderForm(f => ({
+      name:    currentUser ? f.name  : "",
+      phone:   currentUser ? f.phone : "",
+      email:   currentUser ? f.email : "",
+      address: "",
+      lat:     0,
+      lng:     0,
+    }));
     setCoupon(null); setCouponInput("");
     setFulfillmentType('delivery'); setPickupType('stock');
     setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
     setShowCart(false);
     window.location.href = '/succes';
-  }, []);
+  }, [currentUser]);
 
   const handlePaymentCancel = useCallback(() => {
     setStripeClientSecret(null);
