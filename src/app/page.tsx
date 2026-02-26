@@ -11,6 +11,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
+import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
 
 // ── FIREBASE CONFIG ──
 const firebaseConfig = {
@@ -79,6 +80,7 @@ export default function Home() {
   const [addressSuggestions, setAddressSuggestions] = useState<{display: string; lat: number; lng: number}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const addressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const trackedImpressionRef = useRef<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('cash');
   const [banners, setBanners]         = useState<Banner[]>([]);
@@ -118,7 +120,7 @@ export default function Home() {
   const [pickupTimeMode, setPickupTimeMode]     = useState<'asap'|'scheduled'>('asap');
   const [pickupTimeValue, setPickupTimeValue]   = useState<string>('');
   const [pickupLocations, setPickupLocations]   = useState<PickupLocation[]>([]);
-  const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string}|null>(null);
+  const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string|undefined}|null>(null);
   // ── DYNAMIC DELIVERY PRICING ──
   const [distanceKm, setDistanceKm]       = useState(0);
   const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 1, availableDrivers: 1 });
@@ -289,6 +291,28 @@ export default function Home() {
     setLastAddedId(id);
     setTimeout(() => setLastAddedId(null), 600);
     showToast(`${name} ajouté · ${price.toFixed(2)}€`);
+    // ── Tracking promo add_to_cart ──
+    if (activePromo && activePromo.productIds.includes(id)) {
+      addDoc(collection(db, "promotion_events"), {
+        promoId:   activePromo.id,
+        eventType: "add_to_cart",
+        userId:    currentUser?.uid || null,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+    }
+  };
+
+  // ── Ouvre la fiche produit + tracking click si promo ──
+  const openProductModal = (p: Product) => {
+    setSelectedProduct(p);
+    if (activePromo && activePromo.productIds.includes(p.id)) {
+      addDoc(collection(db, "promotion_events"), {
+        promoId:   activePromo.id,
+        eventType: "click",
+        userId:    currentUser?.uid || null,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+    }
   };
 
   const updateQty = (id: string, change: number) => {
@@ -331,6 +355,20 @@ export default function Home() {
     [promotions]
   );
   const promoDiscount = computePromoDiscount(activePromo, cart);
+
+  // ── Tracking impression (une seule fois par promo) ──
+  useEffect(() => {
+    if (activePromo && trackedImpressionRef.current !== activePromo.id) {
+      trackedImpressionRef.current = activePromo.id;
+      addDoc(collection(db, "promotion_events"), {
+        promoId:   activePromo.id,
+        eventType: "impression",
+        userId:    currentUser?.uid || null,
+        createdAt: new Date().toISOString(),
+      }).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePromo?.id]);
 
   const discountedTotal = cartTotal - getDiscount() - promoDiscount;
   const pricingResult: PricingResult | null =
@@ -466,7 +504,7 @@ export default function Home() {
           if (currentStock < item.qty) throw new Error(`Stock insuffisant pour ${item.name} (${currentStock} restant)`);
         }
         for (let i = 0; i < cart.length; i++) {
-          transaction.update(prodRefs[i], { stock: (prodDocs[i].data().stock || 0) - cart[i].qty });
+          transaction.update(prodRefs[i], { stock: (prodDocs[i].data()?.stock || 0) - cart[i].qty });
         }
         transaction.set(counterRef, { count: orderNum });
         transaction.set(orderRef, {
@@ -576,7 +614,7 @@ export default function Home() {
         setCoupon(null); setCouponInput("");
         setFulfillmentType('delivery'); setPickupType('stock');
         setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
-        setLastConfirmPickup(fulfillmentType === 'pickup' ? { type: pickupType, snapshot: pickupSnapshot, time: resolvedPickupTime } : null);
+        setLastConfirmPickup(fulfillmentType === 'pickup' ? { type: pickupType, snapshot: pickupSnapshot, time: resolvedPickupTime ?? undefined } : null);
         setShowCart(false);
         setOrderConfirmId(orderRef.id);
         setOrderConfirmNum(orderNum);
@@ -1037,7 +1075,7 @@ export default function Home() {
               <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 12px 6px",
                 scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
                 {featured.map(p => (
-                  <div key={p.id} onClick={() => setSelectedProduct(p)}
+                  <div key={p.id} onClick={() => openProductModal(p)}
                     style={{flexShrink:0,width:140,background:"#0c0918",
                       border: p.badge==="HOT" ? "1px solid rgba(255,45,120,.4)" : "1px solid rgba(255,180,0,.4)",
                       borderRadius:8,overflow:"hidden",cursor:"pointer",position:"relative"}}>
@@ -1101,7 +1139,7 @@ export default function Home() {
         ) : activeCat !== "all" ? (
           <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:14}}>
             {filtered.map(p => (
-              <div key={p.id} onClick={() => setSelectedProduct(p)}
+              <div key={p.id} onClick={() => openProductModal(p)}
                 style={{background:"#0c0918",
                   border: lastAddedId===p.id ? "1px solid #b8ff00" : p.cat === "snack_peyi" ? "1px solid rgba(255,140,0,.25)" : "1px solid rgba(255,255,255,.06)",
                   borderRadius:8,overflow:"hidden",cursor:"pointer",position:"relative",
@@ -1270,7 +1308,7 @@ export default function Home() {
                   </div>
                   <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:14}}>
                     {catProds.map(p => (
-                      <div key={p.id} onClick={() => setSelectedProduct(p)}
+                      <div key={p.id} onClick={() => openProductModal(p)}
                         style={{background:"#0c0918",
                           border: lastAddedId===p.id ? "1px solid #b8ff00" : p.cat === "snack_peyi" ? "1px solid rgba(255,140,0,.25)" : "1px solid rgba(255,255,255,.06)",
                           borderRadius:8,overflow:"hidden",cursor:"pointer",position:"relative",
@@ -2160,7 +2198,7 @@ export default function Home() {
                   </div>
                   <div style={{display:"flex",gap:8,overflowX:"auto"}}>
                     {suggestions.map(s => (
-                      <div key={s.id} onClick={() => setSelectedProduct(s)}
+                      <div key={s.id} onClick={() => openProductModal(s)}
                         style={{flexShrink:0,width:90,cursor:"pointer",background:"#080514",
                           borderRadius:6,overflow:"hidden",border:"1px solid rgba(255,255,255,.06)"}}>
                         <div style={{height:60,background:"rgba(255,45,120,.04)"}}>
@@ -2615,6 +2653,21 @@ export default function Home() {
           ↑
         </button>
       )}
+
+      {/* ── CHATBOT IA ── */}
+      <AIChatWidget context={{
+        shopOpen:    settings.shopOpen,
+        hours:       settings.hours ?? "20h–06h",
+        zone:        settings.zone  ?? "Cayenne",
+        deliveryMin: settings.deliveryMin ?? 5,
+        freeDelivery: settings.freeDelivery ?? 30,
+        products: products.map(p => ({
+          name:  p.name,
+          price: p.price,
+          stock: p.stock ?? 0,
+          cat:   p.cat ?? "",
+        })),
+      }} />
     </>
   );
 }
