@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, query, where, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, query, where, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
@@ -108,7 +108,7 @@ export default function LivreurPage() {
       setShowPasswordSetup(true);
     }
     setLoggedIn(true);
-    try { localStorage.setItem("yassala_driver", JSON.stringify({ phone: phone.trim() })); } catch {}
+    try { localStorage.setItem("yassala_driver", JSON.stringify({ phone: phone.trim(), driverId: driverDoc.id })); } catch {}
 
     // ── Marquer EN LIGNE dans la collection "drivers" ──
     const goOnline = () => setDoc(doc(db, "drivers", driverDoc.id), {
@@ -136,14 +136,49 @@ export default function LivreurPage() {
     showToast("Contrat accepté ! Bienvenue chez Yassala");
   };
 
+  // ── Auto-login depuis la session sauvegardée ─────────────────────────────
   useEffect(() => {
+    const raw = localStorage.getItem("yassala_driver");
+    if (!raw) return;
     try {
-      const saved = localStorage.getItem("yassala_driver");
-      if (saved) {
-        const { phone: savedPhone } = JSON.parse(saved);
-        if (savedPhone) setPhone(savedPhone);
-      }
-    } catch {}
+      const saved = JSON.parse(raw);
+      // Pré-remplit le champ téléphone dans tous les cas
+      if (saved.phone) setPhone(saved.phone);
+
+      // Auto-login si on a l'ID du livreur
+      if (!saved.driverId) return;
+      getDoc(doc(db, "driver_applications", saved.driverId)).then(snap => {
+        if (!snap.exists() || snap.data().status !== "accepte") {
+          // Compte supprimé ou suspendu → on efface la session
+          localStorage.removeItem("yassala_driver");
+          return;
+        }
+        const data = snap.data();
+        const driver = { id: snap.id, ...data };
+        setDriverData(driver);
+        if (data.transport) setTransportType(data.transport);
+        // Contrat : re-afficher seulement si pas encore accepté
+        if (!data.contractAccepted) setShowContract(true);
+        setLoggedIn(true);
+
+        // Remettre le heartbeat en ligne
+        const goOnline = () => setDoc(doc(db, "drivers", snap.id), {
+          uid: snap.id,
+          name: data.name || saved.phone,
+          status: "online",
+          isOnline: true,
+          lastSeen: serverTimestamp(),
+        }, { merge: true });
+        goOnline();
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+        heartbeatRef.current = setInterval(goOnline, 20000);
+      }).catch(() => {
+        // Erreur réseau : on reste sur le formulaire de connexion
+      });
+    } catch {
+      localStorage.removeItem("yassala_driver");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadOrders = useCallback(() => {
