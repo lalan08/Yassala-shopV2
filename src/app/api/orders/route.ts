@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         totalAmount,
         status: OrderStatus.PENDING,
         orderItems: {
-          create: orderItems.map((item: { productId: string; quantity: number }) => ({
+          create: orderItems.map((item: { productId: string; quantity: number; price?: number }) => ({
             productId: item.productId,
             quantity: item.quantity,
             priceAtOrder: item.price, // Assuming price is sent from frontend or fetched again
