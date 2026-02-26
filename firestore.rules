@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── helpers ────────────────────────────────────────────────
+    function isAdmin() {
+      return request.auth != null
+        && get(/databases/$(database)/documents/drivers/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isDriver(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── drivers ────────────────────────────────────────────────
+    // Admin : lecture/écriture totale
+    // Driver : lecture de son propre doc, écriture partielle (iban, status)
+    match /drivers/{uid} {
+      allow read:  if isAdmin() || isDriver(uid);
+      allow write: if isAdmin();
+      allow update: if isDriver(uid)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(["iban", "paymentMethod", "status", "isOnline", "lastSeen"]);
+    }
+
+    // ── driver_applications ────────────────────────────────────
+    // Utilisé pour l'authentification livreur existante
+    match /driver_applications/{docId} {
+      allow read:  if isAdmin()
+        || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow write: if isAdmin();
+      // Livreur peut mettre à jour son password et contractAccepted
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(["password", "passwordSet", "contractAccepted", "contractAcceptedAt"]);
+    }
+
+    // ── deliveries ─────────────────────────────────────────────
+    // Admin : lecture/écriture totale
+    // Driver : lecture de ses propres livraisons uniquement
+    match /deliveries/{deliveryId} {
+      allow read:   if isAdmin()
+        || (request.auth != null && resource.data.driverId == request.auth.uid);
+      allow write:  if isAdmin();
+      allow create: if isAdmin();
+    }
+
+    // ── payouts ────────────────────────────────────────────────
+    // Admin : lecture/écriture totale
+    // Driver : lecture de ses propres payouts
+    match /payouts/{payoutId} {
+      allow read:  if isAdmin()
+        || (request.auth != null && resource.data.driverId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // ── orders ────────────────────────────────────────────────
+    // Conserver les règles existantes : admin RW, lecture publique limitée
+    match /orders/{orderId} {
+      allow read:  if isAdmin()
+        || resource.data.phone == request.auth.token.phone_number;
+      allow write: if isAdmin();
+      // Création publique (passage de commande client)
+      allow create: if true;
+    }
+
+    // ── autres collections existantes ─────────────────────────
+    match /settings/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /products/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /categories/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /banners/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /coupons/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /packs/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read:  if isAdmin() || isDriver(uid);
+      allow write: if isAdmin() || isDriver(uid);
+    }
+
+    match /driver_locations/{uid} {
+      allow read:  if isAdmin()
+        || (request.auth != null && uid == request.auth.uid);
+      allow write: if request.auth != null && uid == request.auth.uid;
+    }
+
+    // ── pickup_locations ───────────────────────────────────────
+    match /pickup_locations/{doc} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+  }
+}

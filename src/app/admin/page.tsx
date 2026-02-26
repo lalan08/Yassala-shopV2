@@ -143,6 +143,8 @@ export default function AdminPage() {
     if (ok) {
       setAuth(true);
       setPwdError(false);
+      // Persist auth so /admin/payouts doesn't re-ask the password
+      sha256(ADMIN_PASSWORD).then(h => localStorage.setItem("yassala_admin_auth", h));
       if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
       }
@@ -935,6 +937,25 @@ export default function AdminPage() {
               ))}
             </div>
           ))}
+
+          {/* ── lien externe : module rémunération ── */}
+          <div style={{padding:"12px 20px 8px",borderTop:"1px solid rgba(255,255,255,.05)",marginTop:8}}>
+            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".68rem",color:"#4b5563",
+              letterSpacing:".15em",textTransform:"uppercase",marginBottom:8}}>FINANCE</div>
+            <a href="/admin/payouts"
+              style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
+                background:"rgba(184,255,0,.06)",border:"none",borderLeft:"2px solid #b8ff00",
+                color:"#b8ff00",fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".88rem",
+                letterSpacing:".06em",textTransform:"uppercase",textDecoration:"none",
+                borderRadius:"0 6px 6px 0",transition:"background .15s"}}
+              onMouseEnter={e=>(e.currentTarget.style.background="rgba(184,255,0,.12)")}
+              onMouseLeave={e=>(e.currentTarget.style.background="rgba(184,255,0,.06)")}>
+              <span style={{fontSize:"1.1rem"}}>💳</span>
+              <span>PAIEMENTS</span>
+              <span style={{marginLeft:"auto",fontSize:".75rem",opacity:.6}}>↗</span>
+            </a>
+          </div>
+
         </aside>
 
         <main className="admin-main" style={{flex:1,padding:"28px",overflowY:"auto",animation:"fadeUp .3s both"}}>
