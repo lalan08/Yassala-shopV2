@@ -986,18 +986,18 @@ export default function AdminPage() {
             });
             const maxCa = Math.max(...last7.map(d => d.ca), 1);
 
-            const statRow = (icon: string, label: string, value: string, sub?: string, color = "#00f5ff", onClick?: () => void) => (
+            const chip = (icon: string, value: string, label: string, color = "#00f5ff", onClick?: () => void) => (
               <div onClick={onClick} style={{
-                display:"flex",alignItems:"center",gap:10,padding:"7px 0",
-                borderBottom:"1px solid rgba(255,255,255,.04)",cursor:onClick?"pointer":"default",
+                background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.09)",
+                borderRadius:8,padding:"10px 16px",cursor:onClick?"pointer":"default",
+                minWidth:120,flexShrink:0,position:"relative" as const,
               }}>
-                <span style={{fontSize:".9rem",width:18,flexShrink:0,textAlign:"center"}}>{icon}</span>
-                <span style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",color:"#5a5470",
-                  letterSpacing:".07em",textTransform:"uppercase" as const,flex:"0 0 138px"}}>{label}</span>
-                <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",color,flex:"0 0 58px"}}>{value}</span>
-                {sub && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
-                  flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sub}</span>}
-                {onClick && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#ff2d78",flexShrink:0,marginLeft:"auto"}}>→</span>}
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
+                  <span style={{fontSize:".88rem"}}>{icon}</span>
+                  <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.1rem",color,lineHeight:1}}>{value}</span>
+                  {onClick && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#ff2d78",position:"absolute" as const,top:8,right:10}}>→</span>}
+                </div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontSize:".68rem",color:"#5a5470",letterSpacing:".05em",whiteSpace:"nowrap"}}>{label}</div>
               </div>
             );
 
@@ -1038,38 +1038,19 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Stats compactes — 2 panneaux côte à côte */}
-                <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:18}}>
-
-                  {/* Panneau Opérations */}
-                  <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
-                    borderRadius:10,padding:"12px 16px",flex:1,minWidth:280}}>
-                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".7rem",
-                      letterSpacing:".1em",color:"#5a5470",marginBottom:8}}>OPÉRATIONS</div>
-                    {statRow("🗓️", `Commandes ${periodLabel}`, String(periodOrders.length), `CA ${sum(periodOrders).toFixed(0)} €`, "#00f5ff")}
-                    {statRow("🔔", "En attente", String(pending.length), pending.length > 0 ? "traiter" : "aucune", "#ff2d78", pending.length > 0 ? () => setTab("orders") : undefined)}
-                    {statRow("🚚", "En cours", String(inProgress.length), "livraison / retrait", "#ff9500", inProgress.length > 0 ? () => { setOrderFilter("en_cours"); setTab("orders"); } : undefined)}
-                    {statRow("✅", "Livrées / retirées", String(delivered.length), `sur ${orders.length} total`, "#b8ff00")}
-                    {successRate !== null && statRow("📊", "Taux réussite", `${successRate}%`, `${cancelled.length} annulée${cancelled.length>1?"s":""}`, successRate >= 80 ? "#b8ff00" : successRate >= 60 ? "#ff9500" : "#ff2d78")}
-                    {statRow("💶", "Panier moyen", `${avg(periodOrders).toFixed(2)} €`, "sur la période", "#a855f7")}
-                  </div>
-
-                  {/* Panneau Aperçu global */}
-                  <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
-                    borderRadius:10,padding:"12px 16px",flex:1,minWidth:240}}>
-                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".7rem",
-                      letterSpacing:".1em",color:"#5a5470",marginBottom:8}}>APERÇU GLOBAL</div>
-                    {statRow("📦", "CA total", `${sum(orders).toFixed(0)} €`, `${orders.length} commandes`, "#a855f7")}
-                    {statRow("👥", "Clients", String(usersCount), `${activeUids.size} actifs · ${usersCount > 0 ? Math.round(activeUids.size/usersCount*100) : 0}% adoption`, "#00f5ff")}
-                    {statRow("🏍️", "Livreurs en ligne", String(onlineDrivers.length),
-                      onlineDrivers.length > 0 ? onlineDrivers.map(d=>d.name).join(", ").slice(0,28) : "aucun actif",
-                      onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",
-                      onlineDrivers.length > 0 ? () => setTab("online_drivers") : undefined)}
-                    {statRow("📅", "Aujourd'hui", `${todayOrders.length} cmd`,
-                      todayOrders.length > 0 ? `🚚 ${todayDelivery} livr · 🏪 ${todayPickup} retrait` : "aucune commande",
-                      todayOrders.length > 0 ? "#ff9500" : "#5a5470")}
-                  </div>
-
+                {/* Chips de métriques — rangée horizontale scrollable */}
+                <div style={{display:"flex",gap:10,overflowX:"auto",marginBottom:20,paddingBottom:2,
+                  scrollbarWidth:"none" as any}}>
+                  {chip("💰", `${sum(periodOrders).toFixed(0)} €`, `Chiffre d'affaires · ${periodLabel}`, "#b8ff00")}
+                  {chip("🗓️", String(periodOrders.length), `Commandes · ${periodLabel}`, "#00f5ff")}
+                  {chip("🔔", String(pending.length), "En attente", "#ff2d78", pending.length > 0 ? () => setTab("orders") : undefined)}
+                  {chip("🚚", String(inProgress.length), "En cours", "#ff9500", inProgress.length > 0 ? () => { setOrderFilter("en_cours"); setTab("orders"); } : undefined)}
+                  {chip("✅", String(delivered.length), "Livrées / retirées", "#b8ff00")}
+                  {successRate !== null && chip("📊", `${successRate}%`, "Taux de réussite", successRate >= 80 ? "#b8ff00" : successRate >= 60 ? "#ff9500" : "#ff2d78")}
+                  {chip("💶", `${avg(periodOrders).toFixed(2)} €`, "Panier moyen", "#a855f7")}
+                  {chip("👥", String(usersCount), `Clients · ${activeUids.size} actifs`, "#00f5ff")}
+                  {chip("🏍️", String(onlineDrivers.length), "Livreurs en ligne", onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470", onlineDrivers.length > 0 ? () => setTab("online_drivers") : undefined)}
+                  {chip("📅", String(todayOrders.length), `Aujourd'hui · ${todayDelivery}🚚 ${todayPickup}🏪`, "#ff9500")}
                 </div>
 
                 {/* Graphique 7 jours */}
@@ -1077,7 +1058,7 @@ export default function AdminPage() {
                   padding:"18px 22px",marginBottom:18}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                     <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".83rem",letterSpacing:".08em",color:"#5a5470"}}>
-                      CA 7 DERNIERS JOURS
+                      Tendances — CA 7 derniers jours
                     </div>
                     <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#5a5470"}}>
                       semaine : <span style={{color:"#b8ff00"}}>{sum(weekOrders).toFixed(0)} €</span>
@@ -1128,7 +1109,7 @@ export default function AdminPage() {
                     borderRadius:10,padding:"16px 20px",flex:1,minWidth:280}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                       <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".83rem",
-                        letterSpacing:".08em",color:"#5a5470"}}>DERNIÈRES COMMANDES</div>
+                        letterSpacing:".08em",color:"#5a5470"}}>Activité récente</div>
                       <button onClick={() => setTab("orders")} style={{background:"none",border:"none",color:"#ff2d78",
                         fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",cursor:"pointer",padding:0}}>
                         voir tout →
