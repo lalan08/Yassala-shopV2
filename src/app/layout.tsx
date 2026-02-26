@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import dynamic from "next/dynamic";
 import "./globals.css";
+
+const ChatWidget = dynamic(() => import("@/components/ChatWidget"), { ssr: false });
 
 export const viewport: Viewport = {
   themeColor: "#ff2d78",
@@ -56,6 +59,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        <ChatWidget />
         <script dangerouslySetInnerHTML={{__html:`
           if('serviceWorker' in navigator){
             navigator.serviceWorker.getRegistrations().then(function(regs){
