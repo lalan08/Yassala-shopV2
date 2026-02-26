@@ -230,17 +230,34 @@ const FRAUD_EVENTS_SEED = [
   { driverId: "fraud_driver_002", orderId: "ORD_FRAUD_003", type: "CASH_NOT_SETTLED_24H", severity: "high",   scoreImpact: 40, details: { ageHours: 48, cashAmount: 28.50 },                        createdAt: new Date(Date.now() -     3600_000).toISOString(), resolved: false, resolvedAt: null, resolvedBy: null },
 ];
 
+// ── upsell test products ──────────────────────────────────────
+// Scenario: panier vodka → must suggest glaçons + redbull + citron
+const UPSELL_PRODUCTS = [
+  { id: "upsell_vodka_001",   name: "Vodka Absolut 70cl",     cat: "spiritueux", price: 18.50, stock: 20, badge: "🥃", isActive: true, tags: ["alcool","vodka"],          soldCount: 42 },
+  { id: "upsell_glacons_001", name: "Glaçons 1kg",            cat: "glace",      price: 2.50,  stock: 30, badge: "🧊", isActive: true, tags: ["glace","ice","glaçon"],    soldCount: 87 },
+  { id: "upsell_redbull_001", name: "Red Bull 25cl x4",       cat: "soft",       price: 7.90,  stock: 15, badge: "⚡", isActive: true, tags: ["soft","redbull","energy"], soldCount: 65 },
+  { id: "upsell_citron_001",  name: "Citrons verts x4",       cat: "soft",       price: 2.00,  stock: 25, badge: "🍋", isActive: true, tags: ["citron","lime","fruit"],   soldCount: 38 },
+  { id: "upsell_coca_001",    name: "Coca-Cola 1.5L",         cat: "soft",       price: 3.20,  stock: 40, badge: "🥤", isActive: true, tags: ["soft","coca","soda"],      soldCount: 93 },
+  { id: "upsell_chips_001",   name: "Chips Lays 200g",        cat: "snack",      price: 3.50,  stock: 18, badge: "🥔", isActive: true, tags: ["snack","chips"],           soldCount: 55 },
+  { id: "upsell_biere_001",   name: "Pack Hinano 6×25cl",     cat: "biere",      price: 9.90,  stock: 12, badge: "🍺", isActive: true, tags: ["biere","beer","pack"],     soldCount: 71 },
+  { id: "upsell_cacah_001",   name: "Cacahuètes salées 150g", cat: "snack",      price: 2.80,  stock: 22, badge: "🥜", isActive: true, tags: ["snack","cacahuete","nuts"],soldCount: 44 },
+];
+
 // ── component ────────────────────────────────────────────────
 export default function SeedPage() {
-  const [log,          setLog]          = useState<string[]>([]);
-  const [running,      setRunning]      = useState(false);
-  const [done,         setDone]         = useState(false);
-  const [fraudLog,     setFraudLog]     = useState<string[]>([]);
-  const [fraudRunning, setFraudRunning] = useState(false);
-  const [fraudDone,    setFraudDone]    = useState(false);
+  const [log,           setLog]           = useState<string[]>([]);
+  const [running,       setRunning]       = useState(false);
+  const [done,          setDone]          = useState(false);
+  const [fraudLog,      setFraudLog]      = useState<string[]>([]);
+  const [fraudRunning,  setFraudRunning]  = useState(false);
+  const [fraudDone,     setFraudDone]     = useState(false);
+  const [upsellLog,     setUpsellLog]     = useState<string[]>([]);
+  const [upsellRunning, setUpsellRunning] = useState(false);
+  const [upsellDone,    setUpsellDone]    = useState(false);
 
   const push      = (msg: string) => setLog(l => [...l, msg]);
   const pushFraud = (msg: string) => setFraudLog(l => [...l, msg]);
+  const pushUpsell = (msg: string) => setUpsellLog(l => [...l, msg]);
 
   const runSeed = async () => {
     setRunning(true);
@@ -327,6 +344,26 @@ export default function SeedPage() {
       pushFraud("❌ ERREUR : " + e.message);
     }
     setFraudRunning(false);
+  };
+
+  const runUpsellSeed = async () => {
+    setUpsellRunning(true);
+    setUpsellLog([]);
+    try {
+      pushUpsell("🍹 Seed Upsell Test — produits complémentaires…");
+      for (const p of UPSELL_PRODUCTS) {
+        await setDoc(doc(db, "products", p.id), p, { merge: true });
+        pushUpsell(`   ✓ ${p.name} (${p.cat}) — ${p.price}€ · tags: [${p.tags?.join(", ")}]`);
+      }
+      pushUpsell("");
+      pushUpsell("✅ SEED UPSELL TERMINÉ");
+      pushUpsell("   → Ouvre le shop, ajoute la vodka au panier");
+      pushUpsell("   → Dans le panier : doit proposer Glaçons + Red Bull + Citron");
+      setUpsellDone(true);
+    } catch (e: any) {
+      pushUpsell("❌ ERREUR : " + e.message);
+    }
+    setUpsellRunning(false);
   };
 
   return (
@@ -507,6 +544,73 @@ export default function SeedPage() {
                     border: "1px solid rgba(255,45,120,.3)", borderRadius: 8,
                     padding: "10px", fontFamily: "'Inter',sans-serif",
                     fontWeight: 600, fontSize: ".78rem", textDecoration: "none",
+                  }}>{label}</a>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── UPSELL SEED ── */}
+          <div style={{
+            background:"rgba(184,255,0,.04)", border:"1px solid rgba(184,255,0,.2)",
+            borderRadius:12, padding:"22px 24px", marginTop:24,
+          }}>
+            <div style={{
+              fontFamily:"'Black Ops One',cursive", fontSize:"1.1rem",
+              color:"#b8ff00", marginBottom:8, letterSpacing:".04em",
+            }}>
+              🍹 SEED UPSELL TEST
+            </div>
+            <div style={{
+              fontFamily:"'Share Tech Mono',monospace", fontSize:".75rem",
+              color:"#5a5470", lineHeight:1.7, marginBottom:14,
+            }}>
+              Crée 8 produits de test (vodka, glaçons, redbull, citron, coca, chips, bière, cacahuètes).<br/>
+              Scenario : ajouter <strong style={{color:"#b8ff00"}}>Vodka Absolut</strong> au panier → le carousel doit proposer Glaçons + Red Bull + Citron.
+            </div>
+            <button
+              onClick={runUpsellSeed}
+              disabled={upsellRunning}
+              style={{
+                background: upsellRunning ? "#3a3450" : "linear-gradient(135deg,#b8ff00,#78cc00)",
+                color:"#000", border:"none", borderRadius:8,
+                padding:"12px 24px", cursor: upsellRunning ? "not-allowed" : "pointer",
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
+                fontSize:"1rem", letterSpacing:".08em",
+              }}>
+              {upsellRunning ? "Insertion en cours…" : upsellDone ? "✓ Upsell seed terminé — relancer ?" : "🍹 Lancer le seed upsell"}
+            </button>
+
+            {upsellLog.length > 0 && (
+              <div style={{
+                marginTop:14, background:"rgba(0,0,0,.4)", borderRadius:8,
+                padding:"14px", fontFamily:"'Share Tech Mono',monospace",
+                fontSize:".72rem", lineHeight:1.8, maxHeight:200, overflowY:"auto",
+              }}>
+                {upsellLog.map((l, i) => (
+                  <div key={i} style={{
+                    color: l.startsWith("✅") ? "#b8ff00"
+                         : l.startsWith("❌") ? "#ff2d78"
+                         : l.startsWith("   ✓") ? "#00f5ff"
+                         : l.startsWith("   →") ? "#ff9500"
+                         : "#5a5470",
+                  }}>{l || "\u00a0"}</div>
+                ))}
+              </div>
+            )}
+
+            {upsellDone && (
+              <div style={{ display:"flex", gap:10, marginTop:14 }}>
+                {[
+                  ["/",                       "→ Shop (tester le carousel)"],
+                  ["/admin/analytics",        "→ Stats upsell"],
+                ].map(([href, label]) => (
+                  <a key={href} href={href} style={{
+                    flex:1, textAlign:"center",
+                    background:"rgba(184,255,0,.1)", color:"#b8ff00",
+                    border:"1px solid rgba(184,255,0,.3)", borderRadius:8,
+                    padding:"10px", fontFamily:"'Inter',sans-serif",
+                    fontWeight:600, fontSize:".78rem", textDecoration:"none",
                   }}>{label}</a>
                 ))}
               </div>
