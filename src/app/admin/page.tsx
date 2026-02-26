@@ -156,10 +156,22 @@ export default function AdminPage() {
     setTimeout(() => setToast(t => ({ ...t, show: false })), 3000);
   };
 
-  // Load admin hash on mount (before login)
+  // Load admin hash on mount + auto-restore session from localStorage
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "adminAuth"), snap => {
-      if (snap.exists()) setAdminHash(snap.data().hash ?? null);
+    const unsub = onSnapshot(doc(db, "settings", "adminAuth"), async snap => {
+      const h = snap.exists() ? (snap.data().hash ?? null) : null;
+      setAdminHash(h);
+
+      if (typeof window === "undefined") return;
+      const stored = localStorage.getItem("yassala_admin_auth");
+      if (!stored) return;
+
+      if (h) {
+        if (stored === h) setAuth(true);
+      } else {
+        const defaultHash = await sha256(ADMIN_PASSWORD);
+        if (stored === defaultHash) setAuth(true);
+      }
     });
     return () => unsub();
   }, []);
