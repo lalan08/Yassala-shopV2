@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { computeDeliveryPrice, haversineKm, SHOP_LAT, SHOP_LNG, type PricingResult } from "@/utils/pricing";
+import { computeETA, formatETA } from "@/utils/estimateDelivery";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, query, where, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
@@ -147,6 +148,18 @@ export default function Home() {
       .then(r => r.json())
       .then(data => setDeliveryStats(data))
       .catch(() => {});
+  }, [showCart, fulfillmentType]);
+
+  // Rafraîchit les stats (et donc l'ETA) toutes les 30 s quand le panier est ouvert
+  useEffect(() => {
+    if (!showCart || fulfillmentType !== 'delivery') return;
+    const id = setInterval(() => {
+      fetch('/api/delivery-stats')
+        .then(r => r.json())
+        .then(data => setDeliveryStats(data))
+        .catch(() => {});
+    }, 30_000);
+    return () => clearInterval(id);
   }, [showCart, fulfillmentType]);
 
   const toggleLike = (id: string) => {
@@ -306,6 +319,9 @@ export default function Home() {
     fulfillmentType === 'delivery' && distanceKm > 0 && discountedTotal < settings.freeDelivery
       ? computeDeliveryPrice({ distanceKm, ...deliveryStats, hour: new Date().getHours() })
       : null;
+  const etaResult = fulfillmentType === 'delivery'
+    ? computeETA({ distanceKm, pendingOrders: deliveryStats.activeOrders, activeDrivers: deliveryStats.availableDrivers })
+    : null;
   const deliveryFeeDisplay =
     fulfillmentType === 'pickup' ? 0
     : discountedTotal >= settings.freeDelivery ? 0
@@ -1814,6 +1830,54 @@ export default function Home() {
                     borderRadius:6,padding:"12px",marginBottom:16,fontFamily:"'Share Tech Mono',monospace",
                     fontSize:".75rem",color:"#ff2d78",textAlign:"center"}}>
                     ⚠️ Commande minimum : {settings.deliveryMin}€ (il te manque {(settings.deliveryMin - cartTotal).toFixed(2)}€)
+                  </div>
+                )}
+
+                {/* ── ETA LIVRAISON ── */}
+                {etaResult && (
+                  <div style={{
+                    display:"flex",alignItems:"center",gap:12,
+                    background: etaResult.isBusy ? "rgba(255,107,53,.08)" : "rgba(184,255,0,.07)",
+                    border:`1px solid ${etaResult.isBusy ? "rgba(255,107,53,.3)" : "rgba(184,255,0,.25)"}`,
+                    borderRadius:10,padding:"12px 14px",marginBottom:16,
+                  }}>
+                    <span style={{fontSize:"1.4rem",flexShrink:0}}>⏱️</span>
+                    <div style={{flex:1}}>
+                      <div style={{
+                        fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                        color:"#5a5470",letterSpacing:".1em",marginBottom:3,
+                      }}>
+                        LIVRAISON ESTIMÉE
+                      </div>
+                      <div style={{
+                        fontFamily:"'Black Ops One',cursive",fontSize:"1.25rem",
+                        color: etaResult.isBusy ? "#ff6b35" : "#b8ff00",
+                        textShadow: etaResult.isBusy
+                          ? "0 0 12px rgba(255,107,53,.4)"
+                          : "0 0 12px rgba(184,255,0,.4)",
+                        lineHeight:1,
+                      }}>
+                        {formatETA(etaResult.minutes)}
+                      </div>
+                      <div style={{
+                        fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                        color:"#5a5470",marginTop:4,
+                      }}>
+                        {distanceKm > 0
+                          ? `${distanceKm.toFixed(1)} km · base 10 min + route ${Math.round(etaResult.distanceTime)} min${etaResult.loadTime > 0 ? ` + charge ${Math.round(etaResult.loadTime)} min` : ""}`
+                          : "Entrez votre adresse pour affiner l'estimation"
+                        }
+                      </div>
+                    </div>
+                    {etaResult.isBusy && (
+                      <div style={{
+                        flexShrink:0,fontFamily:"'Share Tech Mono',monospace",
+                        fontSize:".6rem",color:"#ff6b35",textAlign:"center",
+                        background:"rgba(255,107,53,.12)",borderRadius:6,padding:"4px 8px",
+                      }}>
+                        🔥<br/>FORTE<br/>DEMANDE
+                      </div>
+                    )}
                   </div>
                 )}
 
