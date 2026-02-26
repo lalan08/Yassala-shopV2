@@ -108,6 +108,7 @@ export default function AdminPage() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
+  const [adminWeather, setAdminWeather] = useState<{ condition: string; precipitation: number; isRaining: boolean; isHeavyRain: boolean } | null>(null);
   const [newPwd,  setNewPwd]  = useState("");
   const [newPwd2, setNewPwd2] = useState("");
   const [pwdFormErr, setPwdFormErr] = useState("");
@@ -296,6 +297,14 @@ export default function AdminPage() {
     });
     if (updates.length > 0) Promise.all(updates);
   }, [orders.length, products.length, auth]);
+
+  /* ── météo admin (poll toutes les 5 min) ── */
+  useEffect(() => {
+    const load = () => fetch('/api/weather').then(r => r.json()).then(setAdminWeather).catch(() => {});
+    load();
+    const id = setInterval(load, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const saveProd = async (p: Product) => {
     try {
@@ -1098,6 +1107,12 @@ export default function AdminPage() {
                   {chip("👥", String(usersCount), `Clients · ${activeUids.size} actifs`, "#00f5ff")}
                   {chip("🏍️", String(onlineDrivers.length), "Livreurs en ligne", onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470", onlineDrivers.length > 0 ? () => setTab("online_drivers") : undefined)}
                   {chip("📅", String(todayOrders.length), `Aujourd'hui · ${todayDelivery}🚚 ${todayPickup}🏪`, "#ff9500")}
+                  {adminWeather && chip(
+                    adminWeather.isHeavyRain ? "⛈" : adminWeather.isRaining ? "🌧" : "☀️",
+                    adminWeather.isHeavyRain ? "+3€" : adminWeather.isRaining ? "+1.50€" : "OK",
+                    `Matoury · ${adminWeather.precipitation.toFixed(1)}mm`,
+                    adminWeather.isHeavyRain ? "#60a5fa" : adminWeather.isRaining ? "#93c5fd" : "#facc15",
+                  )}
                 </div>
 
                 {/* Graphique 7 jours */}

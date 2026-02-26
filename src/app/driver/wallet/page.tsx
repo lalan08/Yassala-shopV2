@@ -61,6 +61,9 @@ export default function DriverWallet() {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState("");
 
+  /* météo — pour badge bonus pluie actif */
+  const [weather, setWeather] = useState<{ isRaining: boolean; isHeavyRain: boolean; condition: string } | null>(null);
+
   /* IBAN editor */
   const [showIban,  setShowIban]  = useState(false);
   const [ibanInput, setIbanInput] = useState("");
@@ -78,6 +81,14 @@ export default function DriverWallet() {
     } catch {
       router.replace("/livreur");
     }
+  }, []);
+
+  /* ── météo ─────────────────────────────────────────────────── */
+  useEffect(() => {
+    const load = () => fetch('/api/weather').then(r => r.json()).then(setWeather).catch(() => {});
+    load();
+    const id = setInterval(load, 5 * 60 * 1000);
+    return () => clearInterval(id);
   }, []);
 
   /* ── real-time deliveries ───────────────────────────────────── */
@@ -221,6 +232,27 @@ export default function DriverWallet() {
                 sub="gains non payés – cash" />
             </div>
 
+            {/* ── badge bonus pluie actif ── */}
+            {weather && (weather.isRaining || weather.isHeavyRain) && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                background: weather.isHeavyRain ? "rgba(96,165,250,.1)" : "rgba(147,197,253,.08)",
+                border: `1px solid ${weather.isHeavyRain ? "rgba(96,165,250,.5)" : "rgba(147,197,253,.4)"}`,
+                borderRadius: 10, padding: "12px 18px", marginBottom: 16,
+              }}>
+                <span style={{ fontSize: "1.4rem" }}>{weather.isHeavyRain ? "⛈" : "🌧"}</span>
+                <div>
+                  <div style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, fontSize: ".95rem",
+                    color: weather.isHeavyRain ? "#60a5fa" : "#93c5fd" }}>
+                    BONUS PLUIE ACTIF
+                  </div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem", color: "#5a5470" }}>
+                    +{weather.isHeavyRain ? "3.00" : "1.50"} € par livraison effectuée maintenant
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── prochain paiement ── */}
             <div className="card" style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ fontSize: "1.5rem" }}>📅</div>
@@ -259,6 +291,12 @@ export default function DriverWallet() {
                     background: d.paymentType === "CASH" ? "rgba(184,255,0,.12)" : "rgba(0,245,255,.12)",
                     color: d.paymentType === "CASH" ? "#b8ff00" : "#00f5ff",
                   }}>{d.paymentType}</span>
+                  {/* bonus pluie badge */}
+                  {(d.rainBonus ?? 0) > 0 && (
+                    <span className="badge" style={{ background: "rgba(147,197,253,.12)", color: "#93c5fd", fontSize: ".65rem" }}>
+                      🌧 +{fmt(d.rainBonus!)}
+                    </span>
+                  )}
                   {/* pay */}
                   <span style={{ fontFamily: "'Black Ops One',cursive", color: "#b8ff00", marginLeft: "auto" }}>
                     +{fmt(d.totalPay)}
