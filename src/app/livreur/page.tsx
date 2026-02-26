@@ -37,6 +37,7 @@ export default function LivreurPage() {
   const [newOrderAlert, setNewOrderAlert] = useState(false);
   const prevOrderCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
   const [confirmAction, setConfirmAction] = useState<{id: string; type: "take"|"deliver"} | null>(null);
   const [expandedMap, setExpandedMap] = useState<string | null>(null);
   const [etaData, setEtaData] = useState<Record<string, {duration: string; distance: string}>>({});
@@ -286,9 +287,34 @@ export default function LivreurPage() {
     };
   }, []);
 
+  // Listener gains livreur (collection deliveries)
+  useEffect(() => {
+    if (!driverData?.id || !loggedIn) return;
+    const unsub = onSnapshot(
+      query(collection(db, "deliveries"), where("driverId", "==", driverData.id)),
+      snap => setDeliveries(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
+    return () => unsub();
+  }, [driverData?.id, loggedIn]);
+
   const availableOrders = orders.filter(o => (o.status === "nouveau" || o.status === "en_cours") && !o.assignedDriver);
   const myOrders = orders.filter(o => o.assignedDriver === driverData?.id && o.status !== "livre");
   const deliveredOrders = orders.filter(o => o.assignedDriver === driverData?.id && o.status === "livre");
+
+  // Calcul wallet
+  const earningsTotal = deliveries
+    .filter(d => d.status === "pending" || d.status === "validated")
+    .reduce((s, d) => s + (d.totalPay || 0), 0);
+  const cashToReturn = deliveries
+    .filter(d => d.paymentType === "CASH" && d.cashStatus === "unsettled")
+    .reduce((s, d) => s + (d.cashCollectedAmount || 0), 0);
+  const netPayout = earningsTotal - cashToReturn;
+  const nextFriday = (() => {
+    const d = new Date();
+    const days = (5 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + days);
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  })();
 
   const displayOrders = filter === "available" ? availableOrders
     : filter === "mine" ? myOrders
@@ -829,6 +855,47 @@ export default function LivreurPage() {
               letterSpacing:".08em",marginBottom:2}}>CA JOUR</div>
             <div style={{fontWeight:700,fontSize:"1.5rem",color:"#ff2d78"}}>{stats.todayRevenue.toFixed(0)}€</div>
           </div>
+        </div>
+
+        {/* Wallet */}
+        <div style={{marginBottom:20,background:"rgba(184,255,0,.05)",
+          border:"1px solid rgba(184,255,0,.25)",borderRadius:14,padding:"16px 18px",
+          position:"relative",overflow:"hidden"}}>
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".63rem",color:"#5a5470",
+            letterSpacing:".15em",marginBottom:3}}>PROCHAIN VIREMENT · VENDREDI {nextFriday}</div>
+          <div style={{display:"flex",alignItems:"flex-end",gap:10,marginBottom:10}}>
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2.4rem",color:"#b8ff00",
+              textShadow:"0 0 22px rgba(184,255,0,.45)",lineHeight:1}}>
+              {netPayout.toFixed(2)}€
+            </div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
+              paddingBottom:6}}>NET</div>
+          </div>
+          <div style={{display:"flex",gap:18,alignItems:"center"}}>
+            <div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",
+                letterSpacing:".1em"}}>GAINS</div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                color:"#b8ff00"}}>+{earningsTotal.toFixed(2)}€</div>
+            </div>
+            {cashToReturn > 0 && (
+              <div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",
+                  letterSpacing:".1em"}}>CASH À REVERSER</div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                  color:"#ff2d78"}}>-{cashToReturn.toFixed(2)}€</div>
+              </div>
+            )}
+            <a href="/driver/wallet"
+              style={{marginLeft:"auto",fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                color:"#b8ff00",textDecoration:"none",letterSpacing:".1em",
+                background:"rgba(184,255,0,.1)",border:"1px solid rgba(184,255,0,.2)",
+                borderRadius:8,padding:"6px 12px"}}>
+              DÉTAIL →
+            </a>
+          </div>
+          <div style={{position:"absolute",right:-30,top:-30,width:120,height:120,
+            borderRadius:"50%",background:"rgba(184,255,0,.03)",pointerEvents:"none"}} />
         </div>
 
         {/* Tabs */}
