@@ -119,7 +119,7 @@ export default function Home() {
   const [pickupTimeMode, setPickupTimeMode]     = useState<'asap'|'scheduled'>('asap');
   const [pickupTimeValue, setPickupTimeValue]   = useState<string>('');
   const [pickupLocations, setPickupLocations]   = useState<PickupLocation[]>([]);
-  const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string}|null>(null);
+  const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string|undefined}|null>(null);
   // ── DYNAMIC DELIVERY PRICING ──
   const [distanceKm, setDistanceKm]       = useState(0);
   const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 1, availableDrivers: 1 });
@@ -467,7 +467,7 @@ export default function Home() {
           if (currentStock < item.qty) throw new Error(`Stock insuffisant pour ${item.name} (${currentStock} restant)`);
         }
         for (let i = 0; i < cart.length; i++) {
-          transaction.update(prodRefs[i], { stock: (prodDocs[i].data().stock || 0) - cart[i].qty });
+          transaction.update(prodRefs[i], { stock: (prodDocs[i].data()?.stock || 0) - cart[i].qty });
         }
         transaction.set(counterRef, { count: orderNum });
         transaction.set(orderRef, {
@@ -577,7 +577,7 @@ export default function Home() {
         setCoupon(null); setCouponInput("");
         setFulfillmentType('delivery'); setPickupType('stock');
         setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
-        setLastConfirmPickup(fulfillmentType === 'pickup' ? { type: pickupType, snapshot: pickupSnapshot, time: resolvedPickupTime } : null);
+        setLastConfirmPickup(fulfillmentType === 'pickup' ? { type: pickupType, snapshot: pickupSnapshot, time: resolvedPickupTime ?? undefined } : null);
         setShowCart(false);
         setOrderConfirmId(orderRef.id);
         setOrderConfirmNum(orderNum);
