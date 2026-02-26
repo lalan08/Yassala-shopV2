@@ -410,6 +410,15 @@ export default function Home() {
         });
       });
 
+      // Auto-assign nearest available driver (fire-and-forget)
+      if (fulfillmentType === 'delivery') {
+        fetch('/api/assign-driver', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: orderRef.id }),
+        }).catch(() => {});
+      }
+
       if (paymentMethod === 'online') {
         const res = await fetch('/api/checkout', {
           method: 'POST',
