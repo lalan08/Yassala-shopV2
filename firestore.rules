@@ -135,5 +135,21 @@ service cloud.firestore {
       allow read:  if isAdmin() || request.auth != null;
       allow write: if isAdmin();
     }
+
+    // ── promotions ─────────────────────────────────────────────
+    // Lecture publique (affichage bannière client).
+    // Écriture réservée à l'admin (créer, activer, stopper une promo).
+    match /promotions/{promoId} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // ── promotion_events ───────────────────────────────────────
+    // Écriture publique : tracking client (impression, click, add_to_cart, checkout_success).
+    // Lecture réservée à l'admin (analytics).
+    match /promotion_events/{eventId} {
+      allow read:  if isAdmin();
+      allow write: if true;
+    }
   }
 }
