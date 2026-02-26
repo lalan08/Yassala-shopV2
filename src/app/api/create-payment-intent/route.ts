@@ -45,8 +45,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      clientSecret:   paymentIntent.client_secret,
-      publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+      clientSecret: paymentIntent.client_secret,
     });
 
   } catch (error: unknown) {

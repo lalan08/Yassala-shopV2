@@ -15,8 +15,10 @@ import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
-// ── Stripe client (chargé dynamiquement depuis le serveur) ──
-// Ne pas initialiser ici pour éviter les problèmes de build-time env vars
+// ── Stripe client (initialisé une seule fois au module level) ──
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
 // ── Thème sombre Stripe (dark neon) ──
 const STRIPE_APPEARANCE = {
@@ -252,7 +254,6 @@ export default function Home() {
 
   // ── STRIPE PAYMENT ELEMENT ──
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
-  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
 
   // ── FLASH DEALS ──
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -758,8 +759,7 @@ export default function Home() {
         });
         const data = await res.json();
         if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Erreur paiement');
-        if (!data.publishableKey) throw new Error('Paiement non configuré (clé publique manquante)');
-        setStripePromise(loadStripe(data.publishableKey));
+        if (!stripePromise) throw new Error('Paiement non configuré (clé publique manquante)');
         setStripeClientSecret(data.clientSecret);
         setSubmitting(false);
         return; // On attend la confirmation dans le Payment Element
