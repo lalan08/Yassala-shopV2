@@ -64,6 +64,9 @@ export default function DriverWallet() {
   /* météo — pour badge bonus pluie actif */
   const [weather, setWeather] = useState<{ isRaining: boolean; isHeavyRain: boolean; condition: string } | null>(null);
 
+  /* boost — pour badge boost actif */
+  const [boostState, setBoostState] = useState<{ isActive: boolean; boostAmount: number } | null>(null);
+
   /* IBAN editor */
   const [showIban,  setShowIban]  = useState(false);
   const [ibanInput, setIbanInput] = useState("");
@@ -88,6 +91,14 @@ export default function DriverWallet() {
     const load = () => fetch('/api/weather').then(r => r.json()).then(setWeather).catch(() => {});
     load();
     const id = setInterval(load, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  /* ── boost state ────────────────────────────────────────────── */
+  useEffect(() => {
+    const load = () => fetch('/api/boost').then(r => r.json()).then(setBoostState).catch(() => {});
+    load();
+    const id = setInterval(load, 60 * 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -253,6 +264,26 @@ export default function DriverWallet() {
               </div>
             )}
 
+            {/* ── badge boost actif ── */}
+            {boostState?.isActive && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                background: "rgba(168,85,247,.1)",
+                border: "1px solid rgba(168,85,247,.4)",
+                borderRadius: 10, padding: "12px 18px", marginBottom: 16,
+              }}>
+                <span style={{ fontSize: "1.4rem" }}>🚀</span>
+                <div>
+                  <div style={{ fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, fontSize: ".95rem", color: "#a855f7" }}>
+                    BOOST ACTIF
+                  </div>
+                  <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem", color: "#5a5470" }}>
+                    +{boostState.boostAmount.toFixed(2)} € par livraison validée maintenant
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ── prochain paiement ── */}
             <div className="card" style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ fontSize: "1.5rem" }}>📅</div>
@@ -295,6 +326,12 @@ export default function DriverWallet() {
                   {(d.rainBonus ?? 0) > 0 && (
                     <span className="badge" style={{ background: "rgba(147,197,253,.12)", color: "#93c5fd", fontSize: ".65rem" }}>
                       🌧 +{fmt(d.rainBonus!)}
+                    </span>
+                  )}
+                  {/* boost badge */}
+                  {(d.boostPay ?? 0) > 0 && (
+                    <span className="badge" style={{ background: "rgba(168,85,247,.12)", color: "#a855f7", fontSize: ".65rem" }}>
+                      🚀 +{fmt(d.boostPay!)}
                     </span>
                   )}
                   {/* pay */}

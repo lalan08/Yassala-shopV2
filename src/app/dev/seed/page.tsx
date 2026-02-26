@@ -8,7 +8,7 @@ import { useState } from "react";
 import { initializeApp, getApps } from "firebase/app";
 import {
   getFirestore, doc, setDoc, addDoc,
-  collection, serverTimestamp,
+  collection, serverTimestamp, Timestamp,
 } from "firebase/firestore";
 import { firebaseConfig } from "@/lib/firebase";
 
@@ -87,6 +87,41 @@ const PAYOUT_EXAMPLE = {
   createdBy:     "admin",
 };
 
+// ── boost test scenario ───────────────────────────────────────
+// 2 online drivers + 10 pending orders → ratio 5 → boost +5.00€
+const BOOST_DRIVERS = [
+  {
+    uid:       "boost_driver_001",
+    name:      "Alex Dural",
+    phone:     "0694555001",
+    status:    "online",
+    isOnline:  true,
+    lastSeen:  Timestamp.now(),
+    role:      "driver",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    uid:       "boost_driver_002",
+    name:      "Cécile Numa",
+    phone:     "0694555002",
+    status:    "online",
+    isOnline:  true,
+    lastSeen:  Timestamp.now(),
+    role:      "driver",
+    createdAt: new Date().toISOString(),
+  },
+];
+
+function makeBoostOrders() {
+  return Array.from({ length: 10 }, (_, i) => ({
+    status:    "nouveau",
+    createdAt: new Date().toISOString(),
+    total:     Math.round((12 + i * 1.5) * 100) / 100,
+    address:   `${10 + i} rue de Cayenne, Matoury`,
+    customerName: `Client Test ${i + 1}`,
+  }));
+}
+
 // ── component ────────────────────────────────────────────────
 export default function SeedPage() {
   const [log,     setLog]     = useState<string[]>([]);
@@ -121,8 +156,23 @@ export default function SeedPage() {
       const payRef = await addDoc(collection(db, "payouts"), PAYOUT_EXAMPLE);
       push(`   ✓ payout: ${payRef.id}`);
 
+      // 4. boost test scenario
       push("");
-      push("✅ SEED TERMINÉ — 2 drivers, 10 livraisons, 1 payout");
+      push("🚀 Scenario boost (2 livreurs online + 10 commandes nouveau)…");
+      for (const d of BOOST_DRIVERS) {
+        await setDoc(doc(db, "drivers", d.uid), d, { merge: true });
+        push(`   ✓ boost driver: ${d.name} [online]`);
+      }
+      const boostOrders = makeBoostOrders();
+      for (const o of boostOrders) {
+        await addDoc(collection(db, "orders"), o);
+      }
+      push(`   ✓ ${boostOrders.length} commandes "nouveau" créées`);
+      push(`   → ratio = ${boostOrders.length}/2 = ${boostOrders.length / 2} → boost +5.00€`);
+      push(`   → Déclencher via POST /api/boost (x-admin-secret: yassala2025)`);
+
+      push("");
+      push("✅ SEED TERMINÉ — 2 drivers, 10 livraisons, 1 payout, 2 boost drivers, 10 orders");
       setDone(true);
     } catch (e: any) {
       push("❌ ERREUR : " + e.message);
@@ -173,6 +223,8 @@ export default function SeedPage() {
             <div style={{ color: "#5a5470", marginLeft: 16 }}>Marie Contard · cash · 4 livraisons</div>
             <div style={{ color: "#a855f7", marginTop: 6 }}>10 deliveries (ONLINE + CASH, pending + validated + paid)</div>
             <div style={{ color: "#a855f7" }}>1 payout exemple (payé semaine précédente)</div>
+            <div style={{ color: "#a855f7", marginTop: 6 }}>🚀 Boost scenario : 2 livreurs online + 10 orders "nouveau"</div>
+            <div style={{ color: "#5a5470", marginLeft: 16 }}>ratio 5 → boost +5.00€ (déclencher via POST /api/boost)</div>
           </div>
 
           {/* URLs */}
@@ -188,6 +240,7 @@ export default function SeedPage() {
               ["/admin/payouts",             "Table rémunération admin"],
               ["/admin/payouts/driver_test_001", "Détail Jean Dallou"],
               ["/admin/payouts/driver_test_002", "Détail Marie Contard"],
+              ["/admin/analytics",           "Analytics — carte Boost"],
             ].map(([url, desc]) => (
               <div key={url}>
                 <span style={{ color: "#b8ff00" }}>{url}</span>

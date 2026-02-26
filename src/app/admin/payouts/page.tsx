@@ -38,6 +38,7 @@ type DriverRow = {
   netPayout: number;
   countValidated: number;
   payoutStatus: "unpaid" | "paid" | "partial";
+  boostTotal: number;
 };
 
 type MarkPayModal = { driverId: string; driverName: string; net: number; deliveries: Delivery[] } | null;
@@ -181,11 +182,12 @@ export default function AdminPayouts() {
           return true;
         });
 
-        const validated = drDels.filter(d => d.status === "validated");
-        const cashUnset = drDels.filter(d => d.paymentType === "CASH" && d.cashStatus === "unsettled");
-        const earn      = validated.reduce((s, d) => s + d.totalPay, 0);
-        const cash      = cashUnset.reduce((s, d) => s + (d.cashCollectedAmount || 0), 0);
-        const net       = earn - cash;
+        const validated  = drDels.filter(d => d.status === "validated");
+        const cashUnset  = drDels.filter(d => d.paymentType === "CASH" && d.cashStatus === "unsettled");
+        const earn       = validated.reduce((s, d) => s + d.totalPay, 0);
+        const cash       = cashUnset.reduce((s, d) => s + (d.cashCollectedAmount || 0), 0);
+        const net        = earn - cash;
+        const boostTotal = drDels.reduce((s, d) => s + ((d as any).boostPay ?? 0), 0);
 
         // check if already paid in this period
         const paid = payouts.some(p =>
@@ -202,6 +204,7 @@ export default function AdminPayouts() {
           netPayout: net,
           countValidated: validated.length,
           payoutStatus: paid ? "paid" : earn > 0 ? "unpaid" : "unpaid",
+          boostTotal,
         } as DriverRow;
       })
       .filter(r => {
@@ -391,6 +394,7 @@ export default function AdminPayouts() {
                     <th>LIVREUR</th>
                     <th>LIVRAISONS VALIDÉES</th>
                     <th>GAINS</th>
+                    <th>🚀 BOOST</th>
                     <th>CASH ENCAISSÉ</th>
                     <th>NET À PAYER</th>
                     <th>STATUT</th>
@@ -413,6 +417,9 @@ export default function AdminPayouts() {
                       </td>
                       <td style={{ fontFamily: "'Black Ops One',cursive", color: "#b8ff00" }}>
                         {fmt(r.earningsValidated)}
+                      </td>
+                      <td style={{ fontFamily: "'Black Ops One',cursive", color: r.boostTotal > 0 ? "#a855f7" : "#5a5470" }}>
+                        {r.boostTotal > 0 ? fmt(r.boostTotal) : "—"}
                       </td>
                       <td style={{ fontFamily: "'Black Ops One',cursive", color: r.cashToReturn > 0 ? "#ff9500" : "#5a5470" }}>
                         {fmt(r.cashToReturn)}

@@ -9,7 +9,9 @@
  *        rainBonus           → 0 | 1.50 | 3.00
  *        weatherCondition    → "clear" | "rain" | "heavy_rain" | "unknown"
  *        precipitationLevel  → float (mm)
- *        totalPay            → basePay + bonusPay + rainBonus
+ *        boostPay            → 0 | 1.50 | 3.00 | 5.00 (depuis boost_state/current)
+ *        boostApplied        → bool
+ *        totalPay            → basePay + bonusPay + rainBonus + boostPay
  *   4. Si rainBonus > 0 → incrémente drivers/{driverId}.rainDeliveriesCount
  *
  * Body : { deliveryId: string }
@@ -56,9 +58,17 @@ export async function POST(request: Request) {
     const weather   = await getWeather();
     const rainBonus = computeRainBonus(weather);
 
+    // ── boost automatique ─────────────────────────────────────────────────
+    const boostSnap = await db.collection('boost_state').doc('current').get();
+    const boostData = boostSnap.data() ?? {};
+    const boostPay: number =
+      boostData.isActive === true && typeof boostData.boostAmount === 'number'
+        ? boostData.boostAmount
+        : 0;
+
     const basePay  = delData.basePay  ?? 0;
     const bonusPay = delData.bonusPay ?? 0;
-    const totalPay = parseFloat((basePay + bonusPay + rainBonus).toFixed(2));
+    const totalPay = parseFloat((basePay + bonusPay + rainBonus + boostPay).toFixed(2));
 
     // ── écriture Firestore ────────────────────────────────────────────────
     const updates: Record<string, unknown> = {
@@ -66,6 +76,9 @@ export async function POST(request: Request) {
       rainBonus,
       weatherCondition:   weather.condition,
       precipitationLevel: parseFloat(weather.precipitation.toFixed(2)),
+      boostPay,
+      boostApplied:       boostPay > 0,
+      boostAmount:        boostPay,
       totalPay,
     };
 
@@ -75,24 +88,25 @@ export async function POST(request: Request) {
     if (rainBonus > 0) {
       const driverId = delData.driverId as string;
       if (driverId) {
-        const driverRef = db.collection('drivers').doc(driverId);
+        const driverRef  = db.collection('drivers').doc(driverId);
         const driverSnap = await driverRef.get();
-        const current = (driverSnap.data()?.rainDeliveriesCount as number) ?? 0;
+        const current    = (driverSnap.data()?.rainDeliveriesCount as number) ?? 0;
         await driverRef.set({ rainDeliveriesCount: current + 1 }, { merge: true });
       }
     }
 
     console.log(
       `[validate-delivery] id=${deliveryId} status=validated` +
-      ` rainBonus=${rainBonus} weather=${weather.condition}` +
-      ` precip=${weather.precipitation}mm totalPay=${totalPay}`,
+      ` rain=${rainBonus} boost=${boostPay}` +
+      ` weather=${weather.condition} total=${totalPay}`,
     );
 
     return NextResponse.json({
       deliveryId,
-      status:    'validated',
+      status:   'validated',
       rainBonus,
-      weather:   { condition: weather.condition, precipitation: weather.precipitation },
+      boostPay,
+      weather:  { condition: weather.condition, precipitation: weather.precipitation },
       totalPay,
     });
   } catch (error: any) {

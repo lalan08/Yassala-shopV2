@@ -321,6 +321,10 @@ export default function AdminAnalytics() {
   const [onlineDrv, setOnlineDrv] = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [loadErr,  setLoadErr]  = useState("");
+  const [boostState, setBoostState] = useState<{
+    isActive: boolean; boostAmount: number; ratio: number;
+    pendingOrders: number; activeDrivers: number; reason: string; updatedAt: string;
+  } | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [countdown,   setCountdown]   = useState(REFRESH_MS / 1000);
 
@@ -363,6 +367,15 @@ export default function AdminAnalytics() {
       setOnlineDrv(drvSnap.docs.filter(d => (d.data() as any).isOnline === true).length);
       setLastRefresh(new Date());
       setCountdown(REFRESH_MS / 1000);
+
+      // ── Refresh boost state (POST = recalcule + sauvegarde) ───────────
+      try {
+        const boostRes = await fetch('/api/boost', {
+          method: 'POST',
+          headers: { 'x-admin-secret': 'yassala2025' },
+        });
+        if (boostRes.ok) setBoostState(await boostRes.json());
+      } catch { /* non-bloquant */ }
     } catch (e: any) {
       setLoadErr("Erreur chargement : " + e.message);
     }
@@ -539,6 +552,56 @@ export default function AdminAnalytics() {
                 ))}
               </div>
             )}
+
+            {/* ── BOOST card ── */}
+            <div className="card" style={{ marginBottom:16,
+              borderColor: boostState?.isActive ? (boostState.boostAmount >= 5 ? "rgba(255,45,120,.4)" : boostState.boostAmount >= 3 ? "rgba(255,149,0,.4)" : "rgba(168,85,247,.4)") : "rgba(255,255,255,.06)",
+            }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ fontSize:"1.8rem" }}>
+                    {boostState?.isActive ? (boostState.boostAmount >= 5 ? "🔥" : boostState.boostAmount >= 3 ? "⚡" : "🚀") : "💤"}
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:"'Black Ops One',cursive", fontSize:"1rem", letterSpacing:".06em",
+                      color: boostState?.isActive
+                        ? (boostState.boostAmount >= 5 ? "#ff2d78" : boostState.boostAmount >= 3 ? "#ff9500" : "#a855f7")
+                        : "#5a5470" }}>
+                      BOOST AUTO — {boostState ? (boostState.isActive ? "ACTIF" : "INACTIF") : "…"}
+                    </div>
+                    <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:".7rem", color:"#5a5470", marginTop:3 }}>
+                      {boostState?.reason ?? "Calcul en cours…"}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                  {[
+                    { label:"Boost / livraison", value: boostState ? `+${boostState.boostAmount.toFixed(2)} €` : "—",
+                      color: boostState?.isActive ? "#a855f7" : "#5a5470" },
+                    { label:"Ratio cmd/livreur",  value: boostState ? boostState.ratio.toFixed(2) : "—", color:"#00f5ff" },
+                    { label:"Cmd. en attente",    value: boostState ? String(boostState.pendingOrders) : "—", color:"#ff9500" },
+                    { label:"Livreurs actifs",    value: boostState ? String(boostState.activeDrivers) : "—", color:"#b8ff00" },
+                  ].map(c => (
+                    <div key={c.label} style={{
+                      background:"rgba(255,255,255,.03)", border:`1px solid ${c.color}22`,
+                      borderLeft:`3px solid ${c.color}`, borderRadius:8, padding:"8px 14px", minWidth:110,
+                    }}>
+                      <div style={{ fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:".95rem", color:c.color }}>
+                        {c.value}
+                      </div>
+                      <div style={{ fontFamily:"'Inter',sans-serif", fontSize:".63rem", color:"#5a5470" }}>
+                        {c.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {boostState && (
+                <div style={{ marginTop:10, fontFamily:"'Share Tech Mono',monospace", fontSize:".66rem", color:"#3a3450" }}>
+                  Seuils : ratio≥2→+1.50€ · ratio≥3→+3.00€ · ratio≥4→+5.00€ · MàJ {boostState.updatedAt.slice(11,19)}
+                </div>
+              )}
+            </div>
 
             {/* ── bar chart ── */}
             <div className="card">
