@@ -104,7 +104,7 @@ export default function AdminPage() {
   const [usersWithOrders, setUsersWithOrders] = useState(0);
   const [usersList, setUsersList]             = useState<{id:string;name:string;email:string;createdAt?:string;lastLoginAt?:string}[]>([]);
   const [usersSearch, setUsersSearch]         = useState("");
-  const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string;password?:string}[]>([]);
+  const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string;password?:string;contractAccepted?:boolean;contractAcceptedAt?:string}[]>([]);
   const [driverFilter, setDriverFilter]       = useState<"all"|"nouveau"|"accepte"|"refuse">("all");
   const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
@@ -1850,7 +1850,7 @@ export default function AdminPage() {
                           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
                             <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
                               color:"#ff2d78",letterSpacing:".04em"}}>
-                              #{(o as any).orderNumber ?? o.id.slice(-6).toUpperCase()}
+                              #{(o as any).orderNumber ?? (o.id ?? '').slice(-6).toUpperCase()}
                             </span>
                             <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",
                               color:"#5a5470",letterSpacing:".06em"}}>
@@ -2674,7 +2674,7 @@ export default function AdminPage() {
                           {/* En-tête : n° + heure + badges + total */}
                           <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:10}}>
                             <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.05rem",color:"#ff2d78",letterSpacing:".04em"}}>
-                              #{(o as any).orderNumber ?? o.id.slice(-6).toUpperCase()}
+                              #{(o as any).orderNumber ?? (o.id ?? '').slice(-6).toUpperCase()}
                             </span>
                             <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem",color:"#5a5470"}}>
                               {new Date(o.createdAt).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
@@ -2745,7 +2745,7 @@ export default function AdminPage() {
                           {/* Actions */}
                           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                             {dispatchFilter === "available" && (
-                              <button onClick={() => setDispatchConfirm({id: o.id, type:"take"})}
+                              <button onClick={() => setDispatchConfirm({id: o.id!, type:"take"})}
                                 style={{flex:1,background:"rgba(0,245,255,.15)",border:"1px solid rgba(0,245,255,.5)",color:"#00f5ff",
                                   borderRadius:8,padding:"10px 16px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",
                                   letterSpacing:".06em",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
@@ -2753,7 +2753,7 @@ export default function AdminPage() {
                               </button>
                             )}
                             {dispatchFilter === "mine" && isMyOrder && (
-                              <button onClick={() => setDispatchConfirm({id: o.id, type:"deliver"})}
+                              <button onClick={() => setDispatchConfirm({id: o.id!, type:"deliver"})}
                                 style={{flex:1,background:"rgba(184,255,0,.15)",border:"1px solid rgba(184,255,0,.5)",color:"#b8ff00",
                                   borderRadius:8,padding:"10px 16px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",
                                   letterSpacing:".06em",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
@@ -3302,7 +3302,7 @@ const GRADIENT_PRESETS = [
 ];
 
 function BannerForm({ banner, onSave, onClose, showToast }: { banner:Banner; onSave:(b:Banner)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void }) {
-  const [b, setB] = useState<Banner>({ brightness: 0.28, ...banner });
+  const [b, setB] = useState<Banner>({ ...banner, brightness: banner.brightness ?? 0.28 });
   const [uploading, setUploading] = useState(false);
   const [imgSrc, setImgSrc]       = useState("");
   const [crop, setCrop]           = useState({ x: 0, y: 0 });

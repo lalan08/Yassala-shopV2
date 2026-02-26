@@ -1,9 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 
 export default function SuccesPage() {
+  // Vider le panier localStorage après paiement Stripe réussi
+  useEffect(() => {
+    try { localStorage.removeItem("yassala_cart"); } catch {}
+  }, []);
+
   return (
     <div
       style={{
