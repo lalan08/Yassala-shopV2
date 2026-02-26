@@ -11,6 +11,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
+import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
 
 // ── FIREBASE CONFIG ──
 const firebaseConfig = {
@@ -2615,6 +2616,21 @@ export default function Home() {
           ↑
         </button>
       )}
+
+      {/* ── CHATBOT IA ── */}
+      <AIChatWidget context={{
+        shopOpen:    settings.shopOpen,
+        hours:       settings.hours ?? "20h–06h",
+        zone:        settings.zone  ?? "Cayenne",
+        deliveryMin: settings.deliveryMin ?? 5,
+        freeDelivery: settings.freeDelivery ?? 30,
+        products: products.map(p => ({
+          name:  p.name,
+          price: p.price,
+          stock: p.stock ?? 0,
+          cat:   p.cat ?? "",
+        })),
+      }} />
     </>
   );
 }
