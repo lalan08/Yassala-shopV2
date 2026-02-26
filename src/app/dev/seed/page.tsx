@@ -122,13 +122,125 @@ function makeBoostOrders() {
   }));
 }
 
+// ── fraud test scenario ───────────────────────────────────────
+// 2 drivers + 10 livraisons dont 3 frauduleuses pré-calculées
+const FRAUD_DRIVERS = [
+  {
+    uid:                    "fraud_driver_001",
+    name:                   "Paulo Droz",
+    phone:                  "0694777001",
+    status:                 "offline",
+    isOnline:               false,
+    role:                   "driver",
+    createdAt:              new Date().toISOString(),
+    riskScore:              40,
+    strikesCount:           1,
+    isBlocked:              false,
+    suspiciousEventsCount:  1,
+    paymentMethod:          "bank",
+    iban:                   "FR76 3000 9999 0000",
+  },
+  {
+    uid:                    "fraud_driver_002",
+    name:                   "Sandra Félix",
+    phone:                  "0694777002",
+    status:                 "offline",
+    isOnline:               false,
+    role:                   "driver",
+    createdAt:              new Date().toISOString(),
+    riskScore:              85,
+    strikesCount:           4,
+    isBlocked:              true,
+    suspiciousEventsCount:  4,
+    paymentMethod:          "cash",
+    iban:                   "",
+  },
+];
+
+function makeFraudDeliveries() {
+  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 3600_000).toISOString();
+  const oneHourAgo = new Date(Date.now() -      3600_000).toISOString();
+  const twoHAgo    = new Date(Date.now() -  2 * 3600_000).toISOString();
+
+  return [
+    // 1. DROP_NOT_AT_CUSTOMER : driver était à 350m du client
+    {
+      driverId: "fraud_driver_001", orderId: "ORD_FRAUD_001",
+      paymentType: "ONLINE", cashCollectedAmount: 0,
+      basePay: 4.50, bonusPay: 0, totalPay: 4.50,
+      status: "validated", cashStatus: "unsettled", createdAt: oneHourAgo,
+      acceptedAt: oneHourAgo,
+      deliveredAt: new Date(Date.parse(oneHourAgo) + 30 * 60_000).toISOString(),
+      distanceKmEstimated: 2.5,
+      pickupLocation:         { lat: 4.850, lng: -52.330 },
+      dropoffLocation:        { lat: 4.852, lng: -52.335 },
+      driverLocationAtPickup: { lat: 4.850, lng: -52.330, accuracy: 15 },
+      driverLocationAtDropoff:{ lat: 4.8547, lng: -52.335, accuracy: 20 }, // 350m north
+      fraudFlags:   ["DROP_NOT_AT_CUSTOMER"],
+      fraudScore:   40,
+      reviewStatus: "ok",
+      reviewedByAdmin: false,
+    },
+    // 2. IMPOSSIBLE_SPEED : 5km en 1 min = 300km/h
+    {
+      driverId: "fraud_driver_002", orderId: "ORD_FRAUD_002",
+      paymentType: "ONLINE", cashCollectedAmount: 0,
+      basePay: 5.00, bonusPay: 2.00, totalPay: 7.00,
+      status: "validated", cashStatus: "unsettled", createdAt: twoHAgo,
+      acceptedAt: twoHAgo,
+      deliveredAt: new Date(Date.parse(twoHAgo) + 60_000).toISOString(), // 1 min
+      distanceKmEstimated: 5.0,
+      fraudFlags:   ["IMPOSSIBLE_SPEED", "TOO_FAST_FOR_DISTANCE"],
+      fraudScore:   65,
+      reviewStatus: "warning",
+      reviewedByAdmin: false,
+    },
+    // 3. CASH_NOT_SETTLED_24H : cash non reversé depuis 2 jours
+    {
+      driverId: "fraud_driver_002", orderId: "ORD_FRAUD_003",
+      paymentType: "CASH", cashCollectedAmount: 28.50,
+      basePay: 4.50, bonusPay: 0, totalPay: 4.50,
+      status: "validated", cashStatus: "unsettled", createdAt: twoDaysAgo,
+      acceptedAt: twoDaysAgo,
+      deliveredAt: new Date(Date.parse(twoDaysAgo) + 45 * 60_000).toISOString(),
+      distanceKmEstimated: 3.0,
+      fraudFlags:   ["CASH_NOT_SETTLED_24H"],
+      fraudScore:   40,
+      reviewStatus: "ok",
+      reviewedByAdmin: false,
+    },
+    // 4-7. Livraisons normales pour compléter l'historique
+    ...Array.from({ length: 4 }, (_, i) => ({
+      driverId: i < 2 ? "fraud_driver_001" : "fraud_driver_002",
+      orderId: `ORD_FRAUD_00${i + 4}`,
+      paymentType: "ONLINE" as const, cashCollectedAmount: 0,
+      basePay: 4.00 + i * 0.5, bonusPay: 0, totalPay: 4.00 + i * 0.5,
+      status: "validated", cashStatus: "unsettled",
+      createdAt: new Date(Date.now() - (i + 3) * 3600_000).toISOString(),
+      distanceKmEstimated: 1.5 + i,
+      fraudFlags: [] as string[], fraudScore: 0, reviewStatus: "ok", reviewedByAdmin: false,
+    })),
+  ];
+}
+
+const FRAUD_EVENTS_SEED = [
+  { driverId: "fraud_driver_001", orderId: "ORD_FRAUD_001", type: "DROP_NOT_AT_CUSTOMER", severity: "high",   scoreImpact: 40, details: { distanceM: 348, accuracyM: 20 },                          createdAt: new Date(Date.now() -     3600_000).toISOString(), resolved: false, resolvedAt: null, resolvedBy: null },
+  { driverId: "fraud_driver_002", orderId: "ORD_FRAUD_002", type: "IMPOSSIBLE_SPEED",     severity: "high",   scoreImpact: 35, details: { speedKmh: 300, distanceKm: 5, durationMin: 1 },            createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(), resolved: false, resolvedAt: null, resolvedBy: null },
+  { driverId: "fraud_driver_002", orderId: "ORD_FRAUD_002", type: "TOO_FAST_FOR_DISTANCE",severity: "high",   scoreImpact: 30, details: { durationMin: 1, distanceKm: 5 },                          createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(), resolved: false, resolvedAt: null, resolvedBy: null },
+  { driverId: "fraud_driver_002", orderId: "ORD_FRAUD_003", type: "CASH_NOT_SETTLED_24H", severity: "high",   scoreImpact: 40, details: { ageHours: 48, cashAmount: 28.50 },                        createdAt: new Date(Date.now() -     3600_000).toISOString(), resolved: false, resolvedAt: null, resolvedBy: null },
+];
+
 // ── component ────────────────────────────────────────────────
 export default function SeedPage() {
-  const [log,     setLog]     = useState<string[]>([]);
-  const [running, setRunning] = useState(false);
-  const [done,    setDone]    = useState(false);
+  const [log,          setLog]          = useState<string[]>([]);
+  const [running,      setRunning]      = useState(false);
+  const [done,         setDone]         = useState(false);
+  const [fraudLog,     setFraudLog]     = useState<string[]>([]);
+  const [fraudRunning, setFraudRunning] = useState(false);
+  const [fraudDone,    setFraudDone]    = useState(false);
 
-  const push = (msg: string) => setLog(l => [...l, msg]);
+  const push      = (msg: string) => setLog(l => [...l, msg]);
+  const pushFraud = (msg: string) => setFraudLog(l => [...l, msg]);
 
   const runSeed = async () => {
     setRunning(true);
@@ -181,6 +293,42 @@ export default function SeedPage() {
     setRunning(false);
   };
 
+  const runFraudSeed = async () => {
+    setFraudRunning(true);
+    setFraudLog([]);
+    setFraudDone(false);
+    try {
+      // 1. Fraud drivers
+      pushFraud("🚨 Création des drivers frauduleux…");
+      for (const d of FRAUD_DRIVERS) {
+        await setDoc(doc(db, "drivers", d.uid), d, { merge: true });
+        pushFraud(`   ✓ driver: ${d.name} · riskScore=${d.riskScore} · blocked=${d.isBlocked}`);
+      }
+      // 2. Fraud deliveries
+      pushFraud("📦 Création des livraisons (3 frauduleuses + 4 normales)…");
+      const fDels = makeFraudDeliveries();
+      for (const d of fDels) {
+        await addDoc(collection(db, "deliveries"), d);
+        const flagLabel = (d.fraudFlags as string[]).length > 0 ? `⚠ [${(d.fraudFlags as string[]).join(",")}]` : "✓ OK";
+        pushFraud(`   ✓ ${d.orderId} → ${d.driverId.slice(-3)} ${flagLabel}`);
+      }
+      // 3. Fraud events
+      pushFraud("⚡ Création des fraud_events pré-calculés…");
+      for (const ev of FRAUD_EVENTS_SEED) {
+        await addDoc(collection(db, "fraud_events"), ev);
+        pushFraud(`   ✓ ${ev.type} → ${ev.driverId.slice(-3)} [${ev.severity} +${ev.scoreImpact}pts]`);
+      }
+      pushFraud("");
+      pushFraud("✅ SEED FRAUDE TERMINÉ");
+      pushFraud("   → /admin/fraud pour voir le tableau de bord");
+      pushFraud("   → fraud_driver_002 (Sandra Félix) doit être bloquée (riskScore=85)");
+      setFraudDone(true);
+    } catch (e: any) {
+      pushFraud("❌ ERREUR : " + e.message);
+    }
+    setFraudRunning(false);
+  };
+
   return (
     <>
       <style>{`
@@ -225,6 +373,8 @@ export default function SeedPage() {
             <div style={{ color: "#a855f7" }}>1 payout exemple (payé semaine précédente)</div>
             <div style={{ color: "#a855f7", marginTop: 6 }}>🚀 Boost scenario : 2 livreurs online + 10 orders "nouveau"</div>
             <div style={{ color: "#5a5470", marginLeft: 16 }}>ratio 5 → boost +5.00€ (déclencher via POST /api/boost)</div>
+            <div style={{ color: "#ff2d78", marginTop: 6 }}>🚨 Fraud scenario (bouton séparé ci-dessous)</div>
+            <div style={{ color: "#5a5470", marginLeft: 16 }}>2 drivers · 7 livraisons · 3 frauduleuses · 4 fraud_events</div>
           </div>
 
           {/* URLs */}
@@ -240,7 +390,10 @@ export default function SeedPage() {
               ["/admin/payouts",             "Table rémunération admin"],
               ["/admin/payouts/driver_test_001", "Détail Jean Dallou"],
               ["/admin/payouts/driver_test_002", "Détail Marie Contard"],
-              ["/admin/analytics",           "Analytics — carte Boost"],
+              ["/admin/analytics",                    "Analytics — carte Boost"],
+              ["/admin/fraud",                        "Anti-Abus ULTRA — tableau de bord"],
+              ["/admin/fraud/fraud_driver_001",       "Profil risque Paulo Droz"],
+              ["/admin/fraud/fraud_driver_002",       "Sandra Félix (bloquée, riskScore=85)"],
             ].map(([url, desc]) => (
               <div key={url}>
                 <span style={{ color: "#b8ff00" }}>{url}</span>
@@ -299,6 +452,67 @@ export default function SeedPage() {
               ))}
             </div>
           )}
+
+          {/* ── Fraud seed section ── */}
+          <div style={{ marginTop: 32, borderTop: "1px solid rgba(255,45,120,.2)", paddingTop: 24 }}>
+            <div style={{ fontFamily: "'Black Ops One',cursive", fontSize: "1.1rem", color: "#ff2d78", marginBottom: 6 }}>
+              🚨 SEED ANTI-FRAUDE
+            </div>
+            <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".72rem", color: "#5a5470", marginBottom: 16, lineHeight: 1.8 }}>
+              Insère 2 livreurs frauduleux + 7 livraisons + 4 fraud_events.<br />
+              Paulo Droz → riskScore 40 (1 flag) · Sandra Félix → bloquée riskScore 85 (3 flags)
+            </div>
+            <button
+              onClick={runFraudSeed}
+              disabled={fraudRunning}
+              style={{
+                width: "100%", padding: "12px",
+                background: fraudDone ? "#b8ff00" : fraudRunning ? "rgba(255,45,120,.3)" : "rgba(255,45,120,.8)",
+                color: "#000", border: "none", borderRadius: 10, cursor: fraudRunning ? "wait" : "pointer",
+                fontFamily: "'Inter',sans-serif", fontWeight: 700, fontSize: ".9rem",
+                marginBottom: 16, transition: "background .2s",
+              }}
+            >
+              {fraudRunning ? "Insertion fraude…" : fraudDone ? "✓ Fraud seed terminé — relancer ?" : "🚨 Lancer le seed fraude"}
+            </button>
+
+            {fraudLog.length > 0 && (
+              <div style={{
+                background: "rgba(0,0,0,.4)", border: "1px solid rgba(255,45,120,.15)",
+                borderRadius: 10, padding: "16px 18px",
+                fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem",
+                lineHeight: 1.8, maxHeight: 250, overflowY: "auto",
+              }}>
+                {fraudLog.map((l, i) => (
+                  <div key={i} style={{
+                    color: l.startsWith("✅") ? "#b8ff00"
+                         : l.startsWith("❌") ? "#ff2d78"
+                         : l.startsWith("   ✓") ? "#00f5ff"
+                         : l.startsWith("   →") ? "#ff9500"
+                         : "#5a5470",
+                  }}>{l || "\u00a0"}</div>
+                ))}
+              </div>
+            )}
+
+            {fraudDone && (
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                {[
+                  ["/admin/fraud",                  "→ Dashboard fraude"],
+                  ["/admin/fraud/fraud_driver_002",  "→ Sandra Félix (bloquée)"],
+                ].map(([href, label]) => (
+                  <a key={href} href={href} style={{
+                    flex: 1, textAlign: "center",
+                    background: "rgba(255,45,120,.1)", color: "#ff2d78",
+                    border: "1px solid rgba(255,45,120,.3)", borderRadius: 8,
+                    padding: "10px", fontFamily: "'Inter',sans-serif",
+                    fontWeight: 600, fontSize: ".78rem", textDecoration: "none",
+                  }}>{label}</a>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     </>

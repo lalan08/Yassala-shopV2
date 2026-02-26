@@ -21,6 +21,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-server';
 import { getWeather, computeRainBonus } from '@/utils/weather';
+import { runFraudCheck } from '@/lib/runFraudCheck';
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET ?? 'yassala2025';
 
@@ -99,6 +100,11 @@ export async function POST(request: Request) {
       `[validate-delivery] id=${deliveryId} status=validated` +
       ` rain=${rainBonus} boost=${boostPay}` +
       ` weather=${weather.condition} total=${totalPay}`,
+    );
+
+    // ── analyse anti-fraude (fire-and-forget) ─────────────────────────────
+    runFraudCheck(deliveryId).catch(e =>
+      console.error('[validate-delivery] fraud-check failed:', e?.message ?? e),
     );
 
     return NextResponse.json({
