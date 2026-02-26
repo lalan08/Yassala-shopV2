@@ -148,7 +148,11 @@ export default function LivreurPage() {
 
   const loadOrders = useCallback(() => {
     if (!driverData || showContract) return () => {};
-    const unsub = onSnapshot(collection(db, "orders"), snap => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 3);
+    const unsub = onSnapshot(
+      query(collection(db, "orders"), where("createdAt", ">=", cutoff.toISOString())),
+      snap => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Order))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -210,6 +214,7 @@ export default function LivreurPage() {
     }
     showToast("Commande prise en charge !");
     setConfirmAction(null);
+    setFilter("mine");
   };
 
   const markDelivered = async (orderId: string) => {
@@ -234,6 +239,7 @@ export default function LivreurPage() {
     }
     showToast("Commande marquée comme livrée !");
     setConfirmAction(null);
+    setFilter("available");
   };
 
   const startGPS = useCallback(() => {
@@ -297,9 +303,15 @@ export default function LivreurPage() {
     return () => unsub();
   }, [driverData?.id, loggedIn]);
 
+  const todayStr = new Date().toISOString().slice(0, 10);
   const availableOrders = orders.filter(o => (o.status === "nouveau" || o.status === "en_cours") && !o.assignedDriver);
   const myOrders = orders.filter(o => o.assignedDriver === driverData?.id && o.status !== "livre");
-  const deliveredOrders = orders.filter(o => o.assignedDriver === driverData?.id && o.status === "livre");
+  // Seulement aujourd'hui — les jours précédents sont archivés automatiquement
+  const deliveredOrders = orders.filter(o =>
+    o.assignedDriver === driverData?.id &&
+    o.status === "livre" &&
+    (o.deliveredAt || o.createdAt).slice(0, 10) === todayStr
+  );
 
   // Calcul wallet
   const earningsTotal = deliveries
@@ -901,9 +913,9 @@ export default function LivreurPage() {
         {/* Tabs */}
         <div style={{display:"flex",gap:6,marginBottom:18}}>
           {([
-            { key: "available" as const, label: "DISPONIBLES", count: availableOrders.length, color: "#ff2d78" },
-            { key: "mine" as const, label: "MES COURSES", count: myOrders.length, color: "#00f5ff" },
-            { key: "delivered" as const, label: "LIVRÉES", count: deliveredOrders.length, color: "#b8ff00" },
+            { key: "available" as const, label: "DISPO", count: availableOrders.length, color: "#ff2d78" },
+            { key: "mine" as const, label: "EN COURS", count: myOrders.length, color: "#00f5ff" },
+            { key: "delivered" as const, label: "AUJOURD'HUI", count: deliveredOrders.length, color: "#b8ff00" },
           ]).map(t => (
             <button key={t.key} onClick={() => setFilter(t.key)}
               style={{flex:1,padding:"10px 6px",borderRadius:10,cursor:"pointer",fontWeight:600,
@@ -935,7 +947,7 @@ export default function LivreurPage() {
             <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",letterSpacing:".1em"}}>
               {filter === "available" ? "Aucune commande disponible" :
                filter === "mine" ? "Aucune course en cours" :
-               "Aucune livraison effectuée"}
+               "Aucune livraison aujourd'hui"}
             </div>
           </div>
         ) : (
