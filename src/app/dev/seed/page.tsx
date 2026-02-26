@@ -9,6 +9,7 @@ import { initializeApp, getApps } from "firebase/app";
 import {
   getFirestore, doc, setDoc, addDoc,
   collection, serverTimestamp, Timestamp,
+  getDocs, limit as limitQ, query as fbQuery,
 } from "firebase/firestore";
 import { firebaseConfig } from "@/lib/firebase";
 
@@ -255,9 +256,14 @@ export default function SeedPage() {
   const [upsellRunning, setUpsellRunning] = useState(false);
   const [upsellDone,    setUpsellDone]    = useState(false);
 
-  const push      = (msg: string) => setLog(l => [...l, msg]);
-  const pushFraud = (msg: string) => setFraudLog(l => [...l, msg]);
+  const [promoLog,     setPromoLog]     = useState<string[]>([]);
+  const [promoRunning, setPromoRunning] = useState(false);
+  const [promoDone,    setPromoDone]    = useState(false);
+
+  const push       = (msg: string) => setLog(l => [...l, msg]);
+  const pushFraud  = (msg: string) => setFraudLog(l => [...l, msg]);
   const pushUpsell = (msg: string) => setUpsellLog(l => [...l, msg]);
+  const pushPromo  = (msg: string) => setPromoLog(l => [...l, msg]);
 
   const runSeed = async () => {
     setRunning(true);
@@ -364,6 +370,51 @@ export default function SeedPage() {
       pushUpsell("❌ ERREUR : " + e.message);
     }
     setUpsellRunning(false);
+  };
+
+  const runPromoSeed = async () => {
+    setPromoRunning(true);
+    setPromoLog([]);
+    setPromoDone(false);
+    try {
+      pushPromo("🔍 Récupération du premier produit actif…");
+      const prodSnap = await getDocs(fbQuery(collection(db, "products"), limitQ(3)));
+      if (prodSnap.empty) { pushPromo("❌ Aucun produit trouvé — seed les produits d'abord"); setPromoRunning(false); return; }
+
+      const firstProd = prodSnap.docs[0];
+      const prodData  = firstProd.data() as { name?: string; price?: number };
+      pushPromo(`   ✓ Produit sélectionné : ${prodData.name ?? firstProd.id} (${prodData.price?.toFixed(2) ?? "?"}€)`);
+
+      const now   = new Date();
+      const endAt = new Date(now.getTime() + 15 * 60 * 1000);
+
+      pushPromo("📝 Création de la promo Flash Deal 15min…");
+      const promoRef = await addDoc(collection(db, "promotions"), {
+        title:         "Flash Deal 🔥",
+        description:   "Offre de test — 15 minutes seulement !",
+        isActive:      true,
+        startAt:       now.toISOString(),
+        endAt:         endAt.toISOString(),
+        discountType:  "percent",
+        discountValue: 10,
+        productIds:    [firstProd.id],
+        maxUses:       10,
+        usesCount:     0,
+        createdAt:     now.toISOString(),
+        updatedAt:     now.toISOString(),
+      });
+      pushPromo(`   ✓ promotions/${promoRef.id}`);
+      pushPromo(`   ✓ Durée : 15 min · remise : -10% · max 10 uses`);
+      pushPromo(`   ✓ Expire à : ${endAt.toLocaleTimeString("fr-FR")}`);
+      pushPromo("");
+      pushPromo("✅ SEED PROMO TERMINÉ");
+      pushPromo("   → Ouvre le shop → bannière Flash Deal visible");
+      pushPromo("   → /admin/promotions pour gérer");
+      setPromoDone(true);
+    } catch (e: any) {
+      pushPromo("❌ ERREUR : " + e.message);
+    }
+    setPromoRunning(false);
   };
 
   return (
@@ -609,6 +660,75 @@ export default function SeedPage() {
                     flex:1, textAlign:"center",
                     background:"rgba(184,255,0,.1)", color:"#b8ff00",
                     border:"1px solid rgba(184,255,0,.3)", borderRadius:8,
+                    padding:"10px", fontFamily:"'Inter',sans-serif",
+                    fontWeight:600, fontSize:".78rem", textDecoration:"none",
+                  }}>{label}</a>
+                ))}
+              </div>
+            )}
+          </div>
+
+
+          {/* ── FLASH DEAL SEED ── */}
+          <div style={{
+            background:"rgba(255,45,120,.05)", border:"1px solid rgba(255,45,120,.25)",
+            borderRadius:12, padding:"22px 24px", marginTop:24,
+          }}>
+            <div style={{
+              fontFamily:"'Black Ops One',cursive", fontSize:"1.1rem",
+              color:"#ff2d78", marginBottom:6,
+            }}>🔥 FLASH DEAL — TEST 15 MIN</div>
+            <div style={{
+              fontFamily:"'Share Tech Mono',monospace", fontSize:".72rem",
+              color:"#5a5470", lineHeight:1.8, marginBottom:14,
+            }}>
+              Crée une promo <span style={{color:"#ff6b35"}}>-10%</span> active 15 min sur le premier produit.<br />
+              Timer réel basé sur Firestore · max 10 utilisations.
+            </div>
+
+            <button
+              onClick={runPromoSeed}
+              disabled={promoRunning}
+              style={{
+                width:"100%", padding:"13px",
+                background: promoDone ? "#b8ff00" : promoRunning ? "rgba(255,45,120,.4)" : "#ff2d78",
+                color:"#000", border:"none", borderRadius:8,
+                cursor: promoRunning ? "wait" : "pointer",
+                fontFamily:"'Inter',sans-serif", fontWeight:700, fontSize:".9rem",
+                marginBottom:14, transition:"background .2s",
+              }}
+            >
+              {promoRunning ? "Création…" : promoDone ? "✓ Promo créée — relancer ?" : "🚀 Seed Flash Deal 15min"}
+            </button>
+
+            {promoLog.length > 0 && (
+              <div style={{
+                background:"rgba(0,0,0,.4)", borderRadius:8,
+                padding:"14px", fontFamily:"'Share Tech Mono',monospace",
+                fontSize:".72rem", lineHeight:1.8, maxHeight:200, overflowY:"auto",
+              }}>
+                {promoLog.map((l, i) => (
+                  <div key={i} style={{
+                    color: l.startsWith("✅") ? "#b8ff00"
+                         : l.startsWith("❌") ? "#ff2d78"
+                         : l.startsWith("   ✓") ? "#00f5ff"
+                         : l.startsWith("   →") ? "#ff9500"
+                         : "#5a5470",
+                  }}>{l || "\u00a0"}</div>
+                ))}
+              </div>
+            )}
+
+            {promoDone && (
+              <div style={{ display:"flex", gap:10, marginTop:14 }}>
+                {[
+                  ["/",                    "→ Shop (voir bannière)"],
+                  ["/admin/promotions",    "→ Admin promotions"],
+                ].map(([href, label]) => (
+                  <a key={href} href={href} style={{
+                    flex:1, textAlign:"center",
+                    background:"rgba(255,45,120,.1)", color:"#ff2d78",
+                    border:"1px solid rgba(255,45,120,.3)", borderRadius:8,
                     padding:"10px", fontFamily:"'Inter',sans-serif",
                     fontWeight:600, fontSize:".78rem", textDecoration:"none",
                   }}>{label}</a>
