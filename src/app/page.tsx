@@ -15,10 +15,8 @@ import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
-// ── Stripe client (initialisé une seule fois au module level) ──
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  : null;
+// ── Stripe client (chargé dynamiquement depuis le serveur) ──
+// Ne pas initialiser ici pour éviter les problèmes de build-time env vars
 
 // ── Thème sombre Stripe (dark neon) ──
 const STRIPE_APPEARANCE = {
@@ -254,6 +252,7 @@ export default function Home() {
 
   // ── STRIPE PAYMENT ELEMENT ──
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+  const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
 
   // ── FLASH DEALS ──
   const [promotions, setPromotions] = useState<Promotion[]>([]);
@@ -711,44 +710,25 @@ export default function Home() {
       }
 
       if (paymentMethod === 'online') {
-        if (stripePromise) {
-          // ── Nouveau flow : Payment Element inline ──────────────────────────
-          const res = await fetch('/api/create-payment-intent', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items:           cart.map(i => ({ name: i.name, price: i.price, qty: i.qty })),
-              deliveryFee,
-              orderId:         orderRef.id,
-              orderNum,
-              fulfillmentType,
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Erreur paiement');
-          setStripeClientSecret(data.clientSecret);
-          setSubmitting(false);
-          return; // On attend la confirmation dans le Payment Element
-        } else {
-          // ── Fallback : ancien flow redirect Stripe Checkout ────────────────
-          const res = await fetch('/api/checkout', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: cart.map(item => ({ product: { name: item.name, price: item.price, description: '' }, quantity: item.qty })),
-              customerName:    orderForm.name,
-              customerPhone:   orderForm.phone,
-              customerAddress: fulfillmentType === 'delivery' ? orderForm.address : (pickupSnapshot?.address || 'Click & Collect'),
-              deliveryFee,
-              orderNum,
-              orderId: orderRef.id,
-              fulfillmentType,
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok || !data.url) throw new Error(data.error || 'Erreur paiement');
-          window.location.href = data.url;
-        }
+        // ── Payment Element inline (clé chargée dynamiquement depuis le serveur) ──
+        const res = await fetch('/api/create-payment-intent', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items:           cart.map(i => ({ name: i.name, price: i.price, qty: i.qty })),
+            deliveryFee,
+            orderId:         orderRef.id,
+            orderNum,
+            fulfillmentType,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.clientSecret) throw new Error(data.error || 'Erreur paiement');
+        if (!data.publishableKey) throw new Error('Paiement non configuré (clé publique manquante)');
+        setStripePromise(loadStripe(data.publishableKey));
+        setStripeClientSecret(data.clientSecret);
+        setSubmitting(false);
+        return; // On attend la confirmation dans le Payment Element
       } else {
         fetch('/api/notify', {
           method: 'POST',
