@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/boost",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
