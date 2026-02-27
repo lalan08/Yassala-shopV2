@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { computeDeliveryPrice, haversineKm, SHOP_LAT, SHOP_LNG, type PricingResult } from "@/utils/pricing";
+import { haversineKm, SHOP_LAT, SHOP_LNG } from "@/utils/pricing";
+import { DEFAULT_DELIVERY_CONFIG, computeDeliveryFee, type DeliveryConfig, type DeliveryFeeResult } from "@/types/delivery";
 import { computeETA, formatETA } from "@/utils/estimateDelivery";
 import UpsellCarousel from "@/components/UpsellCarousel";
 import SmartThresholdSuggestions from "@/components/SmartThresholdSuggestions";
@@ -258,6 +259,7 @@ export default function Home() {
   // ── DYNAMIC DELIVERY PRICING ──
   const [distanceKm, setDistanceKm]       = useState(0);
   const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 0, availableDrivers: 1 });
+  const [deliveryConfig, setDeliveryConfig] = useState<DeliveryConfig>(DEFAULT_DELIVERY_CONFIG);
 
   // ── STRIPE PAYMENT ELEMENT ──
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
@@ -335,6 +337,9 @@ export default function Home() {
     const unsubSettings = onSnapshot(doc(db, "settings", "main"), snap => {
       if (snap.exists()) setSettings(snap.data() as Settings);
     });
+    const unsubDeliveryConfig = onSnapshot(doc(db, "settings", "delivery"), snap => {
+      if (snap.exists()) setDeliveryConfig({ ...DEFAULT_DELIVERY_CONFIG, ...snap.data() } as DeliveryConfig);
+    });
     const unsubBanners = onSnapshot(collection(db, "banners"), snap => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Banner))
         .filter(b => b.active !== false)
@@ -381,7 +386,7 @@ export default function Home() {
     const unsubPromos = onSnapshot(collection(db, "promotions"), snap => {
       setPromotions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Promotion)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubBanners(); unsubCats(); unsubAuth(); unsubPickupLocs(); unsubPromos(); };
+    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPickupLocs(); unsubPromos(); };
   }, []);
 
   // ── CART PERSISTENCE ──
@@ -542,17 +547,14 @@ export default function Home() {
   }, [activePromo?.id]);
 
   const discountedTotal = cartTotal - getDiscount() - promoDiscount;
-  const pricingResult: PricingResult | null =
-    fulfillmentType === 'delivery' && distanceKm > 0 && discountedTotal < settings.freeDelivery
-      ? computeDeliveryPrice({ distanceKm, ...deliveryStats, hour: new Date().getHours() })
-      : null;
+  // Calcul frais de livraison depuis la config Firestore (temps réel)
+  const feeResult: DeliveryFeeResult | null = fulfillmentType === 'delivery'
+    ? computeDeliveryFee(distanceKm, discountedTotal, deliveryConfig)
+    : null;
   const etaResult = fulfillmentType === 'delivery'
     ? computeETA({ distanceKm, pendingOrders: deliveryStats.activeOrders, activeDrivers: deliveryStats.availableDrivers })
     : null;
-  const deliveryFeeDisplay =
-    fulfillmentType === 'pickup' ? 0
-    : discountedTotal >= settings.freeDelivery ? 0
-    : (pricingResult?.total ?? 3);
+  const deliveryFeeDisplay = feeResult?.total ?? 0;
   const finalTotal = discountedTotal + deliveryFeeDisplay;
 
   const searchAddress = useCallback((q: string) => {
@@ -610,8 +612,8 @@ export default function Home() {
       return;
     }
 
-    if (cartTotal < settings.deliveryMin) {
-      showToast(`Commande minimum : ${settings.deliveryMin}€`);
+    if (cartTotal < deliveryConfig.minimum_order_amount) {
+      showToast(`Commande minimum : ${deliveryConfig.minimum_order_amount}€`);
       return;
     }
 
@@ -688,6 +690,9 @@ export default function Home() {
           promoId: validatedPromoId,
           coupon: coupon?.code || null,
           deliveryFee,
+          deliveryBreakdown: fulfillmentType === 'delivery' && feeResult ? feeResult.breakdown : null,
+          deliverySupplements: fulfillmentType === 'delivery' && feeResult ? feeResult.supplements : null,
+          driverPay: fulfillmentType === 'delivery' && feeResult ? feeResult.driverPay : null,
           fulfillmentType,
           pickupType: fulfillmentType === 'pickup' ? pickupType : null,
           pickupLocationId: fulfillmentType === 'pickup' ? (pickupType === 'relay' ? pickupLocationId : 'stock_default') : null,
@@ -1104,7 +1109,7 @@ export default function Home() {
         fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",letterSpacing:".15em",
         position:"relative",zIndex:10}}>
         {settings.shopOpen 
-          ? `// LIVRAISON NOCTURNE · ${settings.zone.toUpperCase()} · MIN. ${settings.deliveryMin}€ · ${settings.hours} //`
+          ? `// LIVRAISON NOCTURNE · ${settings.zone.toUpperCase()} · MIN. ${deliveryConfig.minimum_order_amount}€ · ${settings.hours} //`
           : "// SHOP FERMÉ · REVENEZ PLUS TARD //"
         }
       </div>
@@ -1286,7 +1291,7 @@ export default function Home() {
         borderBottom:"1px solid rgba(0,245,255,.2)",position:"relative",zIndex:1}}>
         {[
           {icon:"⚡",title:"Ultra rapide",     sub:"– 30 minutes"},
-          {icon:"🔥",title:"Livraison offerte",sub:`dès ${settings.freeDelivery}€`},
+          {icon:"🔥",title:"Livraison offerte",sub:`dès ${deliveryConfig.free_delivery_threshold}€`},
           {icon:"📡",title:settings.zone,      sub:"couverture totale"},
           {icon:"🌙",title:settings.hours,     sub:"7j/7"},
         ].map((item,i) => (
@@ -1708,7 +1713,7 @@ export default function Home() {
             🚀 LIVRAISON GRATUITE
           </strong>
           <p style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>
-            // pour toute commande à partir de {settings.freeDelivery}€
+            // pour toute commande à partir de {deliveryConfig.free_delivery_threshold}€
           </p>
         </div>
         <button onClick={() => document.getElementById("catalogue")?.scrollIntoView({behavior:"smooth"})}
@@ -1958,7 +1963,7 @@ export default function Home() {
                   allProducts={products}
                   onAddToCart={p => addToCart(p.id, p.name, p.price)}
                   cartTotal={cartTotal}
-                  deliveryMin={settings.deliveryMin}
+                  deliveryMin={deliveryConfig.minimum_order_amount}
                 />
 
                 {/* ── SEUIL LIVRAISON GRATUITE ── */}
@@ -1966,7 +1971,7 @@ export default function Home() {
                   cartItems={cart}
                   allProducts={products}
                   cartTotal={cartTotal}
-                  threshold={settings.freeDelivery}
+                  threshold={deliveryConfig.free_delivery_threshold}
                   onAddToCart={p => addToCart(p.id, p.name, p.price)}
                 />
 
@@ -2064,30 +2069,41 @@ export default function Home() {
                       <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:"#ff6b35"}}>-{promoDiscount.toFixed(2)}€</span>
                     </div>
                   )}
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  {/* Ligne livraison */}
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:feeResult && feeResult.supplements.length > 0 ? 4 : 8}}>
                     <span style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".75rem",color:"#5a5470"}}>
                       {fulfillmentType === 'pickup' ? 'RETRAIT' : 'LIVRAISON'}
-                      {pricingResult?.isSurge && (
-                        <span style={{marginLeft:6,color:"#ff6b35",fontSize:".7rem"}} title="Forte demande">🔥 SURGE</span>
-                      )}
-                      {pricingResult?.isNight && (
-                        <span style={{marginLeft:6,color:"#a78bfa",fontSize:".7rem"}} title="Tarif nocturne">🌙 NUIT</span>
-                      )}
                     </span>
                     <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:"#b8ff00"}}>
                       {fulfillmentType === 'pickup'
                         ? 'GRATUIT'
-                        : discountedTotal >= settings.freeDelivery
+                        : feeResult?.isFree
                         ? 'GRATUITE'
                         : `${deliveryFeeDisplay.toFixed(2)}€`}
                     </span>
                   </div>
-                  {pricingResult && distanceKm > 0 && (
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,opacity:.65}}>
-                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470"}}>
-                        {distanceKm.toFixed(1)} km · base {pricingResult.base.toFixed(2)}€ + dist {pricingResult.distanceFee.toFixed(2)}€
-                        {pricingResult.surgeFee > 0 && ` + surge ${pricingResult.surgeFee.toFixed(2)}€`}
-                        {pricingResult.nightFee > 0 && ` + nuit ${pricingResult.nightFee.toFixed(2)}€`}
+                  {/* Suppléments actifs */}
+                  {feeResult && !feeResult.isFree && feeResult.supplements.length > 0 && (
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
+                      {feeResult.supplements.map((s, i) => (
+                        <span key={i} style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                          background:"rgba(167,139,250,.1)",border:"1px solid rgba(167,139,250,.25)",
+                          color:"#a78bfa",borderRadius:4,padding:"2px 7px",letterSpacing:".06em"}}>
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Détail distance */}
+                  {feeResult && !feeResult.isFree && distanceKm > 0 && (
+                    <div style={{marginBottom:6,opacity:.6}}>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470"}}>
+                        {distanceKm.toFixed(1)} km ·
+                        base {feeResult.breakdown.base.toFixed(2)}€
+                        {feeResult.breakdown.distance > 0 && ` + dist ${feeResult.breakdown.distance.toFixed(2)}€`}
+                        {feeResult.breakdown.night > 0 && ` + nuit ${feeResult.breakdown.night.toFixed(2)}€`}
+                        {feeResult.breakdown.rain  > 0 && ` + pluie ${feeResult.breakdown.rain.toFixed(2)}€`}
+                        {feeResult.breakdown.rush  > 0 && ` + rush ${feeResult.breakdown.rush.toFixed(2)}€`}
                       </span>
                     </div>
                   )}
@@ -2276,11 +2292,11 @@ export default function Home() {
                   )}
                 </div>
 
-                {cartTotal < settings.deliveryMin && (
+                {cartTotal < deliveryConfig.minimum_order_amount && (
                   <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.3)",
                     borderRadius:6,padding:"12px",marginBottom:16,fontFamily:"'Share Tech Mono',monospace",
                     fontSize:".75rem",color:"#ff2d78",textAlign:"center"}}>
-                    ⚠️ Commande minimum : {settings.deliveryMin}€ (il te manque {(settings.deliveryMin - cartTotal).toFixed(2)}€)
+                    ⚠️ Commande minimum : {deliveryConfig.minimum_order_amount}€ (il te manque {(deliveryConfig.minimum_order_amount - cartTotal).toFixed(2)}€)
                   </div>
                 )}
 
@@ -2398,7 +2414,7 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <button onClick={submitOrder} disabled={submitting || cartTotal < settings.deliveryMin
+                    <button onClick={submitOrder} disabled={submitting || cartTotal < deliveryConfig.minimum_order_amount
                         || (settings.paymentOnlineEnabled === false && settings.paymentCashEnabled === false)
                         || (settings.fulfillmentDeliveryEnabled === false && settings.fulfillmentPickupEnabled === false)}
                       style={{width:"100%",
@@ -3018,8 +3034,8 @@ export default function Home() {
           shopOpen:    settings.shopOpen,
           hours:       settings.hours ?? "20h–06h",
           zone:        settings.zone  ?? "Cayenne",
-          deliveryMin: settings.deliveryMin ?? 5,
-          freeDelivery: settings.freeDelivery ?? 30,
+          deliveryMin: deliveryConfig.minimum_order_amount ?? 5,
+          freeDelivery: deliveryConfig.free_delivery_threshold ?? 30,
           products: products.map(p => ({
             name:  p.name,
             price: p.price,

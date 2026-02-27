@@ -2313,6 +2313,55 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      {/* ── Frais livraison / Bonus / Marge ── */}
+                      {(o as any).fulfillmentType !== 'pickup' && (o as any).deliveryFee > 0 && (
+                        <div style={{borderTop:"1px solid rgba(255,255,255,.05)",paddingTop:8,marginBottom:6,
+                          display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+                          {/* Frais livraison */}
+                          <div style={{display:"flex",alignItems:"center",gap:4,
+                            background:"rgba(184,255,0,.05)",border:"1px solid rgba(184,255,0,.15)",
+                            borderRadius:6,padding:"3px 10px"}}>
+                            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                              color:"#5a5470",letterSpacing:".06em"}}>LIVRAISON</span>
+                            <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                              fontSize:".88rem",color:"#b8ff00",marginLeft:4}}>
+                              {Number((o as any).deliveryFee).toFixed(2)}€
+                            </span>
+                          </div>
+                          {/* Suppléments */}
+                          {Array.isArray((o as any).deliverySupplements) && (o as any).deliverySupplements.length > 0 && (
+                            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                              {((o as any).deliverySupplements as string[]).map((s: string, i: number) => (
+                                <span key={i} style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                                  background:"rgba(167,139,250,.08)",border:"1px solid rgba(167,139,250,.2)",
+                                  color:"#a78bfa",borderRadius:4,padding:"2px 6px",letterSpacing:".04em"}}>
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Marge */}
+                          {(o as any).driverPay != null && (
+                            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",
+                                color:"#5a5470",letterSpacing:".06em"}}>LIVREUR</span>
+                              <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                                fontSize:".82rem",color:"#00f5ff"}}>
+                                {Number((o as any).driverPay).toFixed(2)}€
+                              </span>
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",
+                                color:"#5a5470",letterSpacing:".06em",marginLeft:4}}>MARGE</span>
+                              <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",
+                                color: (Number((o as any).deliveryFee) - Number((o as any).driverPay)) >= 0
+                                  ? "#ff2d78" : "#ef4444"}}>
+                                {(Number((o as any).deliveryFee) - Number((o as any).driverPay)) >= 0 ? "+" : ""}
+                                {(Number((o as any).deliveryFee) - Number((o as any).driverPay)).toFixed(2)}€
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Driver Assignment — delivery only */}
                       {(o as any).fulfillmentType !== 'pickup' && (
                       <div style={{borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:10,marginBottom:8,
@@ -3505,10 +3554,24 @@ export default function AdminPage() {
                   onChange={v => setSettings(s => ({...s, hours: v}))} />
                 <Field label="ZONE DE LIVRAISON" value={settings.zone}
                   onChange={v => setSettings(s => ({...s, zone: v}))} />
-                <Field label="COMMANDE MINIMUM (€)" value={String(settings.deliveryMin)} type="number"
-                  onChange={v => setSettings(s => ({...s, deliveryMin: Number(v)}))} />
-                <Field label="LIVRAISON GRATUITE À PARTIR DE (€)" value={String(settings.freeDelivery)} type="number"
-                  onChange={v => setSettings(s => ({...s, freeDelivery: Number(v)}))} />
+
+                {/* Lien vers la config livraison dédiée */}
+                <a href="/admin/settings/delivery"
+                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                    background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.2)",
+                    borderRadius:8,padding:"14px 18px",textDecoration:"none",transition:"all .2s"}}>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                      color:"#00f5ff",letterSpacing:".12em",marginBottom:3}}>
+                      🚗 CONFIG FRAIS DE LIVRAISON
+                    </div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontSize:".8rem",color:"#5a5470"}}>
+                      Base · Nuit · Pluie · Rush · Distance · Livreur
+                    </div>
+                  </div>
+                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem",
+                    color:"#00f5ff",letterSpacing:".06em"}}>OUVRIR →</span>
+                </a>
 
                 {/* ── Modes de réception ── */}
                 <div>
