@@ -26,7 +26,7 @@ type Product = { id?: string; name: string; desc: string; price: number; image: 
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; };
 type PickupLocation = { id?: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
@@ -59,6 +59,10 @@ const defaultSettings: Settings = {
   hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX",
   paymentOnlineEnabled: true, paymentCashEnabled: true,
   fulfillmentDeliveryEnabled: true, fulfillmentPickupEnabled: true,
+  aiChatEnabled: true, aiVoiceEnabled: true, aiRecommendEnabled: true,
+  aiDescEnabled: true, aiPredictEnabled: true, aiAnomalyEnabled: true,
+  aiBannerEnabled: true, aiStockEnabled: true, aiCoachingEnabled: true,
+  aiCouponEnabled: true, aiRouteEnabled: true,
 };
 
 export default function AdminPage() {
@@ -1516,7 +1520,8 @@ export default function AdminPage() {
                         ✨ RÉSUMÉ IA DU JOUR
                       </div>
                       <button
-                        disabled={aiSummaryLoading}
+                        disabled={aiSummaryLoading || settings.aiPredictEnabled === false}
+                        title={settings.aiPredictEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                         onClick={async () => {
                           setAiSummaryLoading(true);
                           try {
@@ -1560,7 +1565,8 @@ export default function AdminPage() {
                         🔮 PRÉDICTIONS IA
                       </div>
                       <button
-                        disabled={aiPredLoading}
+                        disabled={aiPredLoading || settings.aiPredictEnabled === false}
+                        title={settings.aiPredictEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                         onClick={async () => {
                           setAiPredLoading(true);
                           try {
@@ -1607,7 +1613,8 @@ export default function AdminPage() {
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button
-                    disabled={aiStockLoading}
+                    disabled={aiStockLoading || settings.aiStockEnabled === false}
+                    title={settings.aiStockEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                     onClick={async () => {
                       setAiStockLoading(true); setAiStock([]);
                       try {
@@ -2044,7 +2051,8 @@ export default function AdminPage() {
                     ⬇ EXPORT CSV
                   </button>
                   <button
-                    disabled={aiAnomalyLoading}
+                    disabled={aiAnomalyLoading || settings.aiAnomalyEnabled === false}
+                    title={settings.aiAnomalyEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                     onClick={async () => {
                       setAiAnomalyLoading(true);
                       try {
@@ -2352,7 +2360,8 @@ export default function AdminPage() {
                     {newCoupon.id ? "METTRE À JOUR" : "CRÉER"}
                   </button>
                   <button
-                    disabled={aiCouponLoading}
+                    disabled={aiCouponLoading || settings.aiCouponEnabled === false}
+                    title={settings.aiCouponEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                     onClick={async () => {
                       setAiCouponLoading(true); setAiCoupon(null);
                       try {
@@ -2775,7 +2784,8 @@ export default function AdminPage() {
                         <div style={{display:"flex",gap:8,flexShrink:0,flexWrap:"wrap",marginTop:8}}>
                           {d.status === "accepte" && (
                             <button
-                              disabled={aiCoachLoading && aiCoachId === d.id}
+                              disabled={(aiCoachLoading && aiCoachId === d.id) || settings.aiCoachingEnabled === false}
+                              title={settings.aiCoachingEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                               onClick={async () => {
                                 setAiCoachId(d.id); setAiCoachText(""); setAiCoachLoading(true);
                                 try {
@@ -3085,7 +3095,8 @@ export default function AdminPage() {
                         🗺️ ROUTE IA — {inProgressOrders.filter(o=>(o as any).address).length} livraisons
                       </div>
                       <button
-                        disabled={aiRouteLoading}
+                        disabled={aiRouteLoading || settings.aiRouteEnabled === false}
+                        title={settings.aiRouteEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                         onClick={async () => {
                           setAiRouteLoading(true);
                           setAiRoute(null);
@@ -3338,6 +3349,75 @@ export default function AdminPage() {
                             transition:"background .2s",border:`1px solid ${settings[opt.key] ? opt.color : "rgba(255,255,255,.1)"}`}}>
                           <div style={{position:"absolute",top:2,
                             left: settings[opt.key] ? 22 : 2,
+                            width:18,height:18,borderRadius:"50%",background:"#fff",
+                            transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.4)"}} />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Fonctionnalités IA ── */}
+                <div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",
+                    letterSpacing:".1em",marginBottom:6}}>FONCTIONNALITÉS IA</div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#3a3454",
+                    letterSpacing:".06em",marginBottom:12}}>// Désactiver stoppe les appels Claude sans supprimer le code</div>
+
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",
+                    letterSpacing:".08em",marginBottom:8,marginTop:4}}>— CLIENT —</div>
+                  <div style={{display:"grid",gap:10,marginBottom:14}}>
+                    {([
+                      { key:"aiChatEnabled",      label:"💬 Chatbot IA",              color:"#00f5ff" },
+                      { key:"aiVoiceEnabled",      label:"🎙️ Commande vocale",         color:"#b8ff00" },
+                      { key:"aiRecommendEnabled",  label:"✨ Recommandations produits", color:"#ff9500" },
+                    ] as const).map(opt => (
+                      <label key={opt.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                        background:"#080514",border:`1px solid ${settings[opt.key] !== false ? opt.color + "44" : "rgba(255,255,255,.06)"}`,
+                        borderRadius:6,padding:"10px 16px",cursor:"pointer",transition:"all .2s"}}>
+                        <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:600,fontSize:".9rem",
+                          color: settings[opt.key] !== false ? "#f0eeff" : "#5a5470",letterSpacing:".04em"}}>
+                          {opt.label}
+                        </span>
+                        <div onClick={() => setSettings(s => ({...s, [opt.key]: s[opt.key] === false ? true : false}))}
+                          style={{width:44,height:24,borderRadius:12,position:"relative",cursor:"pointer",flexShrink:0,
+                            background: settings[opt.key] !== false ? opt.color : "rgba(255,255,255,.1)",
+                            transition:"background .2s",border:`1px solid ${settings[opt.key] !== false ? opt.color : "rgba(255,255,255,.1)"}`}}>
+                          <div style={{position:"absolute",top:2,
+                            left: settings[opt.key] !== false ? 22 : 2,
+                            width:18,height:18,borderRadius:"50%",background:"#fff",
+                            transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.4)"}} />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",
+                    letterSpacing:".08em",marginBottom:8}}>— ADMIN —</div>
+                  <div style={{display:"grid",gap:10}}>
+                    {([
+                      { key:"aiDescEnabled",    label:"📝 Génération de descriptions", color:"#b8ff00" },
+                      { key:"aiPredictEnabled", label:"🔮 Prédictions & analytics",    color:"#00f5ff" },
+                      { key:"aiAnomalyEnabled", label:"🔍 Détection d'anomalies",      color:"#ff9500" },
+                      { key:"aiBannerEnabled",  label:"🖼️ Génération de bannières",    color:"#ff2d78" },
+                      { key:"aiStockEnabled",   label:"📦 Prédiction des stocks",      color:"#b8ff00" },
+                      { key:"aiCoachingEnabled",label:"🏆 Coaching livreurs",          color:"#00f5ff" },
+                      { key:"aiCouponEnabled",  label:"🎟️ Suggestion de coupons",      color:"#ff9500" },
+                      { key:"aiRouteEnabled",   label:"🗺️ Optimisation de routes",     color:"#ff2d78" },
+                    ] as const).map(opt => (
+                      <label key={opt.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                        background:"#080514",border:`1px solid ${settings[opt.key] !== false ? opt.color + "44" : "rgba(255,255,255,.06)"}`,
+                        borderRadius:6,padding:"10px 16px",cursor:"pointer",transition:"all .2s"}}>
+                        <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:600,fontSize:".9rem",
+                          color: settings[opt.key] !== false ? "#f0eeff" : "#5a5470",letterSpacing:".04em"}}>
+                          {opt.label}
+                        </span>
+                        <div onClick={() => setSettings(s => ({...s, [opt.key]: s[opt.key] === false ? true : false}))}
+                          style={{width:44,height:24,borderRadius:12,position:"relative",cursor:"pointer",flexShrink:0,
+                            background: settings[opt.key] !== false ? opt.color : "rgba(255,255,255,.1)",
+                            transition:"background .2s",border:`1px solid ${settings[opt.key] !== false ? opt.color : "rgba(255,255,255,.1)"}`}}>
+                          <div style={{position:"absolute",top:2,
+                            left: settings[opt.key] !== false ? 22 : 2,
                             width:18,height:18,borderRadius:"50%",background:"#fff",
                             transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.4)"}} />
                         </div>
@@ -3730,6 +3810,8 @@ function ProductForm({ prod, cats, onSave, onClose, showToast }: { prod:Product;
               <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em"}}>DESCRIPTION</div>
               <button
                 type="button"
+                disabled={settings.aiDescEnabled === false}
+                title={settings.aiDescEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
                 onClick={async () => {
                   if (!p.name) { showToast("Entre le nom du produit d'abord", "err"); return; }
                   try {
@@ -4015,7 +4097,9 @@ function BannerForm({ banner, onSave, onClose, showToast }: { banner:Banner; onS
           </div>
 
           {/* ── Génération IA ── */}
-          <BannerAIGenerator onApply={(vals) => setB(s => ({...s, ...vals}))} showToast={showToast} />
+          {settings.aiBannerEnabled !== false && (
+            <BannerAIGenerator onApply={(vals) => setB(s => ({...s, ...vals}))} showToast={showToast} />
+          )}
 
           <Field label="TITRE (grand texte)" value={b.title} onChange={v => setB(s=>({...s,title:v}))} />
           <Field label="TAGLINE (petit texte au-dessus)" value={b.subtitle} onChange={v => setB(s=>({...s,subtitle:v}))} />

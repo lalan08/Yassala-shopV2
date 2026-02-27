@@ -173,7 +173,7 @@ const translateAuthError = (code: string) => {
 type Product = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; isActive?: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
 type Pack = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
 type PickupLocation = { id: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
@@ -191,6 +191,10 @@ const defaultSettings: Settings = {
   hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX",
   paymentOnlineEnabled: true, paymentCashEnabled: true,
   fulfillmentDeliveryEnabled: true, fulfillmentPickupEnabled: true,
+  aiChatEnabled: true, aiVoiceEnabled: true, aiRecommendEnabled: true,
+  aiDescEnabled: true, aiPredictEnabled: true, aiAnomalyEnabled: true,
+  aiBannerEnabled: true, aiStockEnabled: true, aiCoachingEnabled: true,
+  aiCouponEnabled: true, aiRouteEnabled: true,
 };
 
 export default function Home() {
@@ -863,7 +867,7 @@ export default function Home() {
     : [];
 
   useEffect(() => {
-    if (!selectedProduct || products.length < 3) { setAiRecs([]); return; }
+    if (!selectedProduct || products.length < 3 || settings.aiRecommendEnabled === false) { setAiRecs([]); return; }
     let cancelled = false;
     setAiRecs([]); setAiRecsLoading(true);
     fetch("/api/ai", {
@@ -1321,10 +1325,12 @@ export default function Home() {
             🛒 <span style={{color:"#ff2d78",textShadow:"0 0 20px rgba(255,45,120,.6)"}}>CATALOGUE</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-            <VoiceOrderButton
-              products={products}
-              onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))}
-            />
+            {settings.aiVoiceEnabled !== false && (
+              <VoiceOrderButton
+                products={products}
+                onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))}
+              />
+            )}
             {!loading && (
               <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#00f5ff",
                 letterSpacing:".1em",textTransform:"uppercase",
@@ -3007,19 +3013,21 @@ export default function Home() {
       )}
 
       {/* ── CHATBOT IA ── */}
-      <AIChatWidget context={{
-        shopOpen:    settings.shopOpen,
-        hours:       settings.hours ?? "20h–06h",
-        zone:        settings.zone  ?? "Cayenne",
-        deliveryMin: settings.deliveryMin ?? 5,
-        freeDelivery: settings.freeDelivery ?? 30,
-        products: products.map(p => ({
-          name:  p.name,
-          price: p.price,
-          stock: p.stock ?? 0,
-          cat:   p.cat ?? "",
-        })),
-      }} />
+      {settings.aiChatEnabled !== false && (
+        <AIChatWidget context={{
+          shopOpen:    settings.shopOpen,
+          hours:       settings.hours ?? "20h–06h",
+          zone:        settings.zone  ?? "Cayenne",
+          deliveryMin: settings.deliveryMin ?? 5,
+          freeDelivery: settings.freeDelivery ?? 30,
+          products: products.map(p => ({
+            name:  p.name,
+            price: p.price,
+            stock: p.stock ?? 0,
+            cat:   p.cat ?? "",
+          })),
+        }} />
+      )}
     </>
   );
 }
