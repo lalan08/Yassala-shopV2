@@ -17,11 +17,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
   query,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -166,9 +168,29 @@ export function useAdminAlerts({ orders, onlineDrivers }: UseAdminAlertsProps) {
       resolved:   true,
       resolvedAt: new Date().toISOString(),
     }).catch(() => {});
-    // Reset cooldown so alert can re-trigger after resolution
     const alert = alerts.find(a => a.id === id);
     if (alert) lastAlertRef.current[alert.type] = 0;
+  }, [alerts]);
+
+  // ── delete alert (suppression définitive) ─────────────────────────────────
+  const deleteAlert = useCallback(async (id: string) => {
+    await deleteDoc(doc(db, "admin_alerts", id)).catch(() => {});
+  }, []);
+
+  // ── delete all resolved alerts ─────────────────────────────────────────────
+  const deleteAllResolved = useCallback(async () => {
+    const resolved = alerts.filter(a => a.resolved);
+    if (!resolved.length) return;
+    const batch = writeBatch(db);
+    resolved.forEach(a => batch.delete(doc(db, "admin_alerts", a.id)));
+    await batch.commit().catch(() => {});
+  }, [alerts]);
+
+  // ── resolve + delete all unresolved ───────────────────────────────────────
+  const dismissAll = useCallback(async () => {
+    const batch = writeBatch(db);
+    alerts.forEach(a => batch.delete(doc(db, "admin_alerts", a.id)));
+    await batch.commit().catch(() => {});
   }, [alerts]);
 
   // ── evaluate rules (uses refs → stable function, safe in setInterval) ─────
@@ -251,6 +273,9 @@ export function useAdminAlerts({ orders, onlineDrivers }: UseAdminAlertsProps) {
     alerts,
     unresolvedCount,
     resolveAlert,
+    deleteAlert,
+    deleteAllResolved,
+    dismissAll,
     soundEnabled,
     setSoundEnabled,
     playAlertSound,
