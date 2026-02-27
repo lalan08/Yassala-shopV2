@@ -12,6 +12,7 @@ import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
 import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
+import VoiceOrderButton from "@/components/VoiceOrderButton";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -1271,18 +1272,24 @@ export default function Home() {
           </div>
         )}
 
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px",flexWrap:"wrap",gap:10}}>
           <div className="section-title" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",letterSpacing:".05em"}}>
             🛒 <span style={{color:"#ff2d78",textShadow:"0 0 20px rgba(255,45,120,.6)"}}>CATALOGUE</span>
           </div>
-          {!loading && (
-            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#00f5ff",
-              letterSpacing:".1em",textTransform:"uppercase",
-              background:"rgba(0,245,255,.06)",border:"1px solid rgba(0,245,255,.2)",
-              borderRadius:12,padding:"4px 10px"}}>
-              {products.filter(p => p.stock > 0).length} dispo
-            </span>
-          )}
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+            <VoiceOrderButton
+              products={products}
+              onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))}
+            />
+            {!loading && (
+              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#00f5ff",
+                letterSpacing:".1em",textTransform:"uppercase",
+                background:"rgba(0,245,255,.06)",border:"1px solid rgba(0,245,255,.2)",
+                borderRadius:12,padding:"4px 10px"}}>
+                {products.filter(p => p.stock > 0).length} dispo
+              </span>
+            )}
+          </div>
         </div>
 
         {/* ── À la une (produits HOT / BEST) ── */}
