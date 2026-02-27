@@ -119,6 +119,16 @@ export default function AdminPage() {
   const isFirstLoadRef     = useRef(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // ── IA ──
+  const [aiPrediction, setAiPrediction]         = useState<any>(null);
+  const [aiPredLoading, setAiPredLoading]       = useState(false);
+  const [aiSummary, setAiSummary]               = useState("");
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiRoute, setAiRoute]                   = useState<{order:number[];tips:string}|null>(null);
+  const [aiRouteLoading, setAiRouteLoading]     = useState(false);
+  const [aiAnomalies, setAiAnomalies]           = useState<{orderId:string;reason:string;severity:string}[]>([]);
+  const [aiAnomalyLoading, setAiAnomalyLoading] = useState(false);
+
   // ── Alertes opérationnelles ──
   const {
     alerts: adminAlerts,
@@ -190,6 +200,17 @@ export default function AdminPage() {
   const showToast = (msg: string, type = "ok") => {
     setToast({ msg, show: true, type });
     setTimeout(() => setToast(t => ({ ...t, show: false })), 3000);
+  };
+
+  const callAI = async (action: string, data: Record<string, unknown>) => {
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...data }),
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error ?? "Erreur IA");
+    return json.result;
   };
 
   // Load admin hash on mount + auto-restore session from localStorage
@@ -1441,6 +1462,96 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
+
+                {/* ── SECTION IA ── */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginTop:20}}>
+
+                  {/* Résumé IA du jour */}
+                  <div style={{background:"rgba(255,45,120,.05)",border:"1px solid rgba(255,45,120,.25)",borderRadius:12,padding:"18px 20px"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".9rem",color:"#ff2d78",letterSpacing:".06em"}}>
+                        ✨ RÉSUMÉ IA DU JOUR
+                      </div>
+                      <button
+                        disabled={aiSummaryLoading}
+                        onClick={async () => {
+                          setAiSummaryLoading(true);
+                          try {
+                            const peakHour = (() => {
+                              const hrs: Record<number,number> = {};
+                              todayOrders.forEach(o => { const h = new Date(o.createdAt).getHours(); hrs[h] = (hrs[h]||0)+1; });
+                              const pk = Object.entries(hrs).sort((a,b)=>+b[1]-+a[1])[0];
+                              return pk ? pk[0] : "?";
+                            })();
+                            const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n).join(", ") || "aucun";
+                            const doneC = delivered.length + cancelled.length;
+                            const r = doneC > 0 ? Math.round(delivered.length/doneC*100) : 100;
+                            const result = await callAI("summary", {
+                              count: todayOrders.length,
+                              total: sum(todayOrders).toFixed(2),
+                              topProducts: topProds,
+                              peakHour,
+                              rate: r,
+                              drivers: 0,
+                            });
+                            setAiSummary(result);
+                          } catch { showToast("Erreur IA", "err"); }
+                          setAiSummaryLoading(false);
+                        }}
+                        style={{background:"rgba(255,45,120,.15)",border:"1px solid rgba(255,45,120,.4)",color:"#ff2d78",
+                          padding:"5px 12px",borderRadius:6,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",
+                          fontSize:".75rem",letterSpacing:".06em",opacity:aiSummaryLoading?0.5:1}}>
+                        {aiSummaryLoading ? "..." : "↻ GÉNÉRER"}
+                      </button>
+                    </div>
+                    {aiSummary
+                      ? <div style={{fontFamily:"'Inter',sans-serif",fontSize:".88rem",lineHeight:1.75,color:"#d0d0e0"}}>{aiSummary}</div>
+                      : <div style={{color:"#3a3454",fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem"}}>// Clique ↻ GÉNÉRER pour le résumé IA du jour</div>
+                    }
+                  </div>
+
+                  {/* Prédictions IA */}
+                  <div style={{background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.18)",borderRadius:12,padding:"18px 20px"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".9rem",color:"#00f5ff",letterSpacing:".06em"}}>
+                        🔮 PRÉDICTIONS IA
+                      </div>
+                      <button
+                        disabled={aiPredLoading}
+                        onClick={async () => {
+                          setAiPredLoading(true);
+                          try {
+                            const result = await callAI("predict", { weekData: last7 });
+                            setAiPrediction(result);
+                          } catch { showToast("Erreur IA", "err"); }
+                          setAiPredLoading(false);
+                        }}
+                        style={{background:"rgba(0,245,255,.12)",border:"1px solid rgba(0,245,255,.35)",color:"#00f5ff",
+                          padding:"5px 12px",borderRadius:6,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",
+                          fontSize:".75rem",letterSpacing:".06em",opacity:aiPredLoading?0.5:1}}>
+                        {aiPredLoading ? "..." : "↻ ANALYSER"}
+                      </button>
+                    </div>
+                    {aiPrediction ? (
+                      <div style={{display:"grid",gap:8}}>
+                        {([
+                          {label:"⏰ Heure de pointe", val: aiPrediction.peakHour},
+                          {label:"📅 Meilleur jour",   val: aiPrediction.bestDay},
+                          {label:"🎯 Conseil promo",   val: aiPrediction.promoSuggestion},
+                          {label:"🏪 Ouverture",       val: aiPrediction.openRecommendation},
+                          {label:"💡 Insight",         val: aiPrediction.insight},
+                        ] as {label:string;val:string}[]).filter(i => i.val).map((item, idx) => (
+                          <div key={idx} style={{borderBottom:"1px solid rgba(255,255,255,.04)",paddingBottom:6}}>
+                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".66rem",color:"#5a5470",letterSpacing:".1em"}}>{item.label}</div>
+                            <div style={{fontFamily:"'Inter',sans-serif",fontSize:".84rem",color:"#f0eeff",marginTop:2}}>{item.val}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{color:"#3a3454",fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem"}}>// Clique ↻ ANALYSER pour les prédictions de la semaine</div>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })()}
@@ -1835,6 +1946,34 @@ export default function AdminPage() {
                       fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",letterSpacing:".08em"}}>
                     ⬇ EXPORT CSV
                   </button>
+                  <button
+                    disabled={aiAnomalyLoading}
+                    onClick={async () => {
+                      setAiAnomalyLoading(true);
+                      try {
+                        const recent = orders.slice(0, 60).map(o => ({
+                          id: o.id,
+                          phone: o.phone,
+                          name: (o as any).name,
+                          address: (o as any).address,
+                          total: o.total,
+                          method: (o as any).paidOnline ? "online" : "cash",
+                          createdAt: o.createdAt,
+                        }));
+                        const result = await callAI("anomaly", { orders: recent });
+                        const list = result.suspicious ?? [];
+                        setAiAnomalies(list);
+                        if (list.length === 0) showToast("Aucune anomalie détectée ✓");
+                        else showToast(`${list.length} anomalie(s) détectée(s) !`, "err");
+                      } catch { showToast("Erreur IA", "err"); }
+                      setAiAnomalyLoading(false);
+                    }}
+                    style={{background:"rgba(255,149,0,.1)",border:"1px solid rgba(255,149,0,.35)",
+                      color:"#ff9500",padding:"7px 14px",borderRadius:4,cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",letterSpacing:".08em",
+                      opacity:aiAnomalyLoading?0.5:1}}>
+                    {aiAnomalyLoading ? "..." : "🔍 ANOMALIES IA"}
+                  </button>
                 </div>
               </div>
 
@@ -1908,6 +2047,18 @@ export default function AdminPage() {
                               color:"#ff2d78",letterSpacing:".04em"}}>
                               #{(o as any).orderNumber ?? (o.id ?? '').slice(-6).toUpperCase()}
                             </span>
+                            {(() => {
+                              const flag = aiAnomalies.find(a => a.orderId === o.id);
+                              if (!flag) return null;
+                              const color = flag.severity === "high" ? "#ff2d78" : flag.severity === "medium" ? "#ff9500" : "#b8ff00";
+                              return (
+                                <span title={flag.reason} style={{background:`${color}22`,border:`1px solid ${color}`,color,
+                                  padding:"2px 8px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                                  fontSize:".68rem",letterSpacing:".08em",cursor:"help"}}>
+                                  ⚠ {flag.severity.toUpperCase()}
+                                </span>
+                              );
+                            })()}
                             <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",
                               color:"#5a5470",letterSpacing:".06em"}}>
                               {new Date(o.createdAt).toLocaleString("fr-FR")}
@@ -2728,6 +2879,69 @@ export default function AdminPage() {
                   ))}
                 </div>
 
+                {/* ── Optimisation route IA ── */}
+                {dispatchFilter === "mine" && inProgressOrders.filter(o => (o as any).address).length >= 2 && (
+                  <div style={{background:"rgba(184,255,0,.04)",border:"1px solid rgba(184,255,0,.22)",borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom: aiRoute ? 12 : 0}}>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#b8ff00",letterSpacing:".12em"}}>
+                        🗺️ ROUTE IA — {inProgressOrders.filter(o=>(o as any).address).length} livraisons
+                      </div>
+                      <button
+                        disabled={aiRouteLoading}
+                        onClick={async () => {
+                          setAiRouteLoading(true);
+                          setAiRoute(null);
+                          try {
+                            const delivOrders = inProgressOrders.filter(o => (o as any).address);
+                            const result = await callAI("route", {
+                              orders: delivOrders.map(o => ({
+                                id: o.id,
+                                name: (o as any).name || o.phone,
+                                address: (o as any).address,
+                                total: o.total,
+                              })),
+                            });
+                            setAiRoute(result);
+                          } catch { showToast("Erreur IA", "err"); }
+                          setAiRouteLoading(false);
+                        }}
+                        style={{background:"rgba(184,255,0,.15)",border:"1px solid rgba(184,255,0,.4)",color:"#b8ff00",
+                          padding:"5px 12px",borderRadius:6,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",
+                          fontSize:".75rem",letterSpacing:".06em",opacity:aiRouteLoading?0.5:1}}>
+                        {aiRouteLoading ? "..." : "✨ OPTIMISER"}
+                      </button>
+                    </div>
+                    {aiRoute && (
+                      <div style={{marginTop:8}}>
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {(aiRoute.order as number[]).map((idx, rank) => {
+                            const delivOrders = inProgressOrders.filter(o => (o as any).address);
+                            const o = delivOrders[idx - 1];
+                            if (!o) return null;
+                            return (
+                              <div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",
+                                background:"rgba(0,0,0,.2)",borderRadius:6}}>
+                                <span style={{fontFamily:"'Black Ops One',cursive",fontSize:".88rem",color:"#b8ff00",minWidth:20}}>{rank + 1}.</span>
+                                <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".88rem",flex:1}}>
+                                  {(o as any).name || o.phone}
+                                </span>
+                                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>
+                                  {((o as any).address ?? "").slice(0, 32)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {aiRoute.tips && (
+                          <div style={{marginTop:8,fontFamily:"'Inter',sans-serif",fontSize:".8rem",color:"#7a7090",fontStyle:"italic"}}>
+                            💡 {aiRoute.tips}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* ── Liste des commandes ── */}
                 {displayOrders.length === 0 ? (
                   <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
@@ -3311,7 +3525,42 @@ function ProductForm({ prod, cats, onSave, onClose, showToast }: { prod:Product;
           </div>
 
           <Field label="NOM" value={p.name} onChange={v => setP(s=>({...s,name:v}))} />
-          <Field label="DESCRIPTION" value={p.desc} onChange={v => setP(s=>({...s,desc:v}))} />
+
+          {/* DESCRIPTION + bouton IA */}
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em"}}>DESCRIPTION</div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!p.name) { showToast("Entre le nom du produit d'abord", "err"); return; }
+                  try {
+                    const res = await fetch("/api/ai", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "description", name: p.name, cat: p.cat, price: p.price }),
+                    });
+                    const json = await res.json();
+                    if (json.ok) setP(s => ({ ...s, desc: json.result }));
+                    else showToast("Erreur IA", "err");
+                  } catch { showToast("Erreur IA", "err"); }
+                }}
+                style={{background:"rgba(184,255,0,.12)",border:"1px solid rgba(184,255,0,.35)",color:"#b8ff00",
+                  padding:"3px 10px",borderRadius:4,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",
+                  fontSize:".72rem",letterSpacing:".06em"}}>
+                ✨ IA
+              </button>
+            </div>
+            <input
+              type="text"
+              value={p.desc}
+              onChange={e => setP(s => ({ ...s, desc: e.target.value }))}
+              placeholder="ou génère avec ✨ IA"
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",
+                fontFamily:"'Rajdhani',sans-serif"}}
+            />
+          </div>
           <Field label="PRIX (€)" value={String(p.price)} type="number" onChange={v => setP(s=>({...s,price:Number(v)}))} />
           <Field label="STOCK INITIAL" value={String(p.stock)} type="number" onChange={v => setP(s=>({...s,stock:Number(v)}))} />
           <div>
