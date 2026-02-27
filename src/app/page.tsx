@@ -221,6 +221,8 @@ export default function Home() {
   const [orderConfirmId,  setOrderConfirmId]  = useState<string|null>(null);
   const [orderConfirmNum, setOrderConfirmNum] = useState<number|null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product|null>(null);
+  const [aiRecs, setAiRecs]                   = useState<{name:string;why:string}[]>([]);
+  const [aiRecsLoading, setAiRecsLoading]     = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showHistory, setShowHistory]     = useState(false);
   const [historyPhone, setHistoryPhone]   = useState("");
@@ -859,6 +861,37 @@ export default function Home() {
   const suggestions = selectedProduct
     ? products.filter(p => p.cat === selectedProduct.cat && p.id !== selectedProduct.id && p.stock > 0).slice(0, 4)
     : [];
+
+  useEffect(() => {
+    if (!selectedProduct || products.length < 3) { setAiRecs([]); return; }
+    let cancelled = false;
+    setAiRecs([]); setAiRecsLoading(true);
+    fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "recommend",
+        productName: selectedProduct.name,
+        productCat: selectedProduct.cat,
+        allProducts: products.filter(p => p.id !== selectedProduct.id && p.stock > 0).slice(0, 30),
+      }),
+    })
+      .then(r => r.json())
+      .then(json => {
+        if (!cancelled && json.ok && Array.isArray(json.result?.recs)) {
+          const matched = json.result.recs
+            .map((rec: {name:string;why:string}) => {
+              const found = products.find(p => p.name.toLowerCase().includes(rec.name.toLowerCase()) || rec.name.toLowerCase().includes(p.name.toLowerCase()));
+              return found ? { ...rec, product: found } : null;
+            })
+            .filter(Boolean) as {name:string;why:string;product:Product}[];
+          setAiRecs(matched.slice(0, 2));
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setAiRecsLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedProduct?.id]);
 
   const fetchHistory = async () => {
     setHistoryLoading(true);
@@ -2454,6 +2487,44 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+              {/* ── Combos IA ── */}
+              {(aiRecsLoading || aiRecs.length > 0) && (
+                <div style={{marginBottom:16}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#b8ff00",
+                    letterSpacing:".1em",marginBottom:10,textTransform:"uppercase",display:"flex",alignItems:"center",gap:6}}>
+                    ✨ combo idéal ia
+                    {aiRecsLoading && <span style={{opacity:.5,animation:"pulse 1s infinite"}}>…</span>}
+                  </div>
+                  {!aiRecsLoading && aiRecs.length > 0 && (
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      {(aiRecs as any[]).map((rec: any, i: number) => rec.product && (
+                        <div key={i} onClick={() => openProductModal(rec.product)}
+                          style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+                            background:"rgba(184,255,0,.05)",border:"1px solid rgba(184,255,0,.2)",
+                            borderRadius:8,cursor:"pointer",flex:1,minWidth:180,transition:"all .2s"}}>
+                          <div style={{width:44,height:44,borderRadius:6,overflow:"hidden",flexShrink:0,
+                            background:"rgba(255,45,120,.06)"}}>
+                            {rec.product.image
+                              ? <img src={rec.product.image} alt={rec.product.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                              : <div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem"}}>📷</div>
+                            }
+                          </div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".84rem",
+                              textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap"}}>{rec.product.name}</div>
+                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#b8ff00"}}>
+                              {Number(rec.product.price).toFixed(2)}€
+                            </div>
+                            <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",color:"#7a7090",fontStyle:"italic",
+                              textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap"}}>{rec.why}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Suggestions */}
               {suggestions.length > 0 && (
                 <div>
