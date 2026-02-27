@@ -980,7 +980,7 @@ export default function Home() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
         :root {
           --bg:#04020a; --card:#0c0918;
           --pink:#ff2d78; --cyan:#00f5ff; --lime:#b8ff00;
@@ -1867,9 +1867,9 @@ export default function Home() {
                     <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,
                       padding:"12px",background:"#080514",borderRadius:6,marginBottom:8}}>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:700,fontSize:".9rem",marginBottom:4,
+                        <div style={{fontWeight:700,fontSize:"1rem",fontFamily:"'Inter',sans-serif",marginBottom:4,
                           whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.name}</div>
-                        <div style={{fontSize:".78rem",color:"#b8ff00",fontFamily:"'Black Ops One',cursive"}}>
+                        <div style={{fontSize:".88rem",color:"#b8ff00",fontFamily:"'Inter',sans-serif",fontWeight:700}}>
                           {item.price.toFixed(2)}€
                         </div>
                       </div>
@@ -1879,7 +1879,7 @@ export default function Home() {
                           style={{width:30,height:30,border:"1px solid #ff2d78",background:"transparent",
                             color:"#ff2d78",borderRadius:4,cursor:"pointer",fontSize:"1.2rem",
                             display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
+                        <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:"1rem",
                           minWidth:20,textAlign:"center"}}>{item.qty}</span>
                         <button
                           onClick={e => { e.stopPropagation(); updateQty(item.id, 1); }}
@@ -1893,7 +1893,7 @@ export default function Home() {
                             color:"#5a5470",borderRadius:4,cursor:"pointer",fontSize:".9rem",
                             display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>
                       </div>
-                      <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",color:"#b8ff00",
+                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1.05rem",color:"#b8ff00",
                         minWidth:60,textAlign:"right",flexShrink:0}}>
                         {(item.price * item.qty).toFixed(2)}€
                       </div>
@@ -1926,7 +1926,7 @@ export default function Home() {
                     onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
                     onKeyDown={e => e.key === "Enter" && applyCoupon()}
                     style={{flex:1,background:"#080514",border:"1px solid rgba(255,255,255,.12)",borderRadius:4,
-                      padding:"9px 12px",color:"#f0eeff",fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem",outline:"none"}} />
+                      padding:"9px 12px",color:"#f0eeff",fontFamily:"'Inter',sans-serif",fontSize:".85rem",outline:"none"}} />
                   <button onClick={applyCoupon}
                     style={{background:"rgba(0,245,255,.1)",border:"1px solid rgba(0,245,255,.35)",
                       color:"#00f5ff",padding:"0 14px",borderRadius:4,cursor:"pointer",
@@ -2001,21 +2001,21 @@ export default function Home() {
                 {/* ── TOTALS ── */}
                 <div style={{borderTop:"1px solid rgba(255,45,120,.2)",paddingTop:16,marginBottom:20}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>SOUS-TOTAL</span>
-                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700}}>{cartTotal.toFixed(2)}€</span>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".75rem",color:"#5a5470"}}>SOUS-TOTAL</span>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700}}>{cartTotal.toFixed(2)}€</span>
                   </div>
                   {coupon && <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#b8ff00"}}>RÉDUCTION</span>
-                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#b8ff00"}}>-{getDiscount().toFixed(2)}€</span>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".75rem",color:"#b8ff00"}}>RÉDUCTION</span>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:"#b8ff00"}}>-{getDiscount().toFixed(2)}€</span>
                   </div>}
                   {activePromo && promoDiscount > 0 && (
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#ff6b35"}}>🔥 PROMO FLASH</span>
-                      <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#ff6b35"}}>-{promoDiscount.toFixed(2)}€</span>
+                      <span style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".75rem",color:"#ff6b35"}}>🔥 PROMO FLASH</span>
+                      <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:"#ff6b35"}}>-{promoDiscount.toFixed(2)}€</span>
                     </div>
                   )}
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".75rem",color:"#5a5470"}}>
                       {fulfillmentType === 'pickup' ? 'RETRAIT' : 'LIVRAISON'}
                       {pricingResult?.isSurge && (
                         <span style={{marginLeft:6,color:"#ff6b35",fontSize:".7rem"}} title="Forte demande">🔥 SURGE</span>
@@ -2024,7 +2024,7 @@ export default function Home() {
                         <span style={{marginLeft:6,color:"#a78bfa",fontSize:".7rem"}} title="Tarif nocturne">🌙 NUIT</span>
                       )}
                     </span>
-                    <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,color:"#b8ff00"}}>
+                    <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:"#b8ff00"}}>
                       {fulfillmentType === 'pickup'
                         ? 'GRATUIT'
                         : discountedTotal >= settings.freeDelivery
@@ -2057,19 +2057,19 @@ export default function Home() {
                     onChange={e => setOrderForm(f => ({...f, name: e.target.value}))}
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
-                      fontFamily:"'Rajdhani',sans-serif"}} />
+                      fontFamily:"'Inter',sans-serif"}} />
                   <input placeholder="Téléphone" value={orderForm.phone}
                     onChange={e => setOrderForm(f => ({...f, phone: e.target.value}))}
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
-                      fontFamily:"'Rajdhani',sans-serif"}} />
+                      fontFamily:"'Inter',sans-serif"}} />
                   <input placeholder="Email * (obligatoire pour les notifications)" value={orderForm.email}
                     onChange={e => setOrderForm(f => ({...f, email: e.target.value}))}
                     type="email"
                     style={{width:"100%",background:"#080514",
                       border: orderForm.email ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,45,120,.4)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
-                      fontFamily:"'Rajdhani',sans-serif"}} />
+                      fontFamily:"'Inter',sans-serif"}} />
 
                   {/* Delivery: address field */}
                   {fulfillmentType === 'delivery' && (
@@ -2087,7 +2087,7 @@ export default function Home() {
                           style={{width:"100%",background:"#080514",
                             border: orderForm.lat ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
                             borderRadius:4,padding:"12px 12px 12px 36px",color:"#f0eeff",fontSize:".9rem",
-                            fontFamily:"'Rajdhani',sans-serif"}} />
+                            fontFamily:"'Inter',sans-serif"}} />
                         {orderForm.lat !== 0 && (
                           <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
                             color:"#b8ff00",fontSize:".78rem",fontFamily:"'Share Tech Mono',monospace"}}>✓ localisé</span>

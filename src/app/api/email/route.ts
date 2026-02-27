@@ -37,24 +37,26 @@ function buildEmail(type: EmailType, data: any): { subject: string; html: string
             <div style="font-size:20px;font-weight:700;color:#f0eeff;margin-bottom:4px;">Commande confirmée !</div>
             <div style="color:#b8ff00;font-size:14px;font-weight:600;margin-bottom:20px;">Commande #${orderNum}</div>
             
-            <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px;margin-bottom:16px;">
-              <div style="color:#5a5470;font-size:11px;letter-spacing:2px;margin-bottom:8px;">RÉCAPITULATIF</div>
-              <div style="color:#d0d0e0;font-size:14px;line-height:1.8;white-space:pre-line;">${data.items || ""}</div>
-              <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:12px;padding-top:12px;display:flex;justify-content:space-between;">
-                <span style="color:#ff2d78;font-weight:700;font-size:16px;">TOTAL</span>
-                <span style="color:#b8ff00;font-weight:700;font-size:16px;">${Number(data.total || 0).toFixed(2)}€</span>
-              </div>
+            <div style="background:#1a1428;border:1px solid #2a1f40;border-radius:8px;padding:16px;margin-bottom:16px;">
+              <div style="color:#7a7090;font-size:11px;letter-spacing:2px;margin-bottom:8px;font-family:Arial,sans-serif;">RÉCAPITULATIF</div>
+              <div style="color:#d0d0e0;font-size:14px;line-height:1.8;white-space:pre-line;font-family:Arial,sans-serif;">${data.items || ""}</div>
+              <table width="100%" style="border-collapse:collapse;border-top:1px solid #2a1f40;margin-top:12px;padding-top:12px;" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding-top:12px;color:#ff2d78;font-weight:700;font-size:16px;font-family:Arial,sans-serif;">TOTAL</td>
+                  <td style="padding-top:12px;color:#b8ff00;font-weight:700;font-size:16px;text-align:right;font-family:Arial,sans-serif;">${Number(data.total || 0).toFixed(2)}€</td>
+                </tr>
+              </table>
             </div>
 
-            <div style="background:rgba(0,245,255,.06);border:1px solid rgba(0,245,255,.12);border-radius:8px;padding:14px;margin-bottom:16px;">
-              <div style="color:#5a5470;font-size:11px;letter-spacing:2px;margin-bottom:6px;">${data.fulfillmentType === "pickup" ? "RETRAIT" : "LIVRAISON"}</div>
-              <div style="color:#f0eeff;font-size:14px;">${data.fulfillmentType === "pickup" ? "🏪" : "📍"} ${data.address || ""}</div>
-              <div style="color:#5a5470;font-size:13px;margin-top:4px;">💰 ${data.method === "cash" ? (data.fulfillmentType === "pickup" ? "Paiement cash au retrait" : "Paiement cash à la livraison") : "Payé en ligne"}</div>
+            <div style="background:#0d1a1a;border:1px solid #0d2e2e;border-radius:8px;padding:14px;margin-bottom:16px;">
+              <div style="color:#7a7090;font-size:11px;letter-spacing:2px;margin-bottom:6px;font-family:Arial,sans-serif;">${data.fulfillmentType === "pickup" ? "RETRAIT" : "LIVRAISON"}</div>
+              <div style="color:#f0eeff;font-size:14px;font-family:Arial,sans-serif;">${data.fulfillmentType === "pickup" ? "🏪" : "📍"} ${data.address || ""}</div>
+              <div style="color:#7a7090;font-size:13px;margin-top:4px;font-family:Arial,sans-serif;">💰 ${data.method === "cash" ? (data.fulfillmentType === "pickup" ? "Paiement cash au retrait" : "Paiement cash à la livraison") : "Payé en ligne"}</div>
             </div>
 
             ${trackingUrl ? `
-              <a href="${trackingUrl}" style="display:block;text-align:center;background:linear-gradient(135deg,#00f5ff,#0090ff);
-                color:#000;padding:14px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:1px;">
+              <a href="${trackingUrl}" style="display:block;text-align:center;background:#00c8d4;
+                color:#000;padding:14px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:1px;font-family:Arial,sans-serif;">
                 📍 SUIVRE MA COMMANDE EN DIRECT
               </a>
             ` : ""}
@@ -88,8 +90,8 @@ function buildEmail(type: EmailType, data: any): { subject: string; html: string
             ` : ""}
 
             ${trackingUrl ? `
-              <a href="${trackingUrl}" style="display:block;text-align:center;background:linear-gradient(135deg,#b8ff00,#7acc00);
-                color:#000;padding:14px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:1px;">
+              <a href="${trackingUrl}" style="display:block;text-align:center;background:#9de600;
+                color:#000;padding:14px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:1px;font-family:Arial,sans-serif;">
                 📍 VOIR MON LIVREUR EN DIRECT SUR LA CARTE
               </a>
             ` : ""}
@@ -121,8 +123,8 @@ function buildEmail(type: EmailType, data: any): { subject: string; html: string
             </div>
           </div>
 
-          <a href="${data.shopUrl || "/"}" style="display:block;text-align:center;background:linear-gradient(135deg,#ff2d78,#ff6b35);
-            color:#fff;padding:14px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:1px;">
+          <a href="${data.shopUrl || "/"}" style="display:block;text-align:center;background:#ff2d78;
+            color:#fff;padding:14px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:1px;font-family:Arial,sans-serif;">
             COMMANDER À NOUVEAU
           </a>
         </div>
