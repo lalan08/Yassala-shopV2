@@ -60,6 +60,7 @@ export async function POST(request: Request) {
     }
 
     const order = orderSnap.data()!;
+    const isRush = order.isRush === true;
 
     // Skip non-delivery orders (click & collect, pickup)
     if (order.fulfillmentType !== 'delivery') {
@@ -122,8 +123,12 @@ export async function POST(request: Request) {
         const { lat, lng } = locationMap[d.id];
         const distance = haversineKm(orderLat, orderLng, lat, lng);
         const rating = typeof d.rating === 'number' ? Math.min(d.rating, 5) : 5;
+        const perfScore = typeof d.performanceScore === 'number' ? Math.min(d.performanceScore, 100) : 50;
         // Lower score = better candidate
-        const score = distance - rating * RATING_WEIGHT;
+        // For RUSH orders: also weight performanceScore to favour faster drivers
+        const score = isRush
+          ? distance - rating * RATING_WEIGHT - perfScore * 0.05
+          : distance - rating * RATING_WEIGHT;
         return { id: d.id, name: d.name || 'Livreur', distance, score };
       })
       .sort((a, b) => a.score - b.score);
@@ -153,6 +158,7 @@ export async function POST(request: Request) {
       driverName: best.name,
       distanceKm: parseFloat(best.distance.toFixed(2)),
       candidates: scored.length,
+      isRush,
     });
   } catch (error: any) {
     console.error('[assign-driver] error:', error?.message || error);

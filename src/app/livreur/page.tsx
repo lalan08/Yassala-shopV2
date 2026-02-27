@@ -22,6 +22,7 @@ type Order = {
   orderType?: string; paidOnline?: boolean; assignedDriver?: string;
   assignedDriverName?: string; deliveredAt?: string;
   lat?: number; lng?: number; email?: string;
+  isRush?: boolean; rushFee?: number;
 };
 
 export default function LivreurPage() {
@@ -73,6 +74,28 @@ export default function LivreurPage() {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.5);
+    } catch {}
+  };
+
+  const playRushAlert = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const play = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.45, ctx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + duration);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + duration);
+      };
+      play(1200, 0, 0.15);
+      play(1500, 0.18, 0.15);
+      play(1200, 0.36, 0.15);
+      play(1500, 0.54, 0.15);
+      play(1200, 0.72, 0.25);
     } catch {}
   };
 
@@ -202,10 +225,16 @@ export default function LivreurPage() {
       setOrders(uniqueOrders);
 
       if (available.length > prevOrderCountRef.current && prevOrderCountRef.current > 0) {
-        playAlert();
+        const hasRush = available.some(o => o.isRush);
+        if (hasRush) {
+          playRushAlert();
+          if ("vibrate" in navigator) navigator.vibrate([300, 100, 300, 100, 300]);
+        } else {
+          playAlert();
+          if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+        }
         setNewOrderAlert(true);
         setTimeout(() => setNewOrderAlert(false), 5000);
-        if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
       }
       prevOrderCountRef.current = available.length;
 
@@ -346,7 +375,9 @@ export default function LivreurPage() {
   }, [driverData?.id, loggedIn]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const availableOrders = orders.filter(o => (o.status === "nouveau" || o.status === "en_cours") && !o.assignedDriver);
+  const availableOrders = orders
+    .filter(o => (o.status === "nouveau" || o.status === "en_cours") && !o.assignedDriver)
+    .sort((a, b) => (b.isRush ? 1 : 0) - (a.isRush ? 1 : 0));
   const myOrders = orders.filter(o => o.assignedDriver === driverData?.id && o.status !== "livre");
   // Seulement aujourd'hui — les jours précédents sont archivés automatiquement
   const deliveredOrders = orders.filter(o =>
@@ -997,10 +1028,21 @@ export default function LivreurPage() {
             {displayOrders.map(o => {
               const isMine = o.assignedDriver === driverData?.id;
               return (
-                <div key={o.id} style={{background:"rgba(255,255,255,.02)",
-                  border:`1px solid ${o.status === "nouveau" && !o.assignedDriver ? "rgba(255,45,120,.3)" : isMine ? "rgba(0,245,255,.2)" : "rgba(255,255,255,.06)"}`,
+                <div key={o.id} style={{background: o.isRush ? "rgba(239,68,68,.04)" : "rgba(255,255,255,.02)",
+                  border:`1px solid ${o.isRush ? "rgba(239,68,68,.5)" : o.status === "nouveau" && !o.assignedDriver ? "rgba(255,45,120,.3)" : isMine ? "rgba(0,245,255,.2)" : "rgba(255,255,255,.06)"}`,
                   borderRadius:12,padding:"16px 18px",transition:"all .15s",
-                  animation: o.status === "nouveau" && !o.assignedDriver ? "pulseGlow 3s infinite" : "none"}}>
+                  boxShadow: o.isRush ? "0 0 16px rgba(239,68,68,.12)" : "none",
+                  animation: o.isRush ? "pulseGlow 1.5s infinite" : o.status === "nouveau" && !o.assignedDriver ? "pulseGlow 3s infinite" : "none"}}>
+
+                  {/* Badge RUSH */}
+                  {o.isRush && (
+                    <div style={{background:"#ef4444",color:"white",padding:"6px 12px",borderRadius:6,
+                      fontWeight:700,fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",
+                      letterSpacing:".1em",marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+                      🚨 COMMANDE RUSH
+                      {o.rushFee ? <span style={{marginLeft:"auto",fontSize:".9rem"}}>+{o.rushFee.toFixed(2)} €</span> : null}
+                    </div>
+                  )}
 
                   {/* Header */}
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:10}}>

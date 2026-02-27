@@ -69,7 +69,18 @@ export async function POST(request: Request) {
 
     const basePay  = delData.basePay  ?? 0;
     const bonusPay = delData.bonusPay ?? 0;
-    const totalPay = parseFloat((basePay + bonusPay + rainBonus + boostPay).toFixed(2));
+
+    // Rush fee: read from the linked order if isRush is set
+    let rushFee = 0;
+    const orderId = delData.orderId as string | undefined;
+    if (orderId) {
+      const ordSnap = await db.collection('orders').doc(orderId).get();
+      if (ordSnap.exists && ordSnap.data()?.isRush === true) {
+        rushFee = typeof ordSnap.data()?.rushFee === 'number' ? ordSnap.data()!.rushFee : 2.00;
+      }
+    }
+
+    const totalPay = parseFloat((basePay + bonusPay + rainBonus + boostPay + rushFee).toFixed(2));
 
     // ── écriture Firestore ────────────────────────────────────────────────
     const updates: Record<string, unknown> = {
@@ -80,6 +91,8 @@ export async function POST(request: Request) {
       boostPay,
       boostApplied:       boostPay > 0,
       boostAmount:        boostPay,
+      rushFee,
+      rushApplied:        rushFee > 0,
       totalPay,
     };
 
@@ -98,7 +111,7 @@ export async function POST(request: Request) {
 
     console.log(
       `[validate-delivery] id=${deliveryId} status=validated` +
-      ` rain=${rainBonus} boost=${boostPay}` +
+      ` rain=${rainBonus} boost=${boostPay} rush=${rushFee}` +
       ` weather=${weather.condition} total=${totalPay}`,
     );
 
@@ -112,6 +125,7 @@ export async function POST(request: Request) {
       status:   'validated',
       rainBonus,
       boostPay,
+      rushFee,
       weather:  { condition: weather.condition, precipitation: weather.precipitation },
       totalPay,
     });
