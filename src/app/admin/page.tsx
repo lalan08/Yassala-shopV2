@@ -128,6 +128,13 @@ export default function AdminPage() {
   const [aiRouteLoading, setAiRouteLoading]     = useState(false);
   const [aiAnomalies, setAiAnomalies]           = useState<{orderId:string;reason:string;severity:string}[]>([]);
   const [aiAnomalyLoading, setAiAnomalyLoading] = useState(false);
+  const [aiStock, setAiStock]                   = useState<{name:string;risk:string;estimatedDaysLeft:number;action:string}[]>([]);
+  const [aiStockLoading, setAiStockLoading]     = useState(false);
+  const [aiCoachId, setAiCoachId]               = useState<string|null>(null);
+  const [aiCoachText, setAiCoachText]           = useState("");
+  const [aiCoachLoading, setAiCoachLoading]     = useState(false);
+  const [aiCoupon, setAiCoupon]                 = useState<{code:string;type:string;value:number;minOrder:number;reason:string}|null>(null);
+  const [aiCouponLoading, setAiCouponLoading]   = useState(false);
 
   // ── Alertes opérationnelles ──
   const {
@@ -1562,13 +1569,67 @@ export default function AdminPage() {
                 <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
                   🍺 <span style={{color:"#ff2d78"}}>PRODUITS</span>
                 </div>
-                <button onClick={() => { setEditProd({name:"",desc:"",price:0,image:"",cat:"biere",badge:"",stock:0}); setShowProdForm(true); }}
-                  style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:8,
-                    padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
-                    fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
-                  + AJOUTER
-                </button>
+                <div style={{display:"flex",gap:8}}>
+                  <button
+                    disabled={aiStockLoading}
+                    onClick={async () => {
+                      setAiStockLoading(true); setAiStock([]);
+                      try {
+                        const soldMap: Record<string,number> = {};
+                        orders.forEach(o => o.items.split("\n").forEach(line => {
+                          const n = line.replace(/x\d+.*/, "").trim();
+                          if (n) soldMap[n] = (soldMap[n]||0)+1;
+                        }));
+                        const result = await callAI("stock_predict", {
+                          products: products.map(p => ({ name:p.name, stock:p.stock, vendu_semaine: soldMap[p.name]||0 })),
+                        });
+                        setAiStock(result.at_risk ?? []);
+                        if (!(result.at_risk ?? []).length) showToast("Stocks OK ✓");
+                      } catch { showToast("Erreur IA","err"); }
+                      setAiStockLoading(false);
+                    }}
+                    style={{background:"rgba(255,149,0,.1)",border:"1px solid rgba(255,149,0,.35)",
+                      color:"#ff9500",padding:"8px 16px",borderRadius:8,cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",letterSpacing:".06em",
+                      opacity:aiStockLoading?0.5:1}}>
+                    {aiStockLoading ? "..." : "📦 RUPTURES IA"}
+                  </button>
+                  <button onClick={() => { setEditProd({name:"",desc:"",price:0,image:"",cat:"biere",badge:"",stock:0}); setShowProdForm(true); }}
+                    style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:8,
+                      padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
+                      fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                    + AJOUTER
+                  </button>
+                </div>
               </div>
+
+              {/* ── Alertes stock IA ── */}
+              {aiStock.length > 0 && (
+                <div style={{background:"rgba(255,149,0,.05)",border:"1px solid rgba(255,149,0,.25)",
+                  borderRadius:10,padding:"14px 18px",marginBottom:20}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#ff9500",
+                    letterSpacing:".12em",marginBottom:10}}>📦 RISQUES DE RUPTURE DÉTECTÉS ({aiStock.length})</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {aiStock.map((item, i) => (
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 12px",
+                        background:"rgba(0,0,0,.2)",borderRadius:6}}>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",padding:"2px 8px",borderRadius:4,
+                          background: item.risk==="high" ? "rgba(255,45,120,.2)" : "rgba(255,149,0,.2)",
+                          color: item.risk==="high" ? "#ff2d78" : "#ff9500",border:`1px solid ${item.risk==="high"?"rgba(255,45,120,.4)":"rgba(255,149,0,.4)"}`}}>
+                          {item.risk.toUpperCase()}
+                        </span>
+                        <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".88rem",flex:1}}>{item.name}</span>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>
+                          ~{item.estimatedDaysLeft}j restants
+                        </span>
+                        <span style={{fontFamily:"'Inter',sans-serif",fontSize:".8rem",color:"#ff9500",fontStyle:"italic"}}>
+                          {item.action}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {loading ? (
                 <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
@@ -2254,6 +2315,31 @@ export default function AdminPage() {
                       fontSize:".85rem",letterSpacing:".08em",cursor:"pointer"}}>
                     {newCoupon.id ? "METTRE À JOUR" : "CRÉER"}
                   </button>
+                  <button
+                    disabled={aiCouponLoading}
+                    onClick={async () => {
+                      setAiCouponLoading(true); setAiCoupon(null);
+                      try {
+                        const soldMap: Record<string,number> = {};
+                        orders.forEach(o => o.items.split("\n").forEach(line => {
+                          const n = line.replace(/x\d+.*/, "").trim();
+                          if (n) soldMap[n] = (soldMap[n]||0)+1;
+                        }));
+                        const topProducts = Object.entries(soldMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n).join(", ") || "aucun";
+                        const avg = orders.length ? (orders.reduce((s,o)=>s+Number(o.total),0)/orders.length).toFixed(2) : "0";
+                        const result = await callAI("coupon_suggest", {
+                          topProducts, totalOrders: orders.length, avgBasket: avg, period: "7 derniers jours",
+                        });
+                        setAiCoupon(result);
+                      } catch { showToast("Erreur IA","err"); }
+                      setAiCouponLoading(false);
+                    }}
+                    style={{background:"rgba(184,255,0,.1)",border:"1px solid rgba(184,255,0,.3)",
+                      color:"#b8ff00",padding:"10px 18px",borderRadius:4,cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",letterSpacing:".06em",
+                      opacity:aiCouponLoading?0.5:1}}>
+                    {aiCouponLoading ? "..." : "✨ SUGGESTION IA"}
+                  </button>
                   {newCoupon.id && (
                     <button onClick={() => setNewCoupon({code:"",type:"percent",value:10,active:true})}
                       style={{background:"transparent",border:"1px solid rgba(255,255,255,.1)",color:"#5a5470",
@@ -2264,6 +2350,45 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
+
+              {/* ── Suggestion IA ── */}
+              {aiCoupon && (
+                <div style={{background:"rgba(184,255,0,.05)",border:"1px solid rgba(184,255,0,.3)",
+                  borderRadius:10,padding:"16px 20px",marginBottom:20,display:"flex",alignItems:"flex-start",gap:16,flexWrap:"wrap"}}>
+                  <div style={{flex:1,minWidth:200}}>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#b8ff00",letterSpacing:".12em",marginBottom:8}}>
+                      ✨ SUGGESTION IA
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",color:"#f0eeff",letterSpacing:".06em"}}>
+                        {aiCoupon.code}
+                      </span>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#b8ff00"}}>
+                        {aiCoupon.type==="percent" ? `-${aiCoupon.value}%` : `-${aiCoupon.value}€`}
+                      </span>
+                      {aiCoupon.minOrder > 0 && (
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".76rem",color:"#5a5470"}}>
+                          dès {aiCoupon.minOrder}€
+                        </span>
+                      )}
+                    </div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontSize:".82rem",color:"#7a7090",marginTop:6,fontStyle:"italic"}}>
+                      {aiCoupon.reason}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setNewCoupon(c => ({...c, code: aiCoupon.code, type: aiCoupon.type as "percent"|"fixed", value: aiCoupon.value}));
+                      setAiCoupon(null);
+                      showToast("Coupon IA appliqué au formulaire ✓");
+                    }}
+                    style={{background:"#b8ff00",color:"#000",border:"none",borderRadius:6,padding:"10px 18px",
+                      fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",letterSpacing:".08em",
+                      cursor:"pointer",flexShrink:0}}>
+                    APPLIQUER →
+                  </button>
+                </div>
+              )}
 
               {/* Liste coupons */}
               {coupons.length === 0 ? (
@@ -2599,7 +2724,44 @@ export default function AdminPage() {
                           )}
                         </div>
 
-                        <div style={{display:"flex",gap:8,flexShrink:0}}>
+                        {/* ── Coaching IA ── */}
+                        {aiCoachId === d.id && aiCoachText && (
+                          <div style={{marginTop:12,padding:"12px 16px",background:"rgba(168,85,247,.06)",
+                            border:"1px solid rgba(168,85,247,.25)",borderRadius:8}}>
+                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#a855f7",
+                              letterSpacing:".12em",marginBottom:6}}>🤖 COACHING IA PERSONNALISÉ</div>
+                            <div style={{fontFamily:"'Inter',sans-serif",fontSize:".87rem",color:"#d0d0e0",lineHeight:1.7}}>
+                              {aiCoachText}
+                            </div>
+                          </div>
+                        )}
+
+                        <div style={{display:"flex",gap:8,flexShrink:0,flexWrap:"wrap",marginTop:8}}>
+                          {d.status === "accepte" && (
+                            <button
+                              disabled={aiCoachLoading && aiCoachId === d.id}
+                              onClick={async () => {
+                                setAiCoachId(d.id); setAiCoachText(""); setAiCoachLoading(true);
+                                try {
+                                  const result = await callAI("coaching", {
+                                    driverName: (d as any).name || "Livreur",
+                                    vehicle: (d as any).transport || (d as any).vehicle,
+                                    zone: (d as any).zone,
+                                    message: (d as any).message,
+                                    status: d.status,
+                                    deliveries: (d as any).deliveryCount || 0,
+                                  });
+                                  setAiCoachText(result);
+                                } catch { showToast("Erreur IA","err"); }
+                                setAiCoachLoading(false);
+                              }}
+                              style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.3)",
+                                color:"#a855f7",padding:"8px 14px",borderRadius:8,cursor:"pointer",
+                                fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",letterSpacing:".06em",
+                                opacity:(aiCoachLoading && aiCoachId===d.id)?0.5:1}}>
+                              {aiCoachLoading && aiCoachId===d.id ? "..." : "🤖 COACHING IA"}
+                            </button>
+                          )}
                           {d.status !== "accepte" && (
                             <button onClick={async () => {
                               const pwd = Math.random().toString(36).slice(-6).toUpperCase();
@@ -3816,6 +3978,9 @@ function BannerForm({ banner, onSave, onClose, showToast }: { banner:Banner; onS
             )}
           </div>
 
+          {/* ── Génération IA ── */}
+          <BannerAIGenerator onApply={(vals) => setB(s => ({...s, ...vals}))} showToast={showToast} />
+
           <Field label="TITRE (grand texte)" value={b.title} onChange={v => setB(s=>({...s,title:v}))} />
           <Field label="TAGLINE (petit texte au-dessus)" value={b.subtitle} onChange={v => setB(s=>({...s,subtitle:v}))} />
           <div>
@@ -3919,6 +4084,55 @@ function PackForm({ pack, onSave, onClose }: { pack:Pack; onSave:(p:Pack)=>void;
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+function BannerAIGenerator({ onApply, showToast }: { onApply:(v:{title?:string;subtitle?:string;desc?:string;cta?:string})=>void; showToast:(m:string,t?:string)=>void }) {
+  const [promo, setPromo]     = useState("");
+  const [loading, setLoading] = useState(false);
+  return (
+    <div style={{background:"rgba(184,255,0,.04)",border:"1px solid rgba(184,255,0,.2)",borderRadius:8,padding:"12px 16px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#b8ff00",letterSpacing:".12em"}}>
+          ✨ GÉNÉRATION IA — titre, tagline, description, bouton
+        </div>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={async () => {
+            setLoading(true);
+            try {
+              const res = await fetch("/api/ai", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "banner", promo }),
+              });
+              const json = await res.json();
+              if (json.ok && typeof json.result === "object") {
+                onApply(json.result);
+                showToast("Textes IA générés ✓");
+              } else { showToast("Erreur IA", "err"); }
+            } catch { showToast("Erreur IA", "err"); }
+            setLoading(false);
+          }}
+          style={{background:"rgba(184,255,0,.15)",border:"1px solid rgba(184,255,0,.35)",color:"#b8ff00",
+            padding:"4px 12px",borderRadius:4,cursor:loading?"not-allowed":"pointer",
+            fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
+            opacity:loading?0.5:1}}>
+          {loading ? "..." : "✨ GÉNÉRER"}
+        </button>
+      </div>
+      <input
+        type="text"
+        value={promo}
+        onChange={e => setPromo(e.target.value)}
+        placeholder="Contexte promo (ex: Soirée Saint-Valentin, -20% alcools)…"
+        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+          borderRadius:4,padding:"8px 12px",color:"#f0eeff",fontSize:".85rem",
+          fontFamily:"'Rajdhani',sans-serif",boxSizing:"border-box"}}
+      />
     </div>
   );
 }
