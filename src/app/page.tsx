@@ -8,7 +8,7 @@ import UpsellCarousel from "@/components/UpsellCarousel";
 import SmartThresholdSuggestions from "@/components/SmartThresholdSuggestions";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, getDoc, query, where, setDoc, updateDoc, increment } from "firebase/firestore";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
@@ -214,6 +214,10 @@ export default function Home() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const addressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const trackedImpressionRef = useRef<string | null>(null);
+  const phoneRecaptchaRef = useRef<any>(null);
+  const cashRecaptchaRef  = useRef<any>(null);
+  const cashSmsVerifiedRef   = useRef(false);
+  const submitAttemptsRef    = useRef<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'online'>('cash');
   const [banners, setBanners]         = useState<Banner[]>([]);
@@ -242,6 +246,21 @@ export default function Home() {
   const [authPassword, setAuthPassword]   = useState("");
   const [authError, setAuthError]         = useState("");
   const [authLoading, setAuthLoading]     = useState(false);
+  // ── PHONE AUTH TAB ──
+  const [authTab, setAuthTab]             = useState<'google'|'phone'|'email'>('google');
+  const [phoneAuthStep, setPhoneAuthStep] = useState<'input'|'verify'>('input');
+  const [phoneInput, setPhoneInput]       = useState('');
+  const [phoneAuthCode, setPhoneAuthCode] = useState('');
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult|null>(null);
+  const [phoneAuthLoading, setPhoneAuthLoading]   = useState(false);
+  const [phoneAuthError, setPhoneAuthError]       = useState('');
+  // ── CASH SMS VERIFICATION ──
+  const [showSmsVerify, setShowSmsVerify]         = useState(false);
+  const [cashSmsStep, setCashSmsStep]             = useState<'send'|'verify'>('send');
+  const [cashSmsCode, setCashSmsCode]             = useState('');
+  const [cashSmsConfirmation, setCashSmsConfirmation] = useState<ConfirmationResult|null>(null);
+  const [cashSmsLoading, setCashSmsLoading]       = useState(false);
+  const [cashSmsError, setCashSmsError]           = useState('');
   const [lastAddedId, setLastAddedId]     = useState<string|null>(null);
   const [likes, setLikes]                 = useState<Set<string>>(new Set());
   const [showDriverForm, setShowDriverForm] = useState(false);
@@ -592,6 +611,24 @@ export default function Home() {
   };
 
   const submitOrder = async () => {
+    // ── Checkout gate : connexion obligatoire ──
+    if (!currentUser) {
+      setShowAuthModal(true);
+      showToast("Connecte-toi pour finaliser ta commande 🔐");
+      return;
+    }
+
+    // ── Anti-spam : max 3 tentatives / 60 s (sauf retour après vérif SMS) ──
+    if (!cashSmsVerifiedRef.current) {
+      const now = Date.now();
+      const recent = submitAttemptsRef.current.filter(t => now - t < 60_000);
+      if (recent.length >= 3) {
+        showToast("Trop de tentatives. Réessaie dans 1 minute.");
+        return;
+      }
+      submitAttemptsRef.current = [...recent, now];
+    }
+
     // ── Validation commune ──
     if (!orderForm.name || !orderForm.phone) {
       showToast("Remplis ton nom et téléphone !");
@@ -616,6 +653,13 @@ export default function Home() {
       showToast(`Commande minimum : ${deliveryConfig.minimum_order_amount}€`);
       return;
     }
+
+    // ── Cash : vérification SMS obligatoire ──
+    if (paymentMethod === 'cash' && !cashSmsVerifiedRef.current) {
+      setShowSmsVerify(true);
+      return;
+    }
+    cashSmsVerifiedRef.current = false; // reset après usage
 
     setSubmitting(true);
 
@@ -1001,6 +1045,91 @@ export default function Home() {
       if (msg) setAuthError(msg);
     }
     setAuthLoading(false);
+  };
+
+  // ── Helpers RecaptchaVerifier ──────────────────────────────────────────
+  const initRecaptcha = (ref: React.MutableRefObject<any>, elementId: string) => {
+    if (ref.current) {
+      try { ref.current.clear(); } catch {}
+      ref.current = null;
+    }
+    ref.current = new RecaptchaVerifier(auth, elementId, {
+      size: "invisible",
+      callback: () => {},
+      "expired-callback": () => { ref.current = null; },
+    });
+    return ref.current;
+  };
+
+  // ── Téléphone auth : envoi SMS ─────────────────────────────────────────
+  const handlePhoneSend = async () => {
+    const phone = phoneInput.trim();
+    if (!phone) { setPhoneAuthError("Saisis ton numéro de téléphone."); return; }
+    setPhoneAuthLoading(true); setPhoneAuthError("");
+    try {
+      const verifier = initRecaptcha(phoneRecaptchaRef, "recaptcha-phone-auth");
+      const formatted = phone.startsWith("+") ? phone : `+594${phone.replace(/^0/, "")}`;
+      const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
+      setPhoneConfirmation(confirmation);
+      setPhoneAuthStep("verify");
+    } catch (e: any) {
+      setPhoneAuthError(e.message || "Impossible d'envoyer le SMS.");
+      phoneRecaptchaRef.current = null;
+    }
+    setPhoneAuthLoading(false);
+  };
+
+  // ── Téléphone auth : vérification code ────────────────────────────────
+  const handlePhoneVerify = async () => {
+    if (!phoneAuthCode.trim() || !phoneConfirmation) return;
+    setPhoneAuthLoading(true); setPhoneAuthError("");
+    try {
+      const { user } = await phoneConfirmation.confirm(phoneAuthCode);
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid, phone: user.phoneNumber || "",
+        lastLoginAt: new Date().toISOString(),
+      }, { merge: true });
+      setShowAuthModal(false);
+      setPhoneAuthStep("input"); setPhoneInput(""); setPhoneAuthCode("");
+      showToast("Connecté ! Clique sur Commander pour finaliser 🎉");
+    } catch {
+      setPhoneAuthError("Code incorrect ou expiré. Réessaie.");
+    }
+    setPhoneAuthLoading(false);
+  };
+
+  // ── Cash SMS : envoi code de vérification ─────────────────────────────
+  const handleCashSmsSend = async () => {
+    const phone = orderForm.phone.trim();
+    if (!phone) { setCashSmsError("Aucun numéro de téléphone dans ta commande."); return; }
+    setCashSmsLoading(true); setCashSmsError("");
+    try {
+      const verifier = initRecaptcha(cashRecaptchaRef, "recaptcha-cash-sms");
+      const formatted = phone.startsWith("+") ? phone : `+594${phone.replace(/^0/, "")}`;
+      const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
+      setCashSmsConfirmation(confirmation);
+      setCashSmsStep("verify");
+    } catch (e: any) {
+      setCashSmsError(e.message || "Impossible d'envoyer le SMS.");
+      cashRecaptchaRef.current = null;
+    }
+    setCashSmsLoading(false);
+  };
+
+  // ── Cash SMS : vérification → soumettre la commande ───────────────────
+  const handleCashSmsVerify = async () => {
+    if (!cashSmsCode.trim() || !cashSmsConfirmation) return;
+    setCashSmsLoading(true); setCashSmsError("");
+    try {
+      await cashSmsConfirmation.confirm(cashSmsCode);
+      setShowSmsVerify(false);
+      setCashSmsStep("send"); setCashSmsCode(""); setCashSmsConfirmation(null);
+      cashSmsVerifiedRef.current = true;
+      submitOrder();
+    } catch {
+      setCashSmsError("Code incorrect ou expiré. Réessaie.");
+    }
+    setCashSmsLoading(false);
   };
 
   const handleSignout = async () => {
@@ -2592,7 +2721,10 @@ export default function Home() {
 
       {/* ── AUTH MODAL (Login / Signup) ── */}
       {showAuthModal && (
-        <div onClick={() => { setShowAuthModal(false); setAuthError(""); }}
+        <div onClick={() => {
+            setShowAuthModal(false); setAuthError("");
+            setPhoneAuthStep("input"); setPhoneInput(""); setPhoneAuthCode(""); setPhoneAuthError("");
+          }}
           style={{position:"fixed",inset:0,background:"rgba(4,2,10,.96)",zIndex:1600,
             display:"flex",alignItems:"flex-start",justifyContent:"center",
             paddingTop:20,paddingLeft:16,paddingRight:16,paddingBottom:90,overflowY:"auto"}}>
@@ -2604,71 +2736,149 @@ export default function Home() {
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
               padding:"22px 24px 18px",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
               <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:"#ff2d78",letterSpacing:".04em"}}>
-                {authMode === "login" ? "🔑 CONNEXION" : "✨ CRÉER UN COMPTE"}
+                🔑 CONNEXION
               </div>
-              <button onClick={() => { setShowAuthModal(false); setAuthError(""); }}
+              <button onClick={() => {
+                  setShowAuthModal(false); setAuthError("");
+                  setPhoneAuthStep("input"); setPhoneInput(""); setPhoneAuthCode(""); setPhoneAuthError("");
+                }}
                 style={{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",
                   color:"#f0eeff",fontSize:".9rem",cursor:"pointer",borderRadius:6,
                   width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
 
+            {/* Tabs */}
+            <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+              {(["google","phone","email"] as const).map(tab => (
+                <button key={tab} onClick={() => { setAuthTab(tab); setAuthError(""); setPhoneAuthError(""); }}
+                  style={{flex:1,padding:"12px 4px",background:"transparent",border:"none",
+                    borderBottom: authTab === tab ? "2px solid #ff2d78" : "2px solid transparent",
+                    color: authTab === tab ? "#ff2d78" : "#5a5470",
+                    fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",letterSpacing:".08em",
+                    textTransform:"uppercase",cursor:"pointer",transition:"color .2s"}}>
+                  {tab === "google" ? "🔍 Google" : tab === "phone" ? "📱 SMS" : "✉️ Email"}
+                </button>
+              ))}
+            </div>
+
             <div style={{padding:"22px 24px 28px",display:"flex",flexDirection:"column",gap:14}}>
-              {/* Google */}
-              <button onClick={handleGoogleLogin} disabled={authLoading}
-                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
-                  background:"#fff",color:"#111",border:"none",borderRadius:10,padding:"13px",
-                  fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
-                  cursor:"pointer",letterSpacing:".04em"}}>
-                <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-                Continuer avec Google
-              </button>
 
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470"}}>ou</span>
-                <div style={{flex:1,height:1,background:"rgba(255,255,255,.08)"}}/>
-              </div>
-
-              {/* Nom (signup seulement) */}
-              {authMode === "signup" && (
-                <input placeholder="Ton prénom" value={authName} onChange={e => setAuthName(e.target.value)}
-                  style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                    padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                    fontSize:"1rem",outline:"none",width:"100%"}} />
-              )}
-              <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
-                style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                  padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                  fontSize:"1rem",outline:"none",width:"100%"}} />
-              <input type="password" placeholder="Mot de passe" value={authPassword}
-                onChange={e => setAuthPassword(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleSignup())}
-                style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                  padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                  fontSize:"1rem",outline:"none",width:"100%"}} />
-
-              {authError && (
-                <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
-                  borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
-                  fontSize:".75rem",color:"#ff2d78"}}>
-                  {authError}
-                </div>
+              {/* ── Tab Google ── */}
+              {authTab === "google" && (
+                <button onClick={handleGoogleLogin} disabled={authLoading}
+                  style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                    background:"#fff",color:"#111",border:"none",borderRadius:10,padding:"14px",
+                    fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                    cursor: authLoading ? "not-allowed" : "pointer",letterSpacing:".04em"}}>
+                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                  {authLoading ? "..." : "Continuer avec Google"}
+                </button>
               )}
 
-              <button onClick={authMode === "login" ? handleLogin : handleSignup} disabled={authLoading}
-                style={{background: authLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
-                  borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                  fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
-                  cursor: authLoading ? "not-allowed" : "pointer"}}>
-                {authLoading ? "..." : authMode === "login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
-              </button>
+              {/* ── Tab Téléphone ── */}
+              {authTab === "phone" && (
+                <>
+                  {phoneAuthStep === "input" ? (
+                    <>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                        color:"#7a7490",letterSpacing:".06em",lineHeight:1.5}}>
+                        Saisis ton numéro de téléphone. Un code SMS te sera envoyé.
+                      </div>
+                      <div style={{position:"relative"}}>
+                        <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",
+                          color:"#7a7490",fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
+                          pointerEvents:"none"}}>+594</span>
+                        <input type="tel" placeholder="0694 XX XX XX"
+                          value={phoneInput} onChange={e => setPhoneInput(e.target.value)}
+                          onKeyDown={e => e.key === "Enter" && handlePhoneSend()}
+                          style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                            padding:"12px 14px 12px 54px",color:"#f0eeff",
+                            fontFamily:"'Rajdhani',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
+                      </div>
+                      <div id="recaptcha-phone-auth" />
+                      <button onClick={handlePhoneSend} disabled={phoneAuthLoading}
+                        style={{background: phoneAuthLoading ? "#5a5470" : "#ff2d78",color:"#000",
+                          border:"none",borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",
+                          fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                          cursor: phoneAuthLoading ? "not-allowed" : "pointer"}}>
+                        {phoneAuthLoading ? "ENVOI EN COURS..." : "ENVOYER LE CODE SMS"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                        color:"#7a7490",letterSpacing:".06em",lineHeight:1.5}}>
+                        Code envoyé au {phoneInput.startsWith("+") ? phoneInput : `+594 ${phoneInput}`}.
+                        Saisis les 6 chiffres.
+                      </div>
+                      <input type="number" placeholder="_ _ _ _ _ _" maxLength={6}
+                        value={phoneAuthCode} onChange={e => setPhoneAuthCode(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && handlePhoneVerify()}
+                        style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                          padding:"14px",color:"#f0eeff",fontFamily:"'Share Tech Mono',monospace",
+                          fontSize:"1.4rem",letterSpacing:".5em",textAlign:"center",
+                          outline:"none",width:"100%"}} />
+                      <button onClick={handlePhoneVerify} disabled={phoneAuthLoading}
+                        style={{background: phoneAuthLoading ? "#5a5470" : "#ff2d78",color:"#000",
+                          border:"none",borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",
+                          fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                          cursor: phoneAuthLoading ? "not-allowed" : "pointer"}}>
+                        {phoneAuthLoading ? "VÉRIFICATION..." : "VALIDER LE CODE"}
+                      </button>
+                      <button onClick={() => { setPhoneAuthStep("input"); setPhoneAuthCode(""); setPhoneAuthError(""); }}
+                        style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
+                          fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",textDecoration:"underline"}}>
+                        Renvoyer un code
+                      </button>
+                    </>
+                  )}
+                  {phoneAuthError && (
+                    <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
+                      borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
+                      fontSize:".75rem",color:"#ff2d78"}}>{phoneAuthError}</div>
+                  )}
+                </>
+              )}
 
-              <button onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}
-                style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
-                  fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
-                  textDecoration:"underline",padding:4}}>
-                {authMode === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
-              </button>
+              {/* ── Tab Email ── */}
+              {authTab === "email" && (
+                <>
+                  {authMode === "signup" && (
+                    <input placeholder="Ton prénom" value={authName} onChange={e => setAuthName(e.target.value)}
+                      style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                        padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                        fontSize:"1rem",outline:"none",width:"100%"}} />
+                  )}
+                  <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
+                    style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                      padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:"1rem",outline:"none",width:"100%"}} />
+                  <input type="password" placeholder="Mot de passe" value={authPassword}
+                    onChange={e => setAuthPassword(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleSignup())}
+                    style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                      padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:"1rem",outline:"none",width:"100%"}} />
+                  {authError && (
+                    <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
+                      borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
+                      fontSize:".75rem",color:"#ff2d78"}}>{authError}</div>
+                  )}
+                  <button onClick={authMode === "login" ? handleLogin : handleSignup} disabled={authLoading}
+                    style={{background: authLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
+                      borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                      fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                      cursor: authLoading ? "not-allowed" : "pointer"}}>
+                    {authLoading ? "..." : authMode === "login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
+                  </button>
+                  <button onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}
+                    style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
+                      textDecoration:"underline",padding:4}}>
+                    {authMode === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
+                  </button>
+                </>
+              )}
 
               <div style={{borderTop:"1px solid rgba(255,255,255,.06)",marginTop:10,paddingTop:14}}>
                 <a href="/livreur"
@@ -3026,6 +3236,92 @@ export default function Home() {
             animation:"fadeUp .3s both"}}>
           ↑
         </button>
+      )}
+
+      {/* ── CASH SMS VERIFICATION MODAL ── */}
+      {showSmsVerify && (
+        <div onClick={() => { setShowSmsVerify(false); setCashSmsStep("send"); setCashSmsCode(""); setCashSmsError(""); }}
+          style={{position:"fixed",inset:0,background:"rgba(4,2,10,.97)",zIndex:1700,
+            display:"flex",alignItems:"center",justifyContent:"center",
+            paddingLeft:16,paddingRight:16}}>
+          <div onClick={e => e.stopPropagation()} style={{background:"#0c0918",
+            border:"1px solid rgba(255,45,120,.3)",borderRadius:14,width:"100%",maxWidth:400,
+            animation:"fadeUp .3s both",overflow:"hidden"}}>
+
+            {/* Header */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+              padding:"20px 22px 16px",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.15rem",color:"#ff2d78",letterSpacing:".04em"}}>
+                📱 VÉRIFICATION TÉLÉPHONE
+              </div>
+              <button onClick={() => { setShowSmsVerify(false); setCashSmsStep("send"); setCashSmsCode(""); setCashSmsError(""); }}
+                style={{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",
+                  color:"#f0eeff",fontSize:".9rem",cursor:"pointer",borderRadius:6,
+                  width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+            </div>
+
+            <div style={{padding:"22px 22px 26px",display:"flex",flexDirection:"column",gap:16}}>
+              {cashSmsStep === "send" ? (
+                <>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                    color:"#7a7490",letterSpacing:".05em",lineHeight:1.6}}>
+                    Pour confirmer ta commande <span style={{color:"#ff2d78"}}>cash</span>, nous envoyons un code SMS au numéro :
+                    <div style={{color:"#f0eeff",fontSize:".9rem",marginTop:8,letterSpacing:".08em"}}>
+                      📞 {orderForm.phone.startsWith("+") ? orderForm.phone : `+594 ${orderForm.phone}`}
+                    </div>
+                  </div>
+                  <div id="recaptcha-cash-sms" />
+                  <button onClick={handleCashSmsSend} disabled={cashSmsLoading}
+                    style={{background: cashSmsLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
+                      borderRadius:10,padding:"15px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                      fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                      cursor: cashSmsLoading ? "not-allowed" : "pointer"}}>
+                    {cashSmsLoading ? "ENVOI EN COURS..." : "ENVOYER LE CODE SMS"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                    color:"#7a7490",letterSpacing:".05em",lineHeight:1.6}}>
+                    Code envoyé ! Saisis les 6 chiffres reçus par SMS.
+                  </div>
+                  <input type="number" placeholder="• • • • • •" maxLength={6}
+                    value={cashSmsCode} onChange={e => setCashSmsCode(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleCashSmsVerify()}
+                    autoFocus
+                    style={{background:"#080514",border:"1px solid rgba(255,45,120,.3)",borderRadius:8,
+                      padding:"16px",color:"#ff2d78",fontFamily:"'Share Tech Mono',monospace",
+                      fontSize:"2rem",letterSpacing:".6em",textAlign:"center",
+                      outline:"none",width:"100%"}} />
+                  <button onClick={handleCashSmsVerify} disabled={cashSmsLoading || cashSmsCode.length < 6}
+                    style={{background: cashSmsLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
+                      borderRadius:10,padding:"15px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                      fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                      cursor: cashSmsLoading ? "not-allowed" : "pointer",
+                      opacity: cashSmsCode.length < 6 ? .5 : 1}}>
+                    {cashSmsLoading ? "VÉRIFICATION..." : "✓ CONFIRMER LA COMMANDE"}
+                  </button>
+                  <button onClick={() => { setCashSmsStep("send"); setCashSmsCode(""); setCashSmsError(""); }}
+                    style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",textDecoration:"underline"}}>
+                    Renvoyer un code
+                  </button>
+                </>
+              )}
+
+              {cashSmsError && (
+                <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
+                  borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
+                  fontSize:".75rem",color:"#ff2d78"}}>{cashSmsError}</div>
+              )}
+
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                color:"#3a3455",letterSpacing:".04em",textAlign:"center",lineHeight:1.5}}>
+                Protégé par reCAPTCHA invisible — anti-spam & sécurité
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── CHATBOT IA ── */}
