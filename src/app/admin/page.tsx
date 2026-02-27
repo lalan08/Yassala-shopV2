@@ -141,6 +141,9 @@ export default function AdminPage() {
     alerts: adminAlerts,
     unresolvedCount: alertCount,
     resolveAlert,
+    deleteAlert,
+    deleteAllResolved,
+    dismissAll,
     soundEnabled: alertSound,
     setSoundEnabled: setAlertSound,
   } = useAdminAlerts({ orders, onlineDrivers });
@@ -1211,17 +1214,27 @@ export default function AdminPage() {
                             </span>
                           )}
                         </div>
-                        {/* Son toggle */}
-                        <button
-                          onClick={() => setAlertSound(!alertSound)}
-                          title={alertSound ? "Son activé — cliquer pour désactiver" : "Son désactivé — cliquer pour activer"}
-                          style={{background:"none",border:`1px solid ${alertSound ? "rgba(184,255,0,.3)" : "rgba(255,255,255,.08)"}`,
-                            borderRadius:6,padding:"4px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:6,
-                            color: alertSound ? "#b8ff00" : "#5a5470",
-                            fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
-                          }}>
-                          {alertSound ? "🔔 SON ON" : "🔕 SON OFF"}
-                        </button>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          {adminAlerts.length > 0 && (
+                            <button
+                              onClick={() => { if (confirm("Supprimer toutes les alertes ?")) dismissAll(); }}
+                              title="Supprimer toutes les alertes"
+                              style={{background:"rgba(255,45,120,.08)",border:"1px solid rgba(255,45,120,.2)",
+                                borderRadius:6,padding:"4px 10px",cursor:"pointer",
+                                color:"#ff2d78",fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",letterSpacing:".04em"}}>
+                              🗑 TOUT SUPPRIMER
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setAlertSound(!alertSound)}
+                            title={alertSound ? "Son activé" : "Son désactivé"}
+                            style={{background:"none",border:`1px solid ${alertSound ? "rgba(184,255,0,.3)" : "rgba(255,255,255,.08)"}`,
+                              borderRadius:6,padding:"4px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:6,
+                              color: alertSound ? "#b8ff00" : "#5a5470",
+                              fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem"}}>
+                            {alertSound ? "🔔 SON ON" : "🔕 SON OFF"}
+                          </button>
+                        </div>
                       </div>
 
                       {/* Alert cards */}
@@ -1290,16 +1303,29 @@ export default function AdminPage() {
                                         Voir commandes →
                                       </button>
                                     )}
-                                    <button onClick={() => resolveAlert(alert.id)}
-                                      style={{marginLeft:"auto",background:"rgba(255,255,255,.05)",
-                                        border:"1px solid rgba(255,255,255,.1)",
-                                        borderRadius:5,padding:"3px 10px",cursor:"pointer",
-                                        fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
-                                        color:"#5a5470",transition:"background .15s"}}
-                                      onMouseEnter={e => (e.currentTarget.style.background="rgba(184,255,0,.08)")}
-                                      onMouseLeave={e => (e.currentTarget.style.background="rgba(255,255,255,.05)")}>
-                                      ✓ Résoudre
-                                    </button>
+                                    <div style={{marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+                                      <button onClick={() => resolveAlert(alert.id)}
+                                        style={{background:"rgba(255,255,255,.05)",
+                                          border:"1px solid rgba(255,255,255,.1)",
+                                          borderRadius:5,padding:"3px 10px",cursor:"pointer",
+                                          fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                                          color:"#5a5470",transition:"background .15s"}}
+                                        onMouseEnter={e => (e.currentTarget.style.background="rgba(184,255,0,.08)")}
+                                        onMouseLeave={e => (e.currentTarget.style.background="rgba(255,255,255,.05)")}>
+                                        ✓ Résoudre
+                                      </button>
+                                      <button onClick={() => deleteAlert(alert.id)}
+                                        title="Supprimer cette alerte"
+                                        style={{background:"rgba(255,45,120,.06)",
+                                          border:"1px solid rgba(255,45,120,.15)",
+                                          borderRadius:5,padding:"3px 8px",cursor:"pointer",
+                                          fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                                          color:"#ff2d78",transition:"background .15s"}}
+                                        onMouseEnter={e => (e.currentTarget.style.background="rgba(255,45,120,.18)")}
+                                        onMouseLeave={e => (e.currentTarget.style.background="rgba(255,45,120,.06)")}>
+                                        ×
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1312,8 +1338,14 @@ export default function AdminPage() {
                       {adminAlerts.filter(a => a.resolved).length > 0 && (
                         <details style={{marginTop:8}}>
                           <summary style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
-                            color:"#3a3450",cursor:"pointer",letterSpacing:".06em",userSelect:"none"}}>
-                            {adminAlerts.filter(a => a.resolved).length} alerte{adminAlerts.filter(a => a.resolved).length > 1 ? "s" : ""} résolue{adminAlerts.filter(a => a.resolved).length > 1 ? "s" : ""} (historique)
+                            color:"#3a3450",cursor:"pointer",letterSpacing:".06em",userSelect:"none",
+                            display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                            <span>{adminAlerts.filter(a => a.resolved).length} alerte{adminAlerts.filter(a => a.resolved).length > 1 ? "s" : ""} résolue{adminAlerts.filter(a => a.resolved).length > 1 ? "s" : ""} (historique)</span>
+                            <button onClick={e => { e.preventDefault(); deleteAllResolved(); }}
+                              style={{background:"transparent",border:"none",color:"#ff2d78",
+                                fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",cursor:"pointer",padding:"0 4px"}}>
+                              🗑 vider
+                            </button>
                           </summary>
                           <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:6}}>
                             {adminAlerts.filter(a => a.resolved).slice(0,5).map((alert: AdminAlert) => {
@@ -1334,6 +1366,10 @@ export default function AdminPage() {
                                       ? new Date(alert.resolvedAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})
                                       : ""}
                                   </span>
+                                  <button onClick={() => deleteAlert(alert.id)}
+                                    style={{background:"transparent",border:"none",color:"#5a5470",
+                                      cursor:"pointer",fontSize:".8rem",padding:"0 4px",lineHeight:1,flexShrink:0}}
+                                    title="Supprimer">×</button>
                                 </div>
                               );
                             })}
