@@ -54,6 +54,7 @@ export default function LivreurPage() {
   const [newDriverPwd, setNewDriverPwd] = useState("");
   const [newDriverPwd2, setNewDriverPwd2] = useState("");
   const [pwdSetupError, setPwdSetupError] = useState("");
+  const [problemModal, setProblemModal] = useState<{orderId: string} | null>(null);
 
   const showToast = (msg: string) => {
     setToast({ msg, show: true });
@@ -774,6 +775,342 @@ export default function LivreurPage() {
       </div>
     </>
   );
+
+  // ── MODE FOCUS MISSION — prioritaire dès qu'une commande est acceptée ──
+  if (loggedIn && !showContract && !showPasswordSetup && myOrders.length > 0) {
+    return (
+      <>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap');
+          *{margin:0;padding:0;box-sizing:border-box;}
+          body{background:#080514;color:#f0eeff;font-family:'Inter',sans-serif;}
+          @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+          @keyframes pulseGlow{0%,100%{box-shadow:0 0 8px rgba(255,45,120,.3)}50%{box-shadow:0 0 20px rgba(255,45,120,.6)}}
+          @keyframes slideIn{from{opacity:0;transform:translateY(-20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+          @keyframes missionBlink{0%,100%{opacity:1;}50%{opacity:.5;}}
+          ::-webkit-scrollbar{width:4px;}
+          ::-webkit-scrollbar-track{background:#080514;}
+          ::-webkit-scrollbar-thumb{background:#ff2d78;border-radius:2px;}
+          .leaflet-container{background:#080514 !important;border-radius:10px;}
+          .leaflet-tile-pane{filter:brightness(.8) contrast(1.1) saturate(.8);}
+        `}</style>
+
+        {/* Toast */}
+        <div style={{position:"fixed",top:18,right:18,zIndex:10000,
+          background:"rgba(184,255,0,.12)",border:"1px solid #b8ff00",
+          borderRadius:10,padding:"12px 18px",fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+          color:"#b8ff00",maxWidth:280,boxShadow:"0 8px 32px rgba(0,0,0,.4)",
+          transform: toast.show ? "translateX(0)" : "translateX(130%)",
+          transition:"transform .4s cubic-bezier(.34,1.56,.64,1)"}}>
+          {toast.msg}
+        </div>
+
+        {/* Confirm Modal (livraison) */}
+        {confirmAction && (
+          <div style={{position:"fixed",inset:0,zIndex:10001,background:"rgba(0,0,0,.8)",
+            backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+            onClick={() => setConfirmAction(null)}>
+            <div onClick={e => e.stopPropagation()}
+              style={{background:"#0c0918",border:"1px solid rgba(0,245,255,.2)",borderRadius:16,
+                padding:"30px 28px",maxWidth:380,width:"100%",textAlign:"center",
+                animation:"slideIn .2s both"}}>
+              <div style={{fontSize:"2.5rem",marginBottom:14}}>✅</div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.2rem",
+                marginBottom:8,color:"#f0eeff"}}>Confirmer la livraison ?</div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",
+                marginBottom:24}}>Cette commande sera marquée comme livrée.</div>
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={() => setConfirmAction(null)}
+                  style={{flex:1,padding:"13px",borderRadius:10,border:"1px solid rgba(255,255,255,.1)",
+                    background:"transparent",color:"#5a5470",fontFamily:"'Rajdhani',sans-serif",
+                    fontWeight:700,fontSize:".95rem",cursor:"pointer"}}>ANNULER</button>
+                <button onClick={() => markDelivered(confirmAction.id)}
+                  style={{flex:1,padding:"13px",borderRadius:10,border:"none",
+                    background:"linear-gradient(135deg,#b8ff00,#7acc00)",
+                    color:"#000",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
+                    cursor:"pointer",boxShadow:"0 4px 16px rgba(184,255,0,.3)"}}>
+                  ✓ CONFIRMER
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Problem Modal */}
+        {problemModal && (
+          <div style={{position:"fixed",inset:0,zIndex:10001,background:"rgba(0,0,0,.8)",
+            backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+            onClick={() => setProblemModal(null)}>
+            <div onClick={e => e.stopPropagation()}
+              style={{background:"#0c0918",border:"1px solid rgba(255,45,120,.3)",borderRadius:16,
+                padding:"28px 24px",maxWidth:380,width:"100%",animation:"slideIn .2s both"}}>
+              <div style={{fontSize:"2rem",textAlign:"center",marginBottom:10}}>⚠️</div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.15rem",
+                color:"#ff2d78",textAlign:"center",marginBottom:18,letterSpacing:".04em"}}>
+                SIGNALER UN PROBLÈME
+              </div>
+              <div style={{display:"grid",gap:8,marginBottom:16}}>
+                {["Client absent / injoignable","Adresse introuvable","Problème avec la commande","Autre problème"].map(label => (
+                  <a key={label}
+                    href={`https://wa.me/+594694000000?text=${encodeURIComponent(`⚠️ PROBLÈME LIVRAISON\nCommande : #${(orders.find(o => o.id === problemModal.orderId)?.orderNumber ?? problemModal.orderId.slice(-6).toUpperCase())}\nProblème : ${label}\nLivreur : ${driverData?.name}`)}`}
+                    target="_blank" rel="noopener"
+                    onClick={() => setProblemModal(null)}
+                    style={{padding:"13px 16px",borderRadius:10,
+                      background:"rgba(255,45,120,.07)",border:"1px solid rgba(255,45,120,.2)",
+                      color:"#ff2d78",fontFamily:"'Rajdhani',sans-serif",fontWeight:600,
+                      fontSize:".92rem",textDecoration:"none",display:"block",textAlign:"center",
+                      transition:"all .15s"}}>
+                    {label}
+                  </a>
+                ))}
+              </div>
+              <button onClick={() => setProblemModal(null)}
+                style={{width:"100%",padding:"12px",borderRadius:10,border:"1px solid rgba(255,255,255,.08)",
+                  background:"transparent",color:"#5a5470",fontFamily:"'Rajdhani',sans-serif",
+                  fontWeight:700,fontSize:".9rem",cursor:"pointer"}}>
+                ANNULER
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Header Focus Mission */}
+        <header style={{background:"rgba(8,5,20,.98)",borderBottom:"1px solid rgba(255,45,120,.25)",
+          padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",
+          position:"sticky",top:0,zIndex:100,backdropFilter:"blur(20px)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{width:10,height:10,borderRadius:"50%",background:"#ff2d78",flexShrink:0,
+              boxShadow:"0 0 10px #ff2d78",animation:"missionBlink 1.2s infinite"}} />
+            <div>
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",
+                background:"linear-gradient(135deg,#ff2d78,#ff9500)",WebkitBackgroundClip:"text",
+                WebkitTextFillColor:"transparent",letterSpacing:".06em"}}>
+                MISSION EN COURS
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",
+                letterSpacing:".12em"}}>{myOrders.length} COMMANDE{myOrders.length > 1 ? "S" : ""} ACTIVE{myOrders.length > 1 ? "S" : ""}</div>
+            </div>
+          </div>
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>
+            {driverData?.name}
+          </div>
+        </header>
+
+        {/* Commandes actives */}
+        <div style={{maxWidth:600,margin:"0 auto",padding:"18px 14px",display:"grid",gap:14,
+          animation:"fadeUp .3s both"}}>
+          {myOrders.map(o => (
+            <div key={o.id} style={{background:"rgba(255,45,120,.03)",
+              border:"1px solid rgba(255,45,120,.35)",borderRadius:14,overflow:"hidden",
+              boxShadow:"0 4px 30px rgba(255,45,120,.08)"}}>
+
+              {/* Badge Rush */}
+              {o.isRush && (
+                <div style={{background:"#ef4444",color:"white",padding:"8px 16px",
+                  fontFamily:"'Share Tech Mono',monospace",fontWeight:700,fontSize:".85rem",
+                  letterSpacing:".1em",display:"flex",alignItems:"center",gap:8}}>
+                  🚨 COMMANDE RUSH
+                  {o.rushFee ? <span style={{marginLeft:"auto"}}>+{o.rushFee.toFixed(2)} €</span> : null}
+                </div>
+              )}
+
+              <div style={{padding:"18px 16px",display:"grid",gap:14}}>
+
+                {/* Numéro + Montant */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:"#ff2d78",
+                    letterSpacing:".04em"}}>
+                    #{o.orderNumber ?? o.id.slice(-6).toUpperCase()}
+                  </div>
+                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",color:"#b8ff00",
+                    textShadow:"0 0 16px rgba(184,255,0,.4)"}}>
+                    {Number(o.total).toFixed(2)}€
+                  </div>
+                </div>
+
+                {/* Client */}
+                <div style={{background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.12)",
+                  borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{width:42,height:42,borderRadius:"50%",
+                    background:"rgba(0,245,255,.08)",border:"1px solid rgba(0,245,255,.2)",
+                    display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.2rem",flexShrink:0}}>
+                    👤
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:"1rem",marginBottom:2}}>{o.name || "Client"}</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470"}}>
+                      {o.phone}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,flexShrink:0}}>
+                    <a href={`tel:${o.phone}`}
+                      style={{width:40,height:40,borderRadius:"50%",
+                        background:"rgba(0,245,255,.1)",border:"1px solid rgba(0,245,255,.25)",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        textDecoration:"none",fontSize:"1.1rem"}}>
+                      📞
+                    </a>
+                    <a href={`https://wa.me/${o.phone.replace(/[^0-9+]/g,"")}?text=${encodeURIComponent(`Bonjour ${o.name || ""}, votre livreur Yassala est en route ! 🏍️`)}`}
+                      target="_blank" rel="noopener"
+                      style={{width:40,height:40,borderRadius:"50%",
+                        background:"rgba(37,211,102,.1)",border:"1px solid rgba(37,211,102,.3)",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        textDecoration:"none",fontSize:"1.1rem"}}>
+                      💬
+                    </a>
+                  </div>
+                </div>
+
+                {/* Adresse */}
+                {o.address && (
+                  <div>
+                    <div style={{background:"rgba(0,245,255,.05)",border:"1px solid rgba(0,245,255,.15)",
+                      borderRadius: expandedMap === o.id ? "10px 10px 0 0" : 10,
+                      padding:"12px 14px",display:"flex",alignItems:"center",gap:10,
+                      cursor: o.lat ? "pointer" : "default"}}
+                      onClick={() => {
+                        if (o.lat && o.lng) {
+                          if (expandedMap === o.id) {
+                            cleanupMap(`map-focus-${o.id}`);
+                            setExpandedMap(null);
+                          } else {
+                            if (expandedMap) cleanupMap(`map-focus-${expandedMap}`);
+                            setExpandedMap(o.id);
+                          }
+                        }
+                      }}>
+                      <span style={{fontSize:"1.3rem",flexShrink:0}}>📍</span>
+                      <span style={{color:"#00f5ff",fontSize:".95rem",lineHeight:1.4,fontWeight:500,flex:1}}>
+                        {o.address}
+                      </span>
+                      {o.lat && o.lng && (
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",
+                          color:"#5a5470",flexShrink:0}}>
+                          {expandedMap === o.id ? "▲" : "🗺️"}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* ETA */}
+                    {o.lat && o.lng && etaData[o.id] && (
+                      <div style={{display:"flex",gap:8,padding:"8px 14px",
+                        background:"rgba(184,255,0,.06)",borderLeft:"3px solid #b8ff00",
+                        borderRight:"1px solid rgba(184,255,0,.1)",
+                        borderBottom: expandedMap === o.id ? "none" : "1px solid rgba(184,255,0,.1)",
+                        borderRadius: expandedMap === o.id ? 0 : "0 0 10px 10px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
+                          <span>🕐</span>
+                          <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                            fontSize:"1rem",color:"#b8ff00"}}>{etaData[o.id].duration}</span>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span>📏</span>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",
+                            color:"#5a5470"}}>{etaData[o.id].distance}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Map */}
+                    {expandedMap === o.id && o.lat && o.lng && (
+                      <div style={{border:"1px solid rgba(0,245,255,.15)",borderTop:"none",
+                        borderRadius:"0 0 10px 10px",overflow:"hidden"}}>
+                        <div id={`map-focus-${o.id}`}
+                          ref={el => { if (el) setTimeout(() => initMap(`map-focus-${o.id}`, o.lat!, o.lng!), 100); }}
+                          style={{height:200,width:"100%"}} />
+                        <div style={{padding:"8px 12px",background:"rgba(0,0,0,.4)",display:"flex",gap:8}}>
+                          <a href={`https://www.google.com/maps/dir/?api=1&destination=${o.lat},${o.lng}&travelmode=driving`}
+                            target="_blank" rel="noopener"
+                            style={{flex:1,padding:"9px",borderRadius:6,textAlign:"center",
+                              background:"rgba(0,245,255,.1)",border:"1px solid rgba(0,245,255,.2)",
+                              color:"#00f5ff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                              fontSize:".82rem",textDecoration:"none",letterSpacing:".04em"}}>
+                            🧭 GOOGLE MAPS
+                          </a>
+                          <a href={`https://waze.com/ul?ll=${o.lat},${o.lng}&navigate=yes`}
+                            target="_blank" rel="noopener"
+                            style={{padding:"9px 16px",borderRadius:6,textAlign:"center",
+                              background:"rgba(51,122,255,.1)",border:"1px solid rgba(51,122,255,.2)",
+                              color:"#337aff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                              fontSize:".82rem",textDecoration:"none"}}>
+                            WAZE
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Articles */}
+                <div style={{background:"rgba(255,255,255,.02)",borderRadius:10,padding:"12px 14px",
+                  border:"1px solid rgba(255,255,255,.06)"}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470",
+                    letterSpacing:".12em",marginBottom:6}}>ARTICLES</div>
+                  {o.items.split("\n").map((line, i) => (
+                    <div key={i} style={{fontSize:".9rem",padding:"3px 0",color:"#d0d0e0",
+                      borderBottom: i < o.items.split("\n").length - 1 ? "1px solid rgba(255,255,255,.04)" : "none"}}>
+                      {line}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Paiement */}
+                <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+                  background: o.paidOnline ? "rgba(184,255,0,.06)" : "rgba(255,165,0,.06)",
+                  border:`1px solid ${o.paidOnline ? "rgba(184,255,0,.2)" : "rgba(255,165,0,.2)"}`,
+                  borderRadius:10}}>
+                  <span style={{fontSize:"1.3rem"}}>{o.paidOnline ? "💳" : "💵"}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
+                      color: o.paidOnline ? "#b8ff00" : "#ffa500"}}>
+                      {o.paidOnline ? "PAYÉ EN LIGNE" : "PAIEMENT EN ESPÈCES"}
+                    </div>
+                    {!o.paidOnline && (
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
+                        marginTop:2}}>
+                        Récupérer {Number(o.total).toFixed(2)} € à la livraison
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Boutons d'action */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4}}>
+                  <button onClick={() => setConfirmAction({id: o.id, type: "deliver"})}
+                    style={{gridColumn:"1 / -1",padding:"16px",borderRadius:12,border:"none",
+                      background:"linear-gradient(135deg,#b8ff00,#7acc00)",
+                      color:"#000",fontFamily:"'Black Ops One',cursive",fontSize:"1.05rem",
+                      letterSpacing:".06em",cursor:"pointer",
+                      boxShadow:"0 6px 24px rgba(184,255,0,.35)"}}>
+                    ✓ LIVRAISON EFFECTUÉE
+                  </button>
+                  <a href={`https://wa.me/${o.phone.replace(/[^0-9+]/g,"")}?text=${encodeURIComponent(`Bonjour ${o.name || ""}, je suis en route pour votre livraison ! 🏍️ Yassala`)}`}
+                    target="_blank" rel="noopener"
+                    style={{padding:"13px",borderRadius:12,
+                      background:"rgba(37,211,102,.1)",border:"1px solid rgba(37,211,102,.3)",
+                      color:"#25d366",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                      fontSize:".9rem",textDecoration:"none",textAlign:"center",
+                      letterSpacing:".04em",display:"flex",alignItems:"center",
+                      justifyContent:"center",gap:6}}>
+                    🏍️ EN ROUTE
+                  </a>
+                  <button onClick={() => setProblemModal({orderId: o.id})}
+                    style={{padding:"13px",borderRadius:12,border:"1px solid rgba(255,45,120,.3)",
+                      background:"rgba(255,45,120,.07)",color:"#ff2d78",
+                      fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",
+                      cursor:"pointer",letterSpacing:".04em"}}>
+                    ⚠️ PROBLÈME
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div style={{height:20}} />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
