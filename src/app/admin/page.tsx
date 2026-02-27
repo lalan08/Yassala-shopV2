@@ -113,9 +113,11 @@ export default function AdminPage() {
   const [newPwd,  setNewPwd]  = useState("");
   const [newPwd2, setNewPwd2] = useState("");
   const [pwdFormErr, setPwdFormErr] = useState("");
-  const prevOrderIdsRef  = useRef<Set<string>>(new Set());
-  const dragRef          = useRef<number | null>(null);
-  const isFirstLoadRef   = useRef(true);
+  const prevOrderIdsRef    = useRef<Set<string>>(new Set());
+  const prevOrderStatesRef = useRef<Map<string, string>>(new Map());
+  const dragRef            = useRef<number | null>(null);
+  const isFirstLoadRef     = useRef(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // ── Alertes opérationnelles ──
   const {
@@ -141,6 +143,26 @@ export default function AdminPage() {
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.55);
+    } catch {}
+  }, []);
+
+  // Son distinct pour livraison/retrait confirmé (deux notes descendantes)
+  const playDeliverySound = useCallback(() => {
+    try {
+      const ctx  = new AudioContext();
+      const gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      [1047, 784].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        osc.connect(gain);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const t = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0.28, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        osc.start(t);
+        osc.stop(t + 0.35);
+      });
     } catch {}
   }, []);
 
@@ -207,6 +229,7 @@ export default function AdminPage() {
         .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       if (!isFirstLoadRef.current) {
+        // ── Nouvelles commandes ──
         const added = allOrders.filter(o => o.id && !prevOrderIdsRef.current.has(o.id) && o.status === "nouveau");
         if (added.length > 0) {
           playOrderSound();
@@ -220,9 +243,42 @@ export default function AdminPage() {
             }
           });
         }
+
+        // ── Détection changements de statut (livraison / retrait) ──
+        allOrders.forEach(o => {
+          if (!o.id) return;
+          const prevStatus = prevOrderStatesRef.current.get(o.id);
+          if (!prevStatus || prevStatus === o.status) return;
+
+          const isDelivery = (o as any).fulfillmentType !== "pickup";
+          const name = (o as any).name || o.phone;
+
+          if (o.status === "livre" && prevStatus !== "livre") {
+            playDeliverySound();
+            if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+              new Notification(isDelivery ? "✅ Commande livrée !" : "✅ Commande retirée !", {
+                body: `#${(o as any).orderNumber ?? o.id!.slice(-6).toUpperCase()} — ${name}  •  ${Number(o.total).toFixed(2)} €`,
+                icon: "/favicon.ico",
+                tag: `done-${o.id}`,
+              });
+            }
+          } else if (o.status === "en_cours" && (prevStatus === "nouveau")) {
+            playOrderSound();
+            if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+              new Notification("🏍️ Livreur en route !", {
+                body: `#${(o as any).orderNumber ?? o.id!.slice(-6).toUpperCase()} — ${name} pris en charge`,
+                icon: "/favicon.ico",
+                tag: `enroute-${o.id}`,
+              });
+            }
+          }
+        });
+
         prevOrderIdsRef.current = new Set(allOrders.map(o => o.id!));
+        prevOrderStatesRef.current = new Map(allOrders.map(o => [o.id!, o.status]));
       } else {
         prevOrderIdsRef.current = new Set(allOrders.map(o => o.id!));
+        prevOrderStatesRef.current = new Map(allOrders.map(o => [o.id!, o.status]));
         isFirstLoadRef.current = false;
       }
 
@@ -394,8 +450,8 @@ export default function AdminPage() {
   };
 
   const deleteOrder = async (id: string) => {
-    if (!confirm("Supprimer cette commande ?")) return;
     await deleteDoc(doc(db, "orders", id));
+    setConfirmDeleteId(null);
     showToast("Commande supprimée");
   };
 
@@ -1907,12 +1963,29 @@ export default function AdminPage() {
                                 fontSize:".88rem",letterSpacing:".06em",cursor:"pointer"}}>
                               🖨 TICKET
                             </button>
-                            <button onClick={() => deleteOrder(o.id!)}
-                              style={{background:"transparent",border:"1px solid rgba(255,45,120,.2)",color:"#5a5470",
-                                padding:"6px 12px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
-                                fontSize:".88rem",letterSpacing:".06em",cursor:"pointer"}}>
-                              ✕
-                            </button>
+                            {confirmDeleteId === o.id ? (
+                              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                                <button onClick={() => deleteOrder(o.id!)}
+                                  style={{background:"rgba(255,45,120,.18)",border:"1px solid #ff2d78",color:"#ff2d78",
+                                    padding:"6px 10px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                                    fontSize:".78rem",letterSpacing:".06em",cursor:"pointer",fontWeight:700}}>
+                                  ✕ OUI
+                                </button>
+                                <button onClick={() => setConfirmDeleteId(null)}
+                                  style={{background:"transparent",border:"1px solid rgba(255,255,255,.15)",color:"#5a5470",
+                                    padding:"6px 8px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                                    fontSize:".78rem",cursor:"pointer"}}>
+                                  NON
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteId(o.id!)}
+                                style={{background:"transparent",border:"1px solid rgba(255,45,120,.25)",color:"#7a5070",
+                                  padding:"6px 12px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                                  fontSize:".88rem",letterSpacing:".06em",cursor:"pointer"}}>
+                                🗑
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

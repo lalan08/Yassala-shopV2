@@ -796,6 +796,7 @@ export default function Home() {
               total: totalWithDelivery,
               address: fulfillmentType === 'delivery' ? orderForm.address : `Click & Collect — ${pickupSnapshot?.name}`,
               method: 'cash',
+              fulfillmentType,
               trackingUrl: `${window.location.origin}/suivi?id=${orderRef.id}`,
             }),
           }).catch(() => {});
