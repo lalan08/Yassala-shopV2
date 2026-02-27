@@ -944,7 +944,7 @@ export default function AdminPage() {
       <div className="admin-breadcrumb" style={{padding:"10px 24px",fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:400,color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(10,10,18,.85)"}}>
         <span style={{color:"#5a5470"}}>🏠 Accueil</span>
         <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
-        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",dispatch:"Dispatch",online_drivers:"Livreurs en ligne",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",drivers:"Livreurs",settings:"Paramètres"}[tab]}</span>
+        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",dispatch:"Dispatch",online_drivers:"Livreur en ligne",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",drivers:"Candidature",settings:"Paramètres"}[tab]}</span>
       </div>
 
       <div className="admin-shopbar" style={{background: settings.shopOpen ? "rgba(184,255,0,.08)" : "rgba(255,45,120,.08)",
@@ -1002,9 +1002,9 @@ export default function AdminPage() {
               { key:"dashboard",      label:"TABLEAU DE BORD",  icon:"📊" },
               { key:"orders",         label:"COMMANDES",        icon:"📦" },
               { key:"dispatch",       label:"DISPATCH",         icon:"🗺️" },
-              { key:"online_drivers", label:"EN LIGNE",         icon:"🟢" },
+              { key:"online_drivers", label:"LIVREUR EN LIGNE", icon:"🟢" },
               { key:"users",          label:"CLIENTS",          icon:"👥" },
-              { key:"drivers",        label:"LIVREURS",         icon:"🏍️" },
+              { key:"drivers",        label:"CANDIDATURE",      icon:"🏍️" },
             ]},
             { section:"CATALOGUE", items:[
               { key:"products",   label:"PRODUITS",        icon:"🍺" },
