@@ -7,7 +7,7 @@
     },
     {
       "path": "/api/driver-timeout",
-      "schedule": "*/2 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }
