@@ -24,7 +24,7 @@ const storage = getStorage(app);
 // ── TYPES ──
 type Product = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; isActive?: boolean; };
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
-type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; };
+type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; isRush?: boolean; rushFee?: number; };
 type PickupLocation = { id?: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
@@ -488,6 +488,16 @@ export default function AdminPage() {
     await deleteDoc(doc(db, "orders", id));
     setConfirmDeleteId(null);
     showToast("Commande supprimée");
+  };
+
+  const toggleRush = async (id: string, currentIsRush?: boolean) => {
+    const newIsRush = !currentIsRush;
+    await updateDoc(doc(db, "orders", id), {
+      isRush: newIsRush,
+      rushFee: newIsRush ? 2.00 : 0,
+      rushMarkedAt: newIsRush ? new Date().toISOString() : null,
+    });
+    showToast(newIsRush ? "🚨 Commande marquée RUSH" : "RUSH retiré");
   };
 
   const adminTakeOrder = async (orderId: string) => {
@@ -2178,6 +2188,12 @@ export default function AdminPage() {
                                 background:"rgba(0,245,255,.12)",color:"#00f5ff",borderRadius:3,
                                 padding:"2px 7px",letterSpacing:".08em"}}>🏪 COLLECT</span>
                             )}
+                            {o.isRush && (
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                                background:"rgba(239,68,68,.2)",color:"#ef4444",borderRadius:3,
+                                padding:"2px 7px",letterSpacing:".08em",fontWeight:700,
+                                border:"1px solid rgba(239,68,68,.5)"}}>🚨 RUSH</span>
+                            )}
                           </div>
                           {/* Client */}
                           <div style={{fontWeight:700,fontSize:"1rem",marginBottom:2}}>{(o as any).name || o.phone}</div>
@@ -2212,7 +2228,15 @@ export default function AdminPage() {
                             <option value="livre">🟢 {(o as any).fulfillmentType === 'pickup' ? 'RETIRÉ' : 'LIVRÉ'}</option>
                             <option value="annule">⚫ ANNULÉ</option>
                           </select>
-                          <div style={{display:"flex",gap:6}}>
+                          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                            <button onClick={() => toggleRush(o.id!, o.isRush)}
+                              style={{background: o.isRush ? "rgba(239,68,68,.18)" : "rgba(239,68,68,.08)",
+                                border:`1px solid ${o.isRush ? "#ef4444" : "rgba(239,68,68,.3)"}`,
+                                color:"#ef4444",padding:"6px 12px",borderRadius:4,
+                                fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",
+                                letterSpacing:".06em",cursor:"pointer",fontWeight: o.isRush ? 700 : 400}}>
+                              {o.isRush ? "⛔ RUSH OFF" : "🚨 RUSH"}
+                            </button>
                             <button onClick={() => printOrder(o)}
                               style={{background:"transparent",border:"1px solid rgba(0,245,255,.3)",color:"#00f5ff",
                                 padding:"6px 14px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
