@@ -946,6 +946,11 @@ export default function Home() {
           createdAt: new Date().toISOString(), lastLoginAt: new Date().toISOString(),
         });
       } catch {}
+      try {
+        const saved = JSON.parse(localStorage.getItem("yassala_profile") || "{}");
+        localStorage.setItem("yassala_profile", JSON.stringify({ ...saved, name: authName.trim(), email: authEmail.trim() }));
+      } catch {}
+      setOrderForm(f => ({ ...f, name: f.name || authName.trim(), email: f.email || authEmail.trim() }));
       setShowAuthModal(false);
       showToast("Compte créé ! Bienvenue 🎉");
     } catch (e: any) { setAuthError(translateAuthError(e.code)); }
@@ -960,6 +965,11 @@ export default function Home() {
     try {
       const { user } = await signInWithEmailAndPassword(auth, authEmail.trim(), authPassword);
       await setDoc(doc(db, "users", user.uid), { lastLoginAt: new Date().toISOString() }, { merge: true });
+      try {
+        const saved = JSON.parse(localStorage.getItem("yassala_profile") || "{}");
+        localStorage.setItem("yassala_profile", JSON.stringify({ ...saved, email: authEmail.trim() }));
+      } catch {}
+      setOrderForm(f => ({ ...f, email: f.email || authEmail.trim() }));
       setShowAuthModal(false);
       showToast("Connecté !");
     } catch (e: any) { setAuthError(translateAuthError(e.code)); }
@@ -2836,7 +2846,13 @@ export default function Home() {
           </button>
 
           {/* Compte / Connexion */}
-          <button onClick={() => currentUser ? (setShowHistory(true), fetchHistory()) : setShowAuthModal(true)}
+          <button onClick={() => {
+            if (currentUser) { setShowHistory(true); fetchHistory(); }
+            else {
+              if (!authEmail && orderForm.email) setAuthEmail(orderForm.email);
+              setShowAuthModal(true);
+            }
+          }}
             style={{width:54,height:54,borderRadius:"50%",
               background: currentUser ? "rgba(255,45,120,.08)" : "rgba(0,245,255,.05)",
               border: currentUser ? "1px solid rgba(255,45,120,.4)" : "1px solid rgba(0,245,255,.25)",
