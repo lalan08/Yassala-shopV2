@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, query, where, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, query, where, getDocs, deleteDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
@@ -260,8 +260,12 @@ export default function LivreurPage() {
       assignedDriverName: driverData.name,
       status: "en_cours",
     });
-    // Passer en "busy" dans la collection drivers
-    setDoc(doc(db, "drivers", driverData.id), { status: "busy", lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
+    // Passer en "busy" et ajouter à activeOrderIds (multi-commandes)
+    setDoc(doc(db, "drivers", driverData.id), {
+      status: "busy",
+      lastSeen: serverTimestamp(),
+      activeOrderIds: arrayUnion(orderId),
+    }, { merge: true }).catch(() => {});
     const order = orders.find(o => o.id === orderId);
     if (order?.email) {
       fetch('/api/email', {
@@ -286,8 +290,13 @@ export default function LivreurPage() {
       status: "livre",
       deliveredAt: new Date().toISOString(),
     });
-    // Repasser "online" si plus aucune commande active après livraison
-    setDoc(doc(db, "drivers", driverData.id), { status: "online", lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
+    // Retirer de activeOrderIds; repasser "online" seulement si plus aucune commande active
+    const remainingActive = myOrders.filter(o => o.id !== orderId);
+    setDoc(doc(db, "drivers", driverData.id), {
+      status: remainingActive.length === 0 ? "online" : "busy",
+      lastSeen: serverTimestamp(),
+      activeOrderIds: arrayRemove(orderId),
+    }, { merge: true }).catch(() => {});
     const order = orders.find(o => o.id === orderId);
     if (order?.email) {
       fetch('/api/email', {
@@ -982,6 +991,27 @@ export default function LivreurPage() {
           <div style={{position:"absolute",right:-30,top:-30,width:120,height:120,
             borderRadius:"50%",background:"rgba(184,255,0,.03)",pointerEvents:"none"}} />
         </div>
+
+        {/* Bandeau multi-commandes actives */}
+        {myOrders.length > 1 && (
+          <div style={{marginBottom:14,background:"rgba(0,245,255,.08)",
+            border:"1px solid rgba(0,245,255,.3)",borderRadius:10,
+            padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:"1.1rem"}}>⚡</span>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",
+                color:"#00f5ff",fontWeight:700,letterSpacing:".08em"}}>
+                {myOrders.length} COMMANDES EN PARALLÈLE
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                color:"#5a5470",marginTop:2}}>
+                Mode multi-livraison actif · livrez dans l'ordre affiché
+              </div>
+            </div>
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",
+              color:"#00f5ff",opacity:.7}}>{myOrders.length}/2</div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{display:"flex",gap:6,marginBottom:18}}>

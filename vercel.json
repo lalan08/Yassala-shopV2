@@ -4,6 +4,10 @@
     {
       "path": "/api/boost",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/driver-timeout",
+      "schedule": "*/2 * * * *"
     }
   ]
 }
