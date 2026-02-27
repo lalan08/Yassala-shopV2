@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, query, where, getDocs, deleteDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, query, where, orderBy, getDocs, deleteDoc, serverTimestamp, arrayUnion, arrayRemove } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
@@ -38,7 +38,7 @@ export default function LivreurPage() {
   const [newOrderAlert, setNewOrderAlert] = useState(false);
   const prevOrderCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const [walletTxns, setWalletTxns] = useState<any[]>([]);
   const [confirmAction, setConfirmAction] = useState<{id: string; type: "take"|"deliver"} | null>(null);
   const [expandedMap, setExpandedMap] = useState<string | null>(null);
   const [etaData, setEtaData] = useState<Record<string, {duration: string; distance: string}>>({});
@@ -374,12 +374,16 @@ export default function LivreurPage() {
     };
   }, []);
 
-  // Listener gains livreur (collection deliveries)
+  // Listener wallet_transactions temps réel
   useEffect(() => {
     if (!driverData?.id || !loggedIn) return;
     const unsub = onSnapshot(
-      query(collection(db, "deliveries"), where("driverId", "==", driverData.id)),
-      snap => setDeliveries(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+      query(
+        collection(db, "wallet_transactions"),
+        where("driverId", "==", driverData.id),
+        orderBy("createdAt", "desc")
+      ),
+      snap => setWalletTxns(snap.docs.map(d => ({ id: d.id, ...d.data() })))
     );
     return () => unsub();
   }, [driverData?.id, loggedIn]);
@@ -396,14 +400,30 @@ export default function LivreurPage() {
     (o.deliveredAt || o.createdAt).slice(0, 10) === todayStr
   );
 
-  // Calcul wallet
-  const earningsTotal = deliveries
-    .filter(d => d.status === "pending" || d.status === "validated")
-    .reduce((s, d) => s + (d.totalPay || 0), 0);
-  const cashToReturn = deliveries
-    .filter(d => d.paymentType === "CASH" && d.cashStatus === "unsettled")
-    .reduce((s, d) => s + (d.cashCollectedAmount || 0), 0);
-  const netPayout = earningsTotal - cashToReturn;
+  // ── Calculs wallet depuis wallet_transactions ──────────────────────────
+  // Début de semaine = vendredi dernier (ou aujourd'hui si vendredi)
+  const weekStartStr = (() => {
+    const d = new Date();
+    const offset = (d.getDay() - 5 + 7) % 7; // 0 si vendredi
+    d.setDate(d.getDate() - offset);
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  // Gains du jour (hors virements)
+  const gainsJour = walletTxns
+    .filter(t => t.type !== "payment" && (t.createdAt || "").slice(0, 10) === todayStr)
+    .reduce((s, t) => s + (t.amount || 0), 0);
+
+  // Portefeuille cette semaine (depuis dernier vendredi, hors virements)
+  const portefeuilleWeek = walletTxns
+    .filter(t => t.type !== "payment" && (t.createdAt || "") >= weekStartStr)
+    .reduce((s, t) => s + (t.amount || 0), 0);
+
+  // Dernière transaction de livraison
+  const derniereTransaction = walletTxns.find(t => t.type !== "payment");
+
+  // Vendredi prochain (affichage)
   const nextFriday = (() => {
     const d = new Date();
     const days = (5 - d.getDay() + 7) % 7 || 7;
@@ -1266,67 +1286,157 @@ export default function LivreurPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:22}}>
+        {/* Stats livraisons */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
           <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(0,245,255,.1)",
             borderRadius:12,padding:"14px 16px",borderLeft:"3px solid #00f5ff"}}>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
-              letterSpacing:".08em",marginBottom:2}}>AUJOURD&apos;HUI</div>
-            <div style={{fontWeight:700,fontSize:"1.5rem",color:"#00f5ff"}}>{stats.today}</div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470",
+              letterSpacing:".08em",marginBottom:2}}>LIVRAISONS AUJOURD&apos;HUI</div>
+            <div style={{fontWeight:700,fontSize:"1.6rem",color:"#00f5ff"}}>{stats.today}</div>
           </div>
           <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(184,255,0,.1)",
             borderRadius:12,padding:"14px 16px",borderLeft:"3px solid #b8ff00"}}>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
-              letterSpacing:".08em",marginBottom:2}}>TOTAL</div>
-            <div style={{fontWeight:700,fontSize:"1.5rem",color:"#b8ff00"}}>{stats.total}</div>
-          </div>
-          <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,45,120,.1)",
-            borderRadius:12,padding:"14px 16px",borderLeft:"3px solid #ff2d78"}}>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",
-              letterSpacing:".08em",marginBottom:2}}>CA JOUR</div>
-            <div style={{fontWeight:700,fontSize:"1.5rem",color:"#ff2d78"}}>{stats.todayRevenue.toFixed(0)}€</div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470",
+              letterSpacing:".08em",marginBottom:2}}>TOTAL LIVRAISONS</div>
+            <div style={{fontWeight:700,fontSize:"1.6rem",color:"#b8ff00"}}>{stats.total}</div>
           </div>
         </div>
 
-        {/* Wallet */}
-        <div style={{marginBottom:20,background:"rgba(184,255,0,.05)",
-          border:"1px solid rgba(184,255,0,.25)",borderRadius:14,padding:"16px 18px",
-          position:"relative",overflow:"hidden"}}>
-          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".63rem",color:"#5a5470",
-            letterSpacing:".15em",marginBottom:3}}>PROCHAIN VIREMENT · VENDREDI {nextFriday}</div>
-          <div style={{display:"flex",alignItems:"flex-end",gap:10,marginBottom:10}}>
-            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2.4rem",color:"#b8ff00",
-              textShadow:"0 0 22px rgba(184,255,0,.45)",lineHeight:1}}>
-              {netPayout.toFixed(2)}€
+        {/* ── WALLET ─────────────────────────────────────────────────── */}
+
+        {/* Ligne 1 : Gains du jour + Dernière livraison */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          {/* Gains du jour */}
+          <div style={{background:"rgba(184,255,0,.05)",border:"1px solid rgba(184,255,0,.2)",
+            borderRadius:12,padding:"14px 16px"}}>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",
+              letterSpacing:".1em",marginBottom:6}}>GAINS DU JOUR</div>
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.7rem",color:"#b8ff00",
+              textShadow:"0 0 16px rgba(184,255,0,.4)",lineHeight:1}}>
+              {gainsJour > 0 ? `+${gainsJour.toFixed(2)}€` : "0.00€"}
             </div>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",
-              paddingBottom:6}}>NET</div>
           </div>
-          <div style={{display:"flex",gap:18,alignItems:"center"}}>
-            <div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",
-                letterSpacing:".1em"}}>GAINS</div>
-              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
-                color:"#b8ff00"}}>+{earningsTotal.toFixed(2)}€</div>
-            </div>
-            {cashToReturn > 0 && (
-              <div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",
-                  letterSpacing:".1em"}}>CASH À REVERSER</div>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
-                  color:"#ff2d78"}}>-{cashToReturn.toFixed(2)}€</div>
+          {/* Dernière livraison */}
+          <div style={{background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.15)",
+            borderRadius:12,padding:"14px 16px"}}>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",
+              letterSpacing:".1em",marginBottom:6}}>DERNIÈRE LIVRAISON</div>
+            {derniereTransaction ? (
+              <>
+                <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.7rem",color:"#00f5ff",
+                  textShadow:"0 0 16px rgba(0,245,255,.35)",lineHeight:1}}>
+                  +{(derniereTransaction.amount || 0).toFixed(2)}€
+                </div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".58rem",
+                  color:"#5a5470",marginTop:4,overflow:"hidden",textOverflow:"ellipsis",
+                  whiteSpace:"nowrap"}}>
+                  {derniereTransaction.description || "Livraison"}
+                </div>
+              </>
+            ) : (
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.7rem",color:"#3a3455",lineHeight:1}}>
+                —
               </div>
             )}
-            <a href="/driver/wallet"
-              style={{marginLeft:"auto",fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
-                color:"#b8ff00",textDecoration:"none",letterSpacing:".1em",
-                background:"rgba(184,255,0,.1)",border:"1px solid rgba(184,255,0,.2)",
-                borderRadius:8,padding:"6px 12px"}}>
-              DÉTAIL →
-            </a>
           </div>
-          <div style={{position:"absolute",right:-30,top:-30,width:120,height:120,
-            borderRadius:"50%",background:"rgba(184,255,0,.03)",pointerEvents:"none"}} />
+        </div>
+
+        {/* Ligne 2 : Portefeuille cette semaine */}
+        <div style={{marginBottom:10,background:"rgba(184,255,0,.07)",
+          border:"1px solid rgba(184,255,0,.3)",borderRadius:14,padding:"18px 20px",
+          position:"relative",overflow:"hidden"}}>
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#7a7490",
+            letterSpacing:".14em",marginBottom:8}}>PORTEFEUILLE (CETTE SEMAINE)</div>
+          <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2.6rem",color:"#b8ff00",
+            textShadow:"0 0 28px rgba(184,255,0,.5)",lineHeight:1}}>
+            {portefeuilleWeek.toFixed(2)}€
+          </div>
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",
+            marginTop:6,letterSpacing:".06em"}}>
+            depuis vendredi {weekStartStr.slice(8, 10)}/{weekStartStr.slice(5, 7)}
+          </div>
+          <div style={{position:"absolute",right:-20,bottom:-20,width:100,height:100,
+            borderRadius:"50%",background:"rgba(184,255,0,.04)",pointerEvents:"none"}} />
+        </div>
+
+        {/* Ligne 3 : À recevoir vendredi */}
+        <div style={{marginBottom:16,background:"rgba(255,45,120,.05)",
+          border:"1px solid rgba(255,45,120,.25)",borderRadius:14,padding:"16px 20px",
+          display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#7a7490",
+              letterSpacing:".14em",marginBottom:6}}>À RECEVOIR VENDREDI {nextFriday}</div>
+            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2rem",color:"#ff2d78",
+              textShadow:"0 0 20px rgba(255,45,120,.4)",lineHeight:1}}>
+              {portefeuilleWeek.toFixed(2)}€
+            </div>
+          </div>
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"2rem",color:"rgba(255,45,120,.2)"}}>
+            💸
+          </div>
+        </div>
+
+        {/* Ligne 4 : Historique des gains */}
+        <div style={{marginBottom:20,background:"rgba(255,255,255,.02)",
+          border:"1px solid rgba(255,255,255,.07)",borderRadius:14,overflow:"hidden"}}>
+          <div style={{padding:"14px 18px 10px",borderBottom:"1px solid rgba(255,255,255,.06)",
+            display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#7a7490",
+              letterSpacing:".12em"}}>HISTORIQUE DES GAINS</div>
+            {walletTxns.length > 0 && (
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",
+                color:"#3a3455",letterSpacing:".06em"}}>
+                {walletTxns.filter(t => t.type !== "payment").length} transaction{walletTxns.filter(t => t.type !== "payment").length > 1 ? "s" : ""}
+              </div>
+            )}
+          </div>
+
+          {walletTxns.length === 0 ? (
+            <div style={{padding:"24px 18px",textAlign:"center",fontFamily:"'Share Tech Mono',monospace",
+              fontSize:".7rem",color:"#3a3455",letterSpacing:".06em"}}>
+              Aucune transaction pour l&apos;instant
+            </div>
+          ) : (
+            <div style={{maxHeight:260,overflowY:"auto"}}>
+              {walletTxns.slice(0, 30).map((t, i) => {
+                const isPayment = t.type === "payment";
+                const amount = t.amount || 0;
+                const date = t.createdAt ? new Date(t.createdAt) : null;
+                const timeStr = date ? date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "";
+                const dateStr = date ? date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) : "";
+                const isToday = t.createdAt?.slice(0, 10) === todayStr;
+                return (
+                  <div key={t.id || i}
+                    style={{display:"flex",alignItems:"center",gap:12,padding:"11px 18px",
+                      borderBottom: i < walletTxns.length - 1 ? "1px solid rgba(255,255,255,.04)" : "none",
+                      background: isPayment ? "rgba(0,245,255,.03)" : "transparent"}}>
+                    <div style={{width:34,height:34,borderRadius:10,flexShrink:0,
+                      background: isPayment ? "rgba(0,245,255,.1)" : "rgba(184,255,0,.08)",
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:"1rem"}}>
+                      {isPayment ? "🏦" : t.type === "bonus" ? "⭐" : "🏍️"}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:600,
+                        fontSize:".9rem",color: isPayment ? "#00f5ff" : "#f0eeff",
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {t.description || (isPayment ? "Virement du vendredi" : "Livraison")}
+                      </div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",
+                        color:"#5a5470",marginTop:2}}>
+                        {isToday ? `aujourd'hui ${timeStr}` : `${dateStr} ${timeStr}`}
+                      </div>
+                    </div>
+                    <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",
+                      color: isPayment ? "#00f5ff" : amount >= 0 ? "#b8ff00" : "#ff2d78",
+                      flexShrink:0}}>
+                      {isPayment ? `-${Math.abs(amount).toFixed(2)}€` : `+${amount.toFixed(2)}€`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Bandeau multi-commandes actives */}
