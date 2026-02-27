@@ -4,14 +4,15 @@
  * Assigns the best available driver to a delivery order.
  *
  * Criteria (in order of priority):
- *  1. Driver must be online (isOnline === true, status === "online", lastSeen < 5 min ago)
- *  2. Driver must not be on an active delivery (status !== "busy")
+ *  1. Driver must be online (isOnline === true, status === "online"|"busy", lastSeen < 5 min ago)
+ *  2. Driver must have fewer than MAX_ORDERS_PER_DRIVER active orders (multi-order support)
  *  3. Lowest composite score:  score = distance_km - rating * RATING_WEIGHT
  *     → closer driver wins; higher rating breaks ties
+ *  4. For RUSH orders: performanceScore also weighted (faster drivers prioritised)
  *
  * Firestore collections used:
- *  - orders/{orderId}          : read lat/lng, write assignedDriver
- *  - drivers/{id}              : read online/status/rating
+ *  - orders/{orderId}          : read lat/lng/isRush, write assignedDriver
+ *  - drivers/{id}              : read online/status/rating/activeOrderIds
  *  - driver_locations/{id}     : read lat/lng
  *
  * Requires FIREBASE_SERVICE_ACCOUNT_JSON env var in production.
@@ -41,6 +42,9 @@ const RATING_WEIGHT = 0.5;
 
 // Driver considered offline if lastSeen > 5 minutes ago
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
+
+// Maximum simultaneous active orders per driver (Phase 2 — multi-order)
+const MAX_ORDERS_PER_DRIVER = 2;
 
 export async function POST(request: Request) {
   try {
@@ -89,8 +93,13 @@ export async function POST(request: Request) {
       .filter((d: any) => {
         // Must be explicitly online
         if (!d.isOnline) return false;
-        // Must not be on an active delivery
-        if (d.status === 'busy' || d.status === 'offline') return false;
+        // Offline drivers are never eligible
+        if (d.status === 'offline') return false;
+        // Busy drivers are eligible only if below the multi-order cap
+        if (d.status === 'busy') {
+          const activeCount = Array.isArray(d.activeOrderIds) ? d.activeOrderIds.length : 0;
+          if (activeCount >= MAX_ORDERS_PER_DRIVER) return false;
+        }
         // Must have pinged recently
         if (!d.lastSeen) return false;
         const lastSeenMs: number = d.lastSeen?.toMillis
