@@ -156,11 +156,11 @@ export default function AIChatWidget({ context }: AIChatWidgetProps) {
         title="Demander à l'IA"
         style={{
           position:   "fixed",
-          bottom:     24,
-          left:       24,
+          bottom:     90,
+          left:       14,
           zIndex:     1000,
-          width:      52,
-          height:     52,
+          width:      44,
+          height:     44,
           borderRadius: "50%",
           background: open
             ? "rgba(0,245,255,.12)"
@@ -171,7 +171,7 @@ export default function AIChatWidget({ context }: AIChatWidgetProps) {
           display:    "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize:   "1.3rem",
+          fontSize:   "1.1rem",
           transition: "all .25s",
         }}
       >
@@ -198,8 +198,8 @@ export default function AIChatWidget({ context }: AIChatWidgetProps) {
       {open && (
         <div style={{
           position:   "fixed",
-          bottom:     88,
-          left:       16,
+          bottom:     146,
+          left:       14,
           zIndex:     999,
           width:      "min(350px, calc(100vw - 32px))",
           height:     "min(500px, calc(100vh - 120px))",

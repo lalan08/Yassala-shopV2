@@ -180,13 +180,13 @@ export default function ChatWidget() {
           onClick={openWidget}
           className="cw-btn"
           style={{
-            position:'fixed', bottom:24, right:20, zIndex:9999,
-            width:56, height:56, borderRadius:'50%',
+            position:'fixed', bottom:90, left:66, zIndex:9999,
+            width:44, height:44, borderRadius:'50%',
             background:'linear-gradient(135deg,#ff2d78,#c0145a)',
             border:'none', cursor:'pointer',
             boxShadow:'0 4px 20px rgba(255,45,120,.5)',
             animation:'cw-pulse 2.5s infinite',
-            fontSize:'1.6rem', display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:'1.2rem', display:'flex', alignItems:'center', justifyContent:'center',
             transition:'opacity .2s, transform .2s',
           }}
           aria-label="Assistance client"
@@ -199,7 +199,7 @@ export default function ChatWidget() {
       {open && (
         <div
           style={{
-            position:'fixed', bottom:20, right:16, zIndex:9999,
+            position:'fixed', bottom:146, left:14, zIndex:9999,
             width:'min(340px, calc(100vw - 32px))',
             background:'#0a0a12',
             border:'1px solid rgba(255,45,120,.3)',
