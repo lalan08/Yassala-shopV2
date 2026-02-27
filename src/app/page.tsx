@@ -253,7 +253,7 @@ export default function Home() {
   const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string|undefined}|null>(null);
   // ── DYNAMIC DELIVERY PRICING ──
   const [distanceKm, setDistanceKm]       = useState(0);
-  const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 1, availableDrivers: 1 });
+  const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 0, availableDrivers: 1 });
 
   // ── STRIPE PAYMENT ELEMENT ──
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
