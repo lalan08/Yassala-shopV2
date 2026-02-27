@@ -98,8 +98,10 @@ export default function AdminPage() {
   const [catForm, setCatForm]             = useState<Category>({key:"",label:"",emoji:"",order:0});
   const [loading, setLoading]     = useState(false);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
-  const [orderFilter, setOrderFilter] = useState<"all"|"nouveau"|"en_cours"|"livre"|"annule">("all");
+  const [orderFilter, setOrderFilter] = useState<"all"|"nouveau"|"en_cours">("all");
   const [fulfillmentFilter, setFulfillmentFilter] = useState<"all"|"delivery"|"pickup">("all");
+  const [orderSubTab, setOrderSubTab] = useState<"active"|"archived">("active");
+  const [archiveSearch, setArchiveSearch] = useState({ date: "", client: "", phone: "" });
   const [pickupLocations, setPickupLocations] = useState<PickupLocation[]>([]);
   const [editPickupLoc, setEditPickupLoc] = useState<PickupLocation|null>(null);
   const [pickupLocForm, setPickupLocForm] = useState<PickupLocation>({name:"",address:"",city:"Cayenne",instructions:"",isActive:true});
@@ -226,6 +228,19 @@ export default function AdminPage() {
     if (!json.ok) throw new Error(json.error ?? "Erreur IA");
     return json.result;
   };
+
+  // Read URL params on mount (e.g. /admin/orders?filter=archived redirects here)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "orders") {
+      setTab("orders");
+    }
+    if (params.get("filter") === "archived") {
+      setTab("orders");
+      setOrderSubTab("archived");
+    }
+  }, []);
 
   // Load admin hash on mount + auto-restore session from localStorage
   useEffect(() => {
@@ -558,10 +573,24 @@ export default function AdminPage() {
   };
 
   const exportCSV = () => {
-    const src = orders.filter(o =>
-      (orderFilter === "all" || o.status === orderFilter) &&
-      (fulfillmentFilter === "all" || (o as any).fulfillmentType === fulfillmentFilter || (fulfillmentFilter === "delivery" && !(o as any).fulfillmentType))
-    );
+    const src = orders.filter(o => {
+      if (orderSubTab === "archived") {
+        if (o.status !== "livre" && o.status !== "annule") return false;
+        if (fulfillmentFilter !== "all" && (o as any).fulfillmentType !== fulfillmentFilter && !(fulfillmentFilter === "delivery" && !(o as any).fulfillmentType)) return false;
+        if (archiveSearch.date) {
+          const orderDate = new Date(o.createdAt).toISOString().slice(0,10);
+          if (orderDate !== archiveSearch.date) return false;
+        }
+        if (archiveSearch.client && !((o as any).name || "").toLowerCase().includes(archiveSearch.client.toLowerCase())) return false;
+        if (archiveSearch.phone && !o.phone.includes(archiveSearch.phone)) return false;
+        return true;
+      }
+      return (
+        (o.status === "nouveau" || o.status === "en_cours") &&
+        (orderFilter === "all" || o.status === orderFilter) &&
+        (fulfillmentFilter === "all" || (o as any).fulfillmentType === fulfillmentFilter || (fulfillmentFilter === "delivery" && !(o as any).fulfillmentType))
+      );
+    });
     const rows = [
       ["Date", "Client", "Téléphone", "Adresse", "Articles", "Total (€)", "Statut"],
       ...src.map(o => [
@@ -2048,12 +2077,6 @@ export default function AdminPage() {
                       NOTIFS ACTIVES
                     </div>
                   )}
-                  <button onClick={purgeArchivedOrders}
-                    style={{background:"rgba(255,45,120,.08)",border:"1px solid rgba(255,45,120,.25)",
-                      color:"#ff2d78",padding:"7px 14px",borderRadius:4,cursor:"pointer",
-                      fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",letterSpacing:".08em"}}>
-                    🗑 PURGER ARCHIVÉES
-                  </button>
                   <button onClick={exportCSV}
                     style={{background:"rgba(184,255,0,.1)",border:"1px solid rgba(184,255,0,.35)",
                       color:"#b8ff00",padding:"7px 14px",borderRadius:4,cursor:"pointer",
@@ -2092,62 +2115,82 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Filtres par mode de livraison */}
-              <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              {/* Sous-onglets ACTIVES / ARCHIVES */}
+              <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:"1px solid rgba(255,255,255,.08)"}}>
                 {([
-                  { val:"all",      label:"TOUS",       color:"#5a5470" },
-                  { val:"delivery", label:"🚗 LIVRAISON", color:"#ff2d78" },
-                  { val:"pickup",   label:"🏪 COLLECT",  color:"#00f5ff" },
-                ] as const).map(f => (
-                  <button key={f.val} onClick={() => setFulfillmentFilter(f.val)}
-                    style={{background: fulfillmentFilter===f.val ? `${f.color}22` : "transparent",
-                      border:`1px solid ${fulfillmentFilter===f.val ? f.color : "rgba(255,255,255,.1)"}`,
-                      color: fulfillmentFilter===f.val ? f.color : "#5a5470",
-                      padding:"5px 14px",borderRadius:20,cursor:"pointer",
-                      fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",letterSpacing:".08em",
-                      transition:"all .2s"}}>
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Filtres par statut */}
-              <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-                {([
-                  { val:"all",       label:"TOUTES",    color:"#5a5470" },
-                  { val:"nouveau",   label:"NOUVEAU",   color:"#ff2d78" },
-                  { val:"en_cours",  label:"EN COURS",  color:"#ff9500" },
-                  { val:"livre",     label:"LIVRÉ",     color:"#b8ff00" },
-                  { val:"annule",    label:"ANNULÉ",    color:"#5a5470" },
-                ] as const).map(f => (
-                  <button key={f.val} onClick={() => setOrderFilter(f.val)}
-                    style={{background: orderFilter===f.val ? `${f.color}22` : "transparent",
-                      border:`1px solid ${orderFilter===f.val ? f.color : "rgba(255,255,255,.1)"}`,
-                      color: orderFilter===f.val ? f.color : "#5a5470",
-                      padding:"6px 16px",borderRadius:20,cursor:"pointer",
+                  { val:"active",   label:"⚡ ACTIVES",  color:"#ff2d78",
+                    count: orders.filter(o => o.status === "nouveau" || o.status === "en_cours").length },
+                  { val:"archived", label:"🗂 ARCHIVES", color:"#5a5470",
+                    count: orders.filter(o => o.status === "livre" || o.status === "annule").length },
+                ] as const).map(t => (
+                  <button key={t.val} onClick={() => setOrderSubTab(t.val)}
+                    style={{background:"transparent",border:"none",borderBottom:`2px solid ${orderSubTab===t.val ? t.color : "transparent"}`,
+                      color: orderSubTab===t.val ? t.color : "#5a5470",
+                      padding:"10px 20px",cursor:"pointer",
                       fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",letterSpacing:".08em",
-                      transition:"all .2s"}}>
-                    {f.label}
-                    {f.val !== "all" && (
-                      <span style={{marginLeft:6,opacity:.7}}>
-                        ({orders.filter(o => o.status === f.val).length})
-                      </span>
-                    )}
+                      transition:"all .2s",marginBottom:-1}}>
+                    {t.label}
+                    <span style={{marginLeft:6,opacity:.7}}>({t.count})</span>
                   </button>
                 ))}
               </div>
 
-              {orders.length === 0 ? (
-                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
-                  padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
-                  // aucune commande pour l'instant
+              {orderSubTab === "active" ? (<>
+                {/* Filtres par mode de livraison */}
+                <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                  {([
+                    { val:"all",      label:"TOUS",       color:"#5a5470" },
+                    { val:"delivery", label:"🚗 LIVRAISON", color:"#ff2d78" },
+                    { val:"pickup",   label:"🏪 COLLECT",  color:"#00f5ff" },
+                  ] as const).map(f => (
+                    <button key={f.val} onClick={() => setFulfillmentFilter(f.val)}
+                      style={{background: fulfillmentFilter===f.val ? `${f.color}22` : "transparent",
+                        border:`1px solid ${fulfillmentFilter===f.val ? f.color : "rgba(255,255,255,.1)"}`,
+                        color: fulfillmentFilter===f.val ? f.color : "#5a5470",
+                        padding:"5px 14px",borderRadius:20,cursor:"pointer",
+                        fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",letterSpacing:".08em",
+                        transition:"all .2s"}}>
+                      {f.label}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <div style={{display:"grid",gap:10}}>
-                  {orders.filter(o =>
-                    (orderFilter === "all" || o.status === orderFilter) &&
-                    (fulfillmentFilter === "all" || (o as any).fulfillmentType === fulfillmentFilter || (fulfillmentFilter === "delivery" && !(o as any).fulfillmentType))
-                  ).map(o => (
+
+                {/* Filtres par statut — actives uniquement */}
+                <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+                  {([
+                    { val:"all",      label:"TOUTES",   color:"#5a5470" },
+                    { val:"nouveau",  label:"NOUVEAU",  color:"#ff2d78" },
+                    { val:"en_cours", label:"EN COURS", color:"#ff9500" },
+                  ] as const).map(f => (
+                    <button key={f.val} onClick={() => setOrderFilter(f.val)}
+                      style={{background: orderFilter===f.val ? `${f.color}22` : "transparent",
+                        border:`1px solid ${orderFilter===f.val ? f.color : "rgba(255,255,255,.1)"}`,
+                        color: orderFilter===f.val ? f.color : "#5a5470",
+                        padding:"6px 16px",borderRadius:20,cursor:"pointer",
+                        fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",letterSpacing:".08em",
+                        transition:"all .2s"}}>
+                      {f.label}
+                      {f.val !== "all" && (
+                        <span style={{marginLeft:6,opacity:.7}}>
+                          ({orders.filter(o => o.status === f.val).length})
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {orders.filter(o => o.status === "nouveau" || o.status === "en_cours").length === 0 ? (
+                  <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                    padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
+                    // aucune commande active
+                  </div>
+                ) : (
+                  <div style={{display:"grid",gap:10}}>
+                    {orders.filter(o =>
+                      (o.status === "nouveau" || o.status === "en_cours") &&
+                      (orderFilter === "all" || o.status === orderFilter) &&
+                      (fulfillmentFilter === "all" || (o as any).fulfillmentType === fulfillmentFilter || (fulfillmentFilter === "delivery" && !(o as any).fulfillmentType))
+                    ).map(o => (
                     <div key={o.id} style={{background:"rgba(255,255,255,.02)",
                       border:`1px solid ${o.status==="nouveau" ? "rgba(255,45,120,.35)" : "rgba(255,255,255,.06)"}`,
                       borderRadius:10,padding:"18px 20px",transition:"all .15s ease",
@@ -2333,6 +2376,152 @@ export default function AdminPage() {
                   ))}
                 </div>
               )}
+              </>) : (<>
+                {/* ── ARCHIVES ── */}
+                {/* Barre de recherche */}
+                <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+                  <input
+                    type="date"
+                    value={archiveSearch.date}
+                    onChange={e => setArchiveSearch(s => ({...s, date: e.target.value}))}
+                    style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.12)",borderRadius:6,
+                      padding:"8px 12px",color:"#e0d9ff",fontFamily:"'Share Tech Mono',monospace",
+                      fontSize:".82rem",outline:"none",minWidth:160}}
+                  />
+                  <input
+                    type="text"
+                    placeholder="🔍 Client…"
+                    value={archiveSearch.client}
+                    onChange={e => setArchiveSearch(s => ({...s, client: e.target.value}))}
+                    style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.12)",borderRadius:6,
+                      padding:"8px 12px",color:"#e0d9ff",fontFamily:"'Share Tech Mono',monospace",
+                      fontSize:".82rem",outline:"none",flex:1,minWidth:160}}
+                  />
+                  <input
+                    type="text"
+                    placeholder="📞 Téléphone…"
+                    value={archiveSearch.phone}
+                    onChange={e => setArchiveSearch(s => ({...s, phone: e.target.value}))}
+                    style={{background:"#0c0918",border:"1px solid rgba(255,255,255,.12)",borderRadius:6,
+                      padding:"8px 12px",color:"#e0d9ff",fontFamily:"'Share Tech Mono',monospace",
+                      fontSize:".82rem",outline:"none",minWidth:160}}
+                  />
+                  {(archiveSearch.date || archiveSearch.client || archiveSearch.phone) && (
+                    <button onClick={() => setArchiveSearch({ date:"", client:"", phone:"" })}
+                      style={{background:"transparent",border:"1px solid rgba(255,255,255,.15)",color:"#5a5470",
+                        borderRadius:6,padding:"8px 14px",fontFamily:"'Share Tech Mono',monospace",
+                        fontSize:".82rem",cursor:"pointer",letterSpacing:".06em"}}>
+                      ✕ RÉINITIALISER
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtre livraison pour archives */}
+                <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+                  {([
+                    { val:"all",      label:"TOUS",       color:"#5a5470" },
+                    { val:"delivery", label:"🚗 LIVRAISON", color:"#ff2d78" },
+                    { val:"pickup",   label:"🏪 COLLECT",  color:"#00f5ff" },
+                  ] as const).map(f => (
+                    <button key={f.val} onClick={() => setFulfillmentFilter(f.val)}
+                      style={{background: fulfillmentFilter===f.val ? `${f.color}22` : "transparent",
+                        border:`1px solid ${fulfillmentFilter===f.val ? f.color : "rgba(255,255,255,.1)"}`,
+                        color: fulfillmentFilter===f.val ? f.color : "#5a5470",
+                        padding:"5px 14px",borderRadius:20,cursor:"pointer",
+                        fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",letterSpacing:".08em",
+                        transition:"all .2s"}}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                {(() => {
+                  const archivedOrders = orders.filter(o => {
+                    if (o.status !== "livre" && o.status !== "annule") return false;
+                    if (fulfillmentFilter !== "all" && (o as any).fulfillmentType !== fulfillmentFilter && !(fulfillmentFilter === "delivery" && !(o as any).fulfillmentType)) return false;
+                    if (archiveSearch.date) {
+                      const orderDate = new Date(o.createdAt).toISOString().slice(0,10);
+                      if (orderDate !== archiveSearch.date) return false;
+                    }
+                    if (archiveSearch.client) {
+                      const name = ((o as any).name || "").toLowerCase();
+                      if (!name.includes(archiveSearch.client.toLowerCase())) return false;
+                    }
+                    if (archiveSearch.phone) {
+                      if (!o.phone.includes(archiveSearch.phone)) return false;
+                    }
+                    return true;
+                  });
+                  if (archivedOrders.length === 0) return (
+                    <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                      padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
+                      // aucune commande archivée
+                    </div>
+                  );
+                  return (
+                    <div style={{display:"grid",gap:10}}>
+                      {archivedOrders.map(o => (
+                        <div key={o.id} style={{background:"rgba(255,255,255,.015)",
+                          border:"1px solid rgba(255,255,255,.06)",
+                          borderRadius:10,padding:"18px 20px",opacity:.85}}>
+                          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:10,gap:12}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"}}>
+                                <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",
+                                  color:"#5a5470",letterSpacing:".04em"}}>
+                                  #{(o as any).orderNumber ?? (o.id ?? '').slice(-6).toUpperCase()}
+                                </span>
+                                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470"}}>
+                                  {new Date(o.createdAt).toLocaleString("fr-FR")}
+                                </span>
+                                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                                  background: o.status==="livre" ? "rgba(184,255,0,.12)" : "rgba(90,84,112,.15)",
+                                  color: o.status==="livre" ? "#b8ff00" : "#5a5470",
+                                  border: `1px solid ${o.status==="livre" ? "rgba(184,255,0,.35)" : "rgba(90,84,112,.3)"}`,
+                                  padding:"2px 8px",borderRadius:4,letterSpacing:".08em"}}>
+                                  {o.status==="livre" ? ((o as any).fulfillmentType==="pickup" ? "🟢 RETIRÉ" : "🟢 LIVRÉ") : "⚫ ANNULÉ"}
+                                </span>
+                                {(o as any).paidOnline && (
+                                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                                    background:"rgba(184,255,0,.1)",color:"#b8ff00",borderRadius:3,
+                                    padding:"2px 6px",letterSpacing:".06em"}}>✅ STRIPE</span>
+                                )}
+                                {(o as any).fulfillmentType==="pickup" && (
+                                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                                    background:"rgba(0,245,255,.08)",color:"#00f5ff",borderRadius:3,
+                                    padding:"2px 6px",letterSpacing:".06em"}}>🏪 COLLECT</span>
+                                )}
+                              </div>
+                              <div style={{fontWeight:700,fontSize:".95rem",marginBottom:2}}>{(o as any).name || o.phone}</div>
+                              {(o as any).name && <div style={{fontSize:".76rem",color:"#7a7490",fontFamily:"'Share Tech Mono',monospace"}}>{o.phone}</div>}
+                              {(o as any).address && (
+                                <div style={{fontSize:".76rem",color:"#7a7490",marginTop:3}}>📍 {(o as any).address}</div>
+                              )}
+                            </div>
+                            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
+                              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",
+                                color:"#5a5470"}}>
+                                {Number(o.total).toFixed(2)}€
+                              </div>
+                              <button onClick={() => printOrder(o)}
+                                style={{background:"transparent",border:"1px solid rgba(0,245,255,.2)",color:"#00f5ff",
+                                  padding:"5px 12px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                                  fontSize:".8rem",letterSpacing:".06em",cursor:"pointer"}}>
+                                🖨 TICKET
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".74rem",
+                            color:"#8a84a0",borderTop:"1px solid rgba(255,255,255,.05)",paddingTop:8,
+                            lineHeight:1.9,whiteSpace:"pre-line"}}>
+                            {o.items}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </>)}
             </div>
           )}
 
