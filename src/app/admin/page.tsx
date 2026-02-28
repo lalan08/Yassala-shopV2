@@ -306,7 +306,16 @@ export default function AdminPage() {
           const isDelivery = (o as any).fulfillmentType !== "pickup";
           const name = (o as any).name || o.phone;
 
-          if (o.status === "livre" && prevStatus !== "livre") {
+          if (o.status === "confirmed" && prevStatus === "pending_confirmation") {
+            playOrderSound();
+            if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+              new Notification("✅ Client a confirmé son code !", {
+                body: `#${(o as any).orderNumber ?? o.id!.slice(-6).toUpperCase()} — ${name}  •  Appuyer VALIDER POUR LIVREUR`,
+                icon: "/favicon.ico",
+                tag: `confirmed-${o.id}`,
+              });
+            }
+          } else if (o.status === "livre" && prevStatus !== "livre") {
             playDeliverySound();
             if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
               new Notification(isDelivery ? "✅ Commande livrée !" : "✅ Commande retirée !", {
@@ -335,7 +344,7 @@ export default function AdminPage() {
         isFirstLoadRef.current = false;
       }
 
-      setNewOrdersCount(allOrders.filter(o => o.status === "nouveau").length);
+      setNewOrdersCount(allOrders.filter(o => o.status === "nouveau" || o.status === "confirmed").length);
       setOrders(allOrders);
     });
     const unsubSettings = onSnapshot(doc(db, "settings", "main"), snap => {
@@ -2133,7 +2142,7 @@ export default function AdminPage() {
               <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:"1px solid rgba(255,255,255,.08)"}}>
                 {([
                   { val:"active",   label:"⚡ ACTIVES",  color:"#ff2d78",
-                    count: orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation").length },
+                    count: orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed").length },
                   { val:"archived", label:"🗂 ARCHIVES", color:"#5a5470",
                     count: orders.filter(o => o.status === "livre" || o.status === "annule").length },
                 ] as const).map(t => (
@@ -2172,10 +2181,11 @@ export default function AdminPage() {
                 {/* Filtres par statut — actives uniquement */}
                 <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
                   {([
-                    { val:"all",                  label:"TOUTES",      color:"#5a5470" },
-                    { val:"pending_confirmation", label:"⏳ EN ATTENTE", color:"#a855f7" },
-                    { val:"nouveau",              label:"NOUVEAU",      color:"#ff2d78" },
-                    { val:"en_cours",             label:"EN COURS",     color:"#ff9500" },
+                    { val:"all",                  label:"TOUTES",         color:"#5a5470" },
+                    { val:"pending_confirmation", label:"⏳ EN ATTENTE",  color:"#a855f7" },
+                    { val:"confirmed",            label:"✅ À CONFIRMER", color:"#00f5ff" },
+                    { val:"nouveau",              label:"NOUVEAU",        color:"#ff2d78" },
+                    { val:"en_cours",             label:"EN COURS",       color:"#ff9500" },
                   ] as const).map(f => (
                     <button key={f.val} onClick={() => setOrderFilter(f.val)}
                       style={{background: orderFilter===f.val ? `${f.color}22` : "transparent",
@@ -2194,7 +2204,7 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation").length === 0 ? (
+                {orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed").length === 0 ? (
                   <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
                     padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
                     // aucune commande active
@@ -2202,14 +2212,14 @@ export default function AdminPage() {
                 ) : (
                   <div style={{display:"grid",gap:10}}>
                     {orders.filter(o =>
-                      (o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation") &&
+                      (o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed") &&
                       (orderFilter === "all" || o.status === orderFilter) &&
                       (fulfillmentFilter === "all" || (o as any).fulfillmentType === fulfillmentFilter || (fulfillmentFilter === "delivery" && !(o as any).fulfillmentType))
                     ).map(o => (
-                    <div key={o.id} style={{background:"rgba(255,255,255,.02)",
-                      border:`1px solid ${o.status==="nouveau" ? "rgba(255,45,120,.35)" : "rgba(255,255,255,.06)"}`,
+                    <div key={o.id} style={{background: o.status==="confirmed" ? "rgba(0,245,255,.03)" : "rgba(255,255,255,.02)",
+                      border:`1px solid ${o.status==="nouveau" ? "rgba(255,45,120,.35)" : o.status==="confirmed" ? "rgba(0,245,255,.45)" : "rgba(255,255,255,.06)"}`,
                       borderRadius:10,padding:"18px 20px",transition:"all .15s ease",
-                      boxShadow: o.status==="nouveau" ? "0 0 16px rgba(255,45,120,.08)" : "none"}}>
+                      boxShadow: o.status==="nouveau" ? "0 0 16px rgba(255,45,120,.08)" : o.status==="confirmed" ? "0 0 20px rgba(0,245,255,.1)" : "none"}}>
 
                       {/* En-tête commande */}
                       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:12,gap:12}}>
@@ -2253,6 +2263,14 @@ export default function AdminPage() {
                                 ⏳ ATTENTE OTP
                               </span>
                             )}
+                            {o.status === "confirmed" && (
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                                background:"rgba(0,245,255,.15)",color:"#00f5ff",borderRadius:3,
+                                padding:"2px 7px",letterSpacing:".08em",border:"1px solid rgba(0,245,255,.5)",
+                                animation:"pulse 1.5s infinite",fontWeight:700}}>
+                                ✅ CLIENT CONFIRMÉ
+                              </span>
+                            )}
                             {o.isRush && (
                               <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
                                 background:"rgba(239,68,68,.2)",color:"#ef4444",borderRadius:3,
@@ -2283,6 +2301,18 @@ export default function AdminPage() {
                             color:"#b8ff00",textShadow:"0 0 10px rgba(184,255,0,.4)"}}>
                             {Number(o.total).toFixed(2)}€
                           </div>
+                          {/* Bouton de validation admin — visible uniquement quand le client a confirmé son OTP */}
+                          {o.status === "confirmed" && (
+                            <button
+                              onClick={() => updateOrderStatus(o.id!, "nouveau")}
+                              style={{background:"#00f5ff",color:"#000",border:"none",borderRadius:8,
+                                padding:"10px 16px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                                fontSize:".95rem",letterSpacing:".08em",cursor:"pointer",
+                                textTransform:"uppercase",boxShadow:"0 0 16px rgba(0,245,255,.4)",
+                                animation:"pulse 1.5s infinite",minWidth:160}}>
+                              🚀 VALIDER POUR LIVREUR
+                            </button>
+                          )}
                           {/* OTP block — visible uniquement pour commandes en attente de confirmation */}
                           {o.status === "pending_confirmation" && (o as any).otpCode && (
                             <div style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.35)",
@@ -2310,6 +2340,7 @@ export default function AdminPage() {
                               fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
                               letterSpacing:".06em",cursor:"pointer",minWidth:130}}>
                             <option value="pending_confirmation">⏳ EN ATTENTE</option>
+                            <option value="confirmed">✅ CLIENT CONFIRMÉ</option>
                             <option value="nouveau">🔴 NOUVEAU</option>
                             <option value="en_cours">🟠 EN COURS</option>
                             <option value="livre">🟢 {(o as any).fulfillmentType === 'pickup' ? 'RETIRÉ' : 'LIVRÉ'}</option>
