@@ -254,6 +254,8 @@ export default function Home() {
   const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult|null>(null);
   const [phoneAuthLoading, setPhoneAuthLoading]   = useState(false);
   const [phoneAuthError, setPhoneAuthError]       = useState('');
+  // ── INDICATIF PAYS (commande) ──
+  const [phoneCountry, setPhoneCountry]           = useState('+594');
   // ── CASH SMS VERIFICATION ──
   const [showSmsVerify, setShowSmsVerify]         = useState(false);
   const [cashSmsStep, setCashSmsStep]             = useState<'send'|'verify'>('send');
@@ -1105,7 +1107,7 @@ export default function Home() {
     setCashSmsLoading(true); setCashSmsError("");
     try {
       const verifier = initRecaptcha(cashRecaptchaRef, "recaptcha-cash-sms");
-      const formatted = phone.startsWith("+") ? phone : `+594${phone.replace(/^0/, "")}`;
+      const formatted = phone.startsWith("+") ? phone : `${phoneCountry}${phone.replace(/^0/, "")}`;
       const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
       setCashSmsConfirmation(confirmation);
       setCashSmsStep("verify");
@@ -2253,12 +2255,21 @@ export default function Home() {
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Inter',sans-serif"}} />
-                  <input placeholder="Téléphone (+594 694… ou +33 6…)" value={orderForm.phone}
-                    onChange={e => setOrderForm(f => ({...f, phone: e.target.value}))}
-                    type="tel"
-                    style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
-                      borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
-                      fontFamily:"'Inter',sans-serif"}} />
+                  <div style={{display:"flex",gap:6}}>
+                    <select value={phoneCountry} onChange={e => setPhoneCountry(e.target.value)}
+                      style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                        borderRadius:4,padding:"12px 8px",color:"#f0eeff",fontSize:".9rem",
+                        fontFamily:"'Inter',sans-serif",cursor:"pointer",flexShrink:0,width:90}}>
+                      <option value="+594">🇬🇫 +594</option>
+                      <option value="+33">🇫🇷 +33</option>
+                    </select>
+                    <input placeholder={phoneCountry === "+594" ? "694 00 00 00" : "6 00 00 00 00"} value={orderForm.phone}
+                      onChange={e => setOrderForm(f => ({...f, phone: e.target.value}))}
+                      type="tel"
+                      style={{flex:1,background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                        borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
+                        fontFamily:"'Inter',sans-serif"}} />
+                  </div>
                   <input placeholder="Email * (obligatoire pour les notifications)" value={orderForm.email}
                     onChange={e => setOrderForm(f => ({...f, email: e.target.value}))}
                     type="email"
@@ -3203,7 +3214,7 @@ export default function Home() {
                     color:"#7a7490",letterSpacing:".05em",lineHeight:1.6}}>
                     Pour confirmer ta commande <span style={{color:"#ff2d78"}}>cash</span>, nous envoyons un code SMS au numéro :
                     <div style={{color:"#f0eeff",fontSize:".9rem",marginTop:8,letterSpacing:".08em"}}>
-                      📞 {orderForm.phone.startsWith("+") ? orderForm.phone : `+594 ${orderForm.phone}`}
+                      📞 {orderForm.phone.startsWith("+") ? orderForm.phone : `${phoneCountry} ${orderForm.phone}`}
                     </div>
                   </div>
                   <div id="recaptcha-cash-sms" />
