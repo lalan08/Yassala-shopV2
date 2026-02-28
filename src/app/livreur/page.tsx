@@ -307,16 +307,41 @@ export default function LivreurPage() {
       activeOrderIds: arrayRemove(orderId),
     }, { merge: true }).catch(() => {});
     const order = orders.find(o => o.id === orderId);
-    // Créditer le portefeuille du livreur
-    fetch('/api/driver-wallet-credit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        driverId: driverData.id,
-        orderId,
-        orderNumber: order?.orderNumber ?? null,
-      }),
-    }).catch(() => {});
+    // Créditer le portefeuille du livreur — écriture directe Firestore (fiable, sans dépendance serveur)
+    const txId = `${driverData.id}_${orderId}`;
+    const txRef = doc(db, "wallet_transactions", txId);
+    try {
+      const existingTx = await getDoc(txRef);
+      if (!existingTx.exists()) {
+        let basePay = 2.5;
+        try {
+          const configSnap = await getDoc(doc(db, "settings", "delivery"));
+          if (configSnap.exists() && typeof configSnap.data()?.driver_base_pay === 'number') {
+            basePay = configSnap.data()!.driver_base_pay;
+          }
+        } catch {}
+        const rushBonus = order?.isRush ? (order.rushFee ?? 0.5) : 0;
+        const totalAmount = parseFloat((basePay + rushBonus).toFixed(2));
+        await setDoc(txRef, {
+          driverId: driverData.id,
+          orderId,
+          orderNumber: order?.orderNumber ?? null,
+          type: 'delivery',
+          amount: totalAmount,
+          basePay,
+          rushBonus,
+          description: order?.orderNumber ? `Livraison #${order.orderNumber}` : `Livraison ${orderId.slice(-6).toUpperCase()}`,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch {
+      // Fallback sur l'API serveur si l'écriture client échoue
+      fetch('/api/driver-wallet-credit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: driverData.id, orderId, orderNumber: order?.orderNumber ?? null }),
+      }).catch(() => {});
+    }
     if (order?.email) {
       fetch('/api/email', {
         method: 'POST',
@@ -1206,7 +1231,7 @@ export default function LivreurPage() {
                   </button>
                 </div>
                 <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"3rem",fontWeight:900,
-                  color:"#b8ff00",animation:"walletGlow 3s ease-in-out infinite",
+                  color:"#b8ff00",animation:portefeuilleWeek>0?"walletGlow 3s ease-in-out infinite":"none",
                   lineHeight:1,marginBottom:8}}>
                   {portefeuilleWeek.toFixed(2)}€
                 </div>
