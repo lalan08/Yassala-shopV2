@@ -168,6 +168,9 @@ function SuiviContent() {
   const isCancelled = order?.status === "annule";
   const isEnRoute = !isPickup && order?.status === "en_cours" && order?.assignedDriver;
   const isPickupReady = isPickup && order?.status === "en_cours";
+  const isPendingPayment = order?.status === "pending_payment";
+  const isPendingConfirmation = order?.status === "pending_confirmation";
+  const isConfirmed = order?.status === "confirmed";
 
   return (
     <>
@@ -258,9 +261,9 @@ function SuiviContent() {
             {/* Order Header */}
             <div style={{marginBottom:20}}>
               <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",letterSpacing:".04em",marginBottom:4}}>
-                {isCancelled ? "❌" : isEnRoute ? "🏍️" : isPickupReady ? "🏪" : isPickup ? "📦" : "📦"}
-                <span style={{color: isCancelled ? "#ff2d78" : "#f0eeff",marginLeft:8}}>
-                  {isCancelled ? "ANNULÉE" : isEnRoute ? "EN ROUTE !" : isPickupReady ? "PRÊTE À RETIRER !" : "SUIVI COMMANDE"}
+                {isCancelled ? "❌" : isPendingPayment ? "⏳" : isPendingConfirmation ? "🔐" : isConfirmed ? "✅" : isEnRoute ? "🏍️" : isPickupReady ? "🏪" : isPickup ? "📦" : "📦"}
+                <span style={{color: isCancelled ? "#ff2d78" : isPendingPayment || isPendingConfirmation ? "#a855f7" : isConfirmed ? "#00f5ff" : "#f0eeff",marginLeft:8}}>
+                  {isCancelled ? "ANNULÉE" : isPendingPayment ? "PAIEMENT EN COURS" : isPendingConfirmation ? "EN ATTENTE OTP" : isConfirmed ? "VALIDATION EN COURS" : isEnRoute ? "EN ROUTE !" : isPickupReady ? "PRÊTE À RETIRER !" : "SUIVI COMMANDE"}
                 </span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -342,8 +345,59 @@ function SuiviContent() {
               </div>
             )}
 
+            {/* Pre-confirmation banners */}
+            {isPendingPayment && (
+              <div style={{marginBottom:20,padding:"20px 20px",
+                background:"rgba(168,85,247,.06)",border:"1px solid rgba(168,85,247,.3)",
+                borderRadius:12,textAlign:"center"}}>
+                <div style={{fontSize:"2rem",marginBottom:8,animation:"pulse 1.2s infinite"}}>⏳</div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.05rem",
+                  color:"#a855f7",marginBottom:6}}>Vérification du paiement en cours…</div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",lineHeight:1.7}}>
+                  Ton paiement Stripe est en cours de traitement.<br />
+                  Cette page se mettra à jour automatiquement.
+                </div>
+              </div>
+            )}
+            {isPendingConfirmation && (
+              <div style={{marginBottom:20,padding:"20px 20px",
+                background:"rgba(168,85,247,.06)",border:"1px solid rgba(168,85,247,.35)",
+                borderRadius:12,textAlign:"center"}}>
+                <div style={{fontSize:"2rem",marginBottom:8,animation:"pulse 1.5s infinite"}}>🔐</div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.05rem",
+                  color:"#a855f7",marginBottom:6}}>En attente de ta confirmation</div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",
+                  lineHeight:1.7,marginBottom:14}}>
+                  L'admin t'a envoyé un code OTP par WhatsApp.<br />
+                  Saisis-le sur la page de confirmation pour valider ta commande.
+                </div>
+                {id && (
+                  <a href={`/confirm?id=${id}`}
+                    style={{display:"inline-block",background:"#a855f7",color:"#fff",
+                      borderRadius:8,padding:"10px 22px",textDecoration:"none",
+                      fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",
+                      letterSpacing:".06em",boxShadow:"0 0 18px rgba(168,85,247,.4)"}}>
+                    🔐 ENTRER MON CODE
+                  </a>
+                )}
+              </div>
+            )}
+            {isConfirmed && (
+              <div style={{marginBottom:20,padding:"20px 20px",
+                background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.3)",
+                borderRadius:12,textAlign:"center"}}>
+                <div style={{fontSize:"2rem",marginBottom:8,animation:"pulse 1.5s infinite"}}>✅</div>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.05rem",
+                  color:"#00f5ff",marginBottom:6}}>Code confirmé — validation admin en cours</div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",lineHeight:1.7}}>
+                  Ton code a bien été accepté.<br />
+                  L'admin va valider ta commande et un livreur sera assigné très bientôt.
+                </div>
+              </div>
+            )}
+
             {/* Progress Steps */}
-            {!isCancelled && (
+            {!isCancelled && !isPendingPayment && !isPendingConfirmation && !isConfirmed && (
               <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
                 borderRadius:12,padding:"24px 20px",marginBottom:20}}>
                 <div style={{display:"flex",alignItems:"flex-start",gap:0}}>

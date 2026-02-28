@@ -741,7 +741,7 @@ export default function Home() {
           pickupLocationId: fulfillmentType === 'pickup' ? (pickupType === 'relay' ? pickupLocationId : 'stock_default') : null,
           pickupLocationSnapshot: pickupSnapshot,
           pickupTime: resolvedPickupTime,
-          status: paymentMethod === 'cash' ? "pending_confirmation" : "nouveau",
+          status: paymentMethod === 'cash' ? "pending_confirmation" : "pending_payment",
           otpCode: cashOtpCode,
           otpExpiry: cashOtpExpiry,
           createdAt: new Date().toISOString(),

@@ -2142,7 +2142,7 @@ export default function AdminPage() {
               <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:"1px solid rgba(255,255,255,.08)"}}>
                 {([
                   { val:"active",   label:"⚡ ACTIVES",  color:"#ff2d78",
-                    count: orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed").length },
+                    count: orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed" || o.status === "pending_payment").length },
                   { val:"archived", label:"🗂 ARCHIVES", color:"#5a5470",
                     count: orders.filter(o => o.status === "livre" || o.status === "annule").length },
                 ] as const).map(t => (
@@ -2181,11 +2181,12 @@ export default function AdminPage() {
                 {/* Filtres par statut — actives uniquement */}
                 <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
                   {([
-                    { val:"all",                  label:"TOUTES",         color:"#5a5470" },
-                    { val:"pending_confirmation", label:"⏳ EN ATTENTE",  color:"#a855f7" },
-                    { val:"confirmed",            label:"✅ À CONFIRMER", color:"#00f5ff" },
-                    { val:"nouveau",              label:"NOUVEAU",        color:"#ff2d78" },
-                    { val:"en_cours",             label:"EN COURS",       color:"#ff9500" },
+                    { val:"all",                  label:"TOUTES",           color:"#5a5470" },
+                    { val:"pending_payment",      label:"💳 PAIEMENT",      color:"#f59e0b" },
+                    { val:"pending_confirmation", label:"⏳ EN ATTENTE",    color:"#a855f7" },
+                    { val:"confirmed",            label:"✅ À CONFIRMER",   color:"#00f5ff" },
+                    { val:"nouveau",              label:"NOUVEAU",          color:"#ff2d78" },
+                    { val:"en_cours",             label:"EN COURS",         color:"#ff9500" },
                   ] as const).map(f => (
                     <button key={f.val} onClick={() => setOrderFilter(f.val)}
                       style={{background: orderFilter===f.val ? `${f.color}22` : "transparent",
@@ -2204,7 +2205,7 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed").length === 0 ? (
+                {orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed" || o.status === "pending_payment").length === 0 ? (
                   <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
                     padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
                     // aucune commande active
@@ -2212,12 +2213,12 @@ export default function AdminPage() {
                 ) : (
                   <div style={{display:"grid",gap:10}}>
                     {orders.filter(o =>
-                      (o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed") &&
+                      (o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation" || o.status === "confirmed" || o.status === "pending_payment") &&
                       (orderFilter === "all" || o.status === orderFilter) &&
                       (fulfillmentFilter === "all" || (o as any).fulfillmentType === fulfillmentFilter || (fulfillmentFilter === "delivery" && !(o as any).fulfillmentType))
                     ).map(o => (
-                    <div key={o.id} style={{background: o.status==="confirmed" ? "rgba(0,245,255,.03)" : "rgba(255,255,255,.02)",
-                      border:`1px solid ${o.status==="nouveau" ? "rgba(255,45,120,.35)" : o.status==="confirmed" ? "rgba(0,245,255,.45)" : "rgba(255,255,255,.06)"}`,
+                    <div key={o.id} style={{background: o.status==="confirmed" ? "rgba(0,245,255,.03)" : o.status==="pending_payment" ? "rgba(245,158,11,.03)" : "rgba(255,255,255,.02)",
+                      border:`1px solid ${o.status==="nouveau" ? "rgba(255,45,120,.35)" : o.status==="confirmed" ? "rgba(0,245,255,.45)" : o.status==="pending_payment" ? "rgba(245,158,11,.35)" : "rgba(255,255,255,.06)"}`,
                       borderRadius:10,padding:"18px 20px",transition:"all .15s ease",
                       boxShadow: o.status==="nouveau" ? "0 0 16px rgba(255,45,120,.08)" : o.status==="confirmed" ? "0 0 20px rgba(0,245,255,.1)" : "none"}}>
 
@@ -2255,6 +2256,14 @@ export default function AdminPage() {
                               <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
                                 background:"rgba(0,245,255,.12)",color:"#00f5ff",borderRadius:3,
                                 padding:"2px 7px",letterSpacing:".08em"}}>🏪 COLLECT</span>
+                            )}
+                            {o.status === "pending_payment" && (
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                                background:"rgba(245,158,11,.15)",color:"#f59e0b",borderRadius:3,
+                                padding:"2px 7px",letterSpacing:".08em",border:"1px solid rgba(245,158,11,.4)",
+                                animation:"pulse 1.5s infinite"}}>
+                                💳 STRIPE EN ATTENTE
+                              </span>
                             )}
                             {o.status === "pending_confirmation" && (
                               <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
@@ -2339,7 +2348,8 @@ export default function AdminPage() {
                               color:"#ff2d78",padding:"7px 12px",borderRadius:4,
                               fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
                               letterSpacing:".06em",cursor:"pointer",minWidth:130}}>
-                            <option value="pending_confirmation">⏳ EN ATTENTE</option>
+                            <option value="pending_payment">💳 STRIPE EN ATTENTE</option>
+                            <option value="pending_confirmation">⏳ EN ATTENTE OTP</option>
                             <option value="confirmed">✅ CLIENT CONFIRMÉ</option>
                             <option value="nouveau">🔴 NOUVEAU</option>
                             <option value="en_cours">🟠 EN COURS</option>
