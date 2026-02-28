@@ -129,6 +129,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [platformCommissions, setPlatformCommissions] = useState<{ id: string; amount: number; createdAt: string }[]>([]);
   const [page, setPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState<"all" | "nouveau" | "en_cours">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,7 +175,15 @@ export default function AdminDashboard() {
       setDeliveries(data);
     });
 
-    return () => { unsubOrders(); unsubDrivers(); unsubDeliveries(); };
+    const unsubCommissions = onSnapshot(collection(db, "platform_commissions"), (snap) => {
+      setPlatformCommissions(snap.docs.map(d => ({
+        id: d.id,
+        amount: d.data().amount || 0,
+        createdAt: d.data().createdAt || "",
+      })));
+    });
+
+    return () => { unsubOrders(); unsubDrivers(); unsubDeliveries(); unsubCommissions(); };
   }, []);
 
   // ── Computed stats ──
@@ -195,6 +204,12 @@ export default function AdminDashboard() {
     (d) => d.cashStatus === "unsettled" && d.createdAt &&
     Date.now() - new Date(d.createdAt).getTime() > 24 * 60 * 60 * 1000
   ).length;
+
+  // Commissions plateforme Yassala (+0,50€ par livraison)
+  const totalCommissions = platformCommissions.reduce((s, c) => s + c.amount, 0);
+  const commissionsToday = platformCommissions
+    .filter(c => c.createdAt.slice(0, 10) === todayStr)
+    .reduce((s, c) => s + c.amount, 0);
 
   // ── Orders table data ──
   const allActiveOrders = orders.filter((o) => ["nouveau", "en_cours", "confirmed"].includes(o.status));
@@ -886,6 +901,39 @@ export default function AdminDashboard() {
               value={String(paymentErrors)}
               color={paymentErrors > 0 ? C.red : C.textFaint}
             />
+          </div>
+
+          {/* Commissions plateforme */}
+          <div
+            style={{
+              marginTop: 14, paddingTop: 14,
+              borderTop: `1px solid ${C.border}`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.6rem", fontWeight: 700,
+                letterSpacing: "0.18em", color: C.purple,
+                marginBottom: 8, textTransform: "uppercase" as const,
+              }}
+            >
+              COMMISSIONS YASSALA
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <PayRow label="Total cumulé" value={`${totalCommissions.toFixed(2)}€`} color={C.purple} />
+              <PayRow label="Aujourd'hui" value={`${commissionsToday.toFixed(2)}€`} color={C.purple} />
+              <div
+                style={{
+                  padding: "5px 10px",
+                  background: "rgba(139,92,246,0.06)",
+                  border: "1px solid rgba(139,92,246,0.18)",
+                  borderRadius: 7,
+                  fontSize: "0.67rem", color: C.textFaint,
+                }}
+              >
+                +0,50€ par livraison · {platformCommissions.length} livraison{platformCommissions.length !== 1 ? "s" : ""}
+              </div>
+            </div>
           </div>
           <a
             href="/admin/payouts"
