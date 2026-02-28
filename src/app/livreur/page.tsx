@@ -23,6 +23,7 @@ type Order = {
   assignedDriverName?: string; deliveredAt?: string;
   lat?: number; lng?: number; email?: string;
   isRush?: boolean; rushFee?: number;
+  driverArrived?: boolean;
 };
 
 export default function LivreurPage() {
@@ -306,6 +307,16 @@ export default function LivreurPage() {
       activeOrderIds: arrayRemove(orderId),
     }, { merge: true }).catch(() => {});
     const order = orders.find(o => o.id === orderId);
+    // Créditer le portefeuille du livreur
+    fetch('/api/driver-wallet-credit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driverId: driverData.id,
+        orderId,
+        orderNumber: order?.orderNumber ?? null,
+      }),
+    }).catch(() => {});
     if (order?.email) {
       fetch('/api/email', {
         method: 'POST',
@@ -328,6 +339,14 @@ export default function LivreurPage() {
     showToast("Commande marquée comme livrée !");
     setConfirmAction(null);
     setFilter("available");
+  };
+
+  const notifyArrival = async (orderId: string) => {
+    await updateDoc(doc(db, "orders", orderId), {
+      driverArrived: true,
+      driverArrivedAt: new Date().toISOString(),
+    });
+    showToast("📍 Client notifié de ton arrivée !");
   };
 
   const startGPS = useCallback(() => {
@@ -1549,25 +1568,45 @@ export default function LivreurPage() {
                           </button>
                         )}
                         {filter==="mine"&&isMine&&(
-                          <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8}}>
-                            <button onClick={()=>setConfirmAction({id:o.id,type:"deliver"})} style={{
-                              padding:"14px",borderRadius:12,border:"none",
-                              background:"linear-gradient(135deg,#b8ff00,#7acc00)",
-                              color:"#000",fontFamily:"'Orbitron',sans-serif",fontWeight:700,
-                              fontSize:".88rem",cursor:"pointer",letterSpacing:".06em",
-                              boxShadow:"0 4px 16px rgba(184,255,0,.35)"}}>
-                              ✓ LIVRÉ
-                            </button>
-                            <a href={`https://wa.me/${o.phone.replace(/[^0-9+]/g,"")}?text=${encodeURIComponent(`Bonjour ${o.name||""}, votre livreur Yassala est en route ! 🏍️`)}`}
-                              target="_blank" rel="noopener"
-                              style={{padding:"14px 16px",borderRadius:12,
-                                background:"rgba(37,211,102,.1)",border:"1px solid rgba(37,211,102,.3)",
-                                color:"#25d366",display:"flex",alignItems:"center",
-                                justifyContent:"center",textDecoration:"none",fontSize:"1.1rem"}}>💬</a>
-                            <button onClick={()=>setProblemModal({orderId:o.id})} style={{
-                              padding:"14px 16px",borderRadius:12,
-                              border:"1px solid rgba(255,45,120,.3)",background:"rgba(255,45,120,.07)",
-                              color:"#ff2d78",cursor:"pointer",fontSize:"1rem"}}>⚠️</button>
+                          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                            {!o.driverArrived ? (
+                              <button onClick={()=>notifyArrival(o.id)} style={{
+                                width:"100%",padding:"13px",borderRadius:12,border:"none",
+                                background:"linear-gradient(135deg,#ff9500,#ff6200)",
+                                color:"#fff",fontFamily:"'Orbitron',sans-serif",fontWeight:700,
+                                fontSize:".88rem",cursor:"pointer",letterSpacing:".06em",
+                                boxShadow:"0 4px 16px rgba(255,149,0,.4)"}}>
+                                📍 JE SUIS LÀ !
+                              </button>
+                            ) : (
+                              <div style={{
+                                padding:"11px 14px",borderRadius:12,textAlign:"center",
+                                background:"rgba(255,149,0,.08)",border:"1px solid rgba(255,149,0,.3)",
+                                fontFamily:"'Exo 2',sans-serif",fontWeight:700,fontSize:".82rem",
+                                color:"#ff9500",letterSpacing:".04em"}}>
+                                ✓ Client notifié de ton arrivée
+                              </div>
+                            )}
+                            <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8}}>
+                              <button onClick={()=>setConfirmAction({id:o.id,type:"deliver"})} style={{
+                                padding:"14px",borderRadius:12,border:"none",
+                                background:"linear-gradient(135deg,#b8ff00,#7acc00)",
+                                color:"#000",fontFamily:"'Orbitron',sans-serif",fontWeight:700,
+                                fontSize:".88rem",cursor:"pointer",letterSpacing:".06em",
+                                boxShadow:"0 4px 16px rgba(184,255,0,.35)"}}>
+                                ✓ LIVRÉ
+                              </button>
+                              <a href={`https://wa.me/${o.phone.replace(/[^0-9+]/g,"")}?text=${encodeURIComponent(`Bonjour ${o.name||""}, votre livreur Yassala est en route ! 🏍️`)}`}
+                                target="_blank" rel="noopener"
+                                style={{padding:"14px 16px",borderRadius:12,
+                                  background:"rgba(37,211,102,.1)",border:"1px solid rgba(37,211,102,.3)",
+                                  color:"#25d366",display:"flex",alignItems:"center",
+                                  justifyContent:"center",textDecoration:"none",fontSize:"1.1rem"}}>💬</a>
+                              <button onClick={()=>setProblemModal({orderId:o.id})} style={{
+                                padding:"14px 16px",borderRadius:12,
+                                border:"1px solid rgba(255,45,120,.3)",background:"rgba(255,45,120,.07)",
+                                color:"#ff2d78",cursor:"pointer",fontSize:"1rem"}}>⚠️</button>
+                            </div>
                           </div>
                         )}
                         {filter==="delivered"&&(

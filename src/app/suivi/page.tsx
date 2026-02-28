@@ -26,6 +26,8 @@ type Order = {
   pickupType?: 'stock'|'relay';
   pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string};
   pickupTime?: string;
+  driverArrived?: boolean;
+  driverArrivedAt?: string;
 };
 
 type DriverLocation = {
@@ -58,6 +60,7 @@ function SuiviContent() {
   const [notFound, setNotFound] = useState(false);
   const [driverLoc, setDriverLoc] = useState<DriverLocation | null>(null);
   const [eta, setEta] = useState<{duration: string; distance: string} | null>(null);
+  const [arrivedBannerDismissed, setArrivedBannerDismissed] = useState(false);
   const mapRef = useRef<any>(null);
   const driverMarkerRef = useRef<any>(null);
   const mapInitRef = useRef(false);
@@ -177,6 +180,7 @@ function SuiviContent() {
         @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
         @keyframes pulseGlow{0%,100%{box-shadow:0 0 8px rgba(184,255,0,.3)}50%{box-shadow:0 0 20px rgba(184,255,0,.6)}}
         @keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-100%);}to{opacity:1;transform:translateY(0);}}
         .spin{animation:pulse 1.2s infinite;}
         .leaflet-container{background:#0a0a12 !important;border-radius:12px;}
         .leaflet-tile-pane{filter:brightness(.8) contrast(1.1) saturate(.7);}
@@ -224,6 +228,33 @@ function SuiviContent() {
 
         {order && (
           <div>
+            {/* Driver Arrived Banner */}
+            {order.driverArrived && !arrivedBannerDismissed && order.status !== 'livre' && (
+              <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,
+                background:"linear-gradient(135deg,#ff9500,#ff6200)",
+                padding:"16px 20px",display:"flex",alignItems:"center",
+                justifyContent:"space-between",gap:12,
+                boxShadow:"0 4px 30px rgba(255,149,0,.5)",
+                animation:"slideDown .4s both"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{fontSize:"1.8rem",animation:"bounce 1s infinite"}}>🔔</span>
+                  <div>
+                    <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",color:"#fff",
+                      letterSpacing:".04em"}}>
+                      VOTRE LIVREUR EST LÀ !
+                    </div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                      color:"rgba(255,255,255,.85)",marginTop:2}}>
+                      {order.assignedDriverName||"Votre livreur"} est devant chez vous 🏠
+                    </div>
+                  </div>
+                </div>
+                <button onClick={()=>setArrivedBannerDismissed(true)}
+                  style={{width:32,height:32,borderRadius:"50%",border:"none",
+                    background:"rgba(255,255,255,.25)",color:"#fff",
+                    cursor:"pointer",fontSize:".9rem",flexShrink:0}}>✕</button>
+              </div>
+            )}
             {/* Order Header */}
             <div style={{marginBottom:20}}>
               <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",letterSpacing:".04em",marginBottom:4}}>

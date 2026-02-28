@@ -151,5 +151,13 @@ service cloud.firestore {
       allow read:  if isAdmin();
       allow write: if true;
     }
+
+    // ── wallet_transactions ─────────────────────────────────────
+    // Livreur : lecture de ses propres transactions
+    // Écriture réservée au serveur (via Admin SDK)
+    match /wallet_transactions/{txId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
