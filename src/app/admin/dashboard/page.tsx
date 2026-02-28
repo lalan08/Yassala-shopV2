@@ -65,17 +65,17 @@ const NAV = [
   {
     section: "OPÉRATIONS",
     items: [
-      { key: "dashboard", label: "Tableau de bord", icon: "⊞" },
-      { key: "commandes", label: "Commandes", icon: "📋" },
-      { key: "dispatch", label: "Dispatch", icon: "🏍️" },
-      { key: "paiements", label: "Paiements", icon: "💳" },
+      { key: "dashboard", label: "Tableau de bord", icon: "⊞", href: "" },
+      { key: "commandes", label: "Commandes", icon: "📋", href: "/admin/commandes" },
+      { key: "dispatch", label: "Dispatch", icon: "🏍️", href: "" },
+      { key: "paiements", label: "Paiements", icon: "💳", href: "" },
     ],
   },
   {
     section: "FINANCE",
     items: [
-      { key: "finance-commandes", label: "Commandes", icon: "📊" },
-      { key: "finance-dispatch", label: "Dispatch", icon: "📈" },
+      { key: "finance-commandes", label: "Commandes", icon: "📊", href: "" },
+      { key: "finance-dispatch", label: "Dispatch", icon: "📈", href: "" },
     ],
   },
 ];
@@ -320,7 +320,7 @@ export default function AdminDashboard() {
                 return (
                   <button
                     key={item.key}
-                    onClick={() => setActiveNav(item.key)}
+                    onClick={() => item.href ? (window.location.href = item.href) : setActiveNav(item.key)}
                     style={{
                       width: "100%",
                       display: "flex",

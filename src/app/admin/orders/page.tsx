@@ -10,9 +10,9 @@ function OrdersRedirect() {
 
   useEffect(() => {
     if (filter) {
-      router.replace(`/admin?tab=orders&filter=${filter}`);
+      router.replace(`/admin/commandes?filter=${filter}`);
     } else {
-      router.replace("/admin?tab=orders");
+      router.replace("/admin/commandes");
     }
   }, [filter, router]);
 
