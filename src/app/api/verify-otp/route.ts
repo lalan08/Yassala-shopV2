@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   await orderRef.update({
-    status: 'confirmed',
+    status: 'nouveau',
     confirmedAt: new Date().toISOString(),
     otpCode: null,
   });
