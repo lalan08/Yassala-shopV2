@@ -8,7 +8,7 @@ import UpsellCarousel from "@/components/UpsellCarousel";
 import SmartThresholdSuggestions from "@/components/SmartThresholdSuggestions";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, getDoc, query, where, setDoc, updateDoc, increment } from "firebase/firestore";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, updateProfile, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, updateProfile, RecaptchaVerifier, signInWithPhoneNumber, sendPasswordResetEmail, type ConfirmationResult } from "firebase/auth";
 import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
@@ -250,6 +250,11 @@ export default function Home() {
   const [authPassword, setAuthPassword]   = useState("");
   const [authError, setAuthError]         = useState("");
   const [authLoading, setAuthLoading]     = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail]               = useState("");
+  const [forgotLoading, setForgotLoading]           = useState(false);
+  const [forgotSuccess, setForgotSuccess]           = useState(false);
+  const [forgotError, setForgotError]               = useState("");
   // ── PHONE AUTH TAB ──
   const [authTab, setAuthTab]             = useState<'google'|'email'>('google');
   const [phoneAuthStep, setPhoneAuthStep] = useState<'input'|'verify'>('input');
@@ -1037,6 +1042,16 @@ export default function Home() {
       showToast("Connecté !");
     } catch (e: any) { setAuthError(translateAuthError(e.code)); }
     setAuthLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) { setForgotError("Entre ton email."); return; }
+    setForgotLoading(true); setForgotError("");
+    try {
+      await sendPasswordResetEmail(auth, forgotEmail.trim());
+      setForgotSuccess(true);
+    } catch (e: any) { setForgotError(translateAuthError(e.code)); }
+    setForgotLoading(false);
   };
 
   const handleGoogleLogin = async () => {
@@ -2754,6 +2769,7 @@ export default function Home() {
         <div onClick={() => {
             setShowAuthModal(false); setAuthError("");
             setPhoneAuthStep("input"); setPhoneInput(""); setPhoneAuthCode(""); setPhoneAuthError("");
+            setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(""); setForgotError("");
           }}
           style={{position:"fixed",inset:0,background:"rgba(4,2,10,.96)",zIndex:1600,
             display:"flex",alignItems:"flex-start",justifyContent:"center",
@@ -2771,6 +2787,7 @@ export default function Home() {
               <button onClick={() => {
                   setShowAuthModal(false); setAuthError("");
                   setPhoneAuthStep("input"); setPhoneInput(""); setPhoneAuthCode(""); setPhoneAuthError("");
+                  setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(""); setForgotError("");
                 }}
                 style={{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",
                   color:"#f0eeff",fontSize:".9rem",cursor:"pointer",borderRadius:6,
@@ -2778,61 +2795,125 @@ export default function Home() {
             </div>
 
             {/* ── Contenu : tout sur une seule page, pas de tabs ── */}
-            <div style={{padding:"22px 24px 0",display:"flex",flexDirection:"column",gap:14}}>
+            {showForgotPassword ? (
+              <div style={{padding:"22px 24px 28px",display:"flex",flexDirection:"column",gap:14}}>
+                {forgotSuccess ? (
+                  <>
+                    <div style={{textAlign:"center",fontSize:"2.5rem",lineHeight:1}}>✉️</div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.1rem",
+                      color:"#00f5ff",textAlign:"center",letterSpacing:".04em"}}>
+                      Email envoyé !
+                    </div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                      color:"#7a7490",textAlign:"center",lineHeight:1.6}}>
+                      Vérifie ta boîte mail (et les spams).<br/>
+                      Le lien expire dans 1 heure.
+                    </div>
+                    <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(""); }}
+                      style={{background:"#ff2d78",color:"#000",border:"none",borderRadius:10,padding:"14px",
+                        fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                        letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                      RETOUR À LA CONNEXION
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                      color:"#7a7490",letterSpacing:".06em",lineHeight:1.6}}>
+                      Entre ton email et on t&apos;envoie un lien pour réinitialiser ton mot de passe.
+                    </div>
+                    <input type="email" placeholder="Ton email" value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleForgotPassword()}
+                      style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                        padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                        fontSize:"1rem",outline:"none",width:"100%"}} />
+                    {forgotError && (
+                      <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
+                        borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
+                        fontSize:".75rem",color:"#ff2d78"}}>{forgotError}</div>
+                    )}
+                    <button onClick={handleForgotPassword} disabled={forgotLoading}
+                      style={{background: forgotLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
+                        borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                        fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                        cursor: forgotLoading ? "not-allowed" : "pointer"}}>
+                      {forgotLoading ? "..." : "ENVOYER LE LIEN"}
+                    </button>
+                    <button onClick={() => { setShowForgotPassword(false); setForgotError(""); setForgotEmail(""); }}
+                      style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
+                        fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
+                        textDecoration:"underline",padding:4}}>
+                      ← Retour à la connexion
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div style={{padding:"22px 24px 0",display:"flex",flexDirection:"column",gap:14}}>
 
-              {/* 1. Email */}
-              {authMode === "signup" && (
-                <input placeholder="Ton prénom" value={authName} onChange={e => setAuthName(e.target.value)}
+                {/* 1. Email */}
+                {authMode === "signup" && (
+                  <input placeholder="Ton prénom" value={authName} onChange={e => setAuthName(e.target.value)}
+                    style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                      padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                      fontSize:"1rem",outline:"none",width:"100%"}} />
+                )}
+                <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
                   style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
                     padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
                     fontSize:"1rem",outline:"none",width:"100%"}} />
-              )}
-              <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
-                style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                  padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                  fontSize:"1rem",outline:"none",width:"100%"}} />
-              <input type="password" placeholder="Mot de passe" value={authPassword}
-                onChange={e => setAuthPassword(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleSignup())}
-                style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                  padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                  fontSize:"1rem",outline:"none",width:"100%"}} />
-              {authError && (
-                <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
-                  borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
-                  fontSize:".75rem",color:"#ff2d78"}}>{authError}</div>
-              )}
-              <button onClick={authMode === "login" ? handleLogin : handleSignup} disabled={authLoading}
-                style={{background: authLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
-                  borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                  fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
-                  cursor: authLoading ? "not-allowed" : "pointer"}}>
-                {authLoading ? "..." : authMode === "login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
-              </button>
-              <button onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}
-                style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
-                  fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
-                  textDecoration:"underline",padding:4}}>
-                {authMode === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
-              </button>
+                <input type="password" placeholder="Mot de passe" value={authPassword}
+                  onChange={e => setAuthPassword(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleSignup())}
+                  style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                    padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                    fontSize:"1rem",outline:"none",width:"100%"}} />
+                {authMode === "login" && (
+                  <button onClick={() => { setShowForgotPassword(true); setForgotEmail(authEmail); setForgotError(""); setForgotSuccess(false); }}
+                    style={{background:"transparent",border:"none",color:"#7a7490",cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",letterSpacing:".06em",
+                      textDecoration:"underline",padding:0,textAlign:"right",alignSelf:"flex-end"}}>
+                    Mot de passe oublié ?
+                  </button>
+                )}
+                {authError && (
+                  <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
+                    borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
+                    fontSize:".75rem",color:"#ff2d78"}}>{authError}</div>
+                )}
+                <button onClick={authMode === "login" ? handleLogin : handleSignup} disabled={authLoading}
+                  style={{background: authLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
+                    borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                    fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                    cursor: authLoading ? "not-allowed" : "pointer"}}>
+                  {authLoading ? "..." : authMode === "login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
+                </button>
+                <button onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}
+                  style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
+                    fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
+                    textDecoration:"underline",padding:4}}>
+                  {authMode === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
+                </button>
 
-              {/* Séparateur */}
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{flex:1,height:1,background:"rgba(255,255,255,.06)"}} />
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#3a3454",letterSpacing:".1em"}}>OU</span>
-                <div style={{flex:1,height:1,background:"rgba(255,255,255,.06)"}} />
+                {/* Séparateur */}
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1,height:1,background:"rgba(255,255,255,.06)"}} />
+                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#3a3454",letterSpacing:".1em"}}>OU</span>
+                  <div style={{flex:1,height:1,background:"rgba(255,255,255,.06)"}} />
+                </div>
+
+                {/* 2. Google */}
+                <button onClick={handleGoogleLogin} disabled={authLoading}
+                  style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                    background:"#fff",color:"#111",border:"none",borderRadius:10,padding:"14px",
+                    fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                    cursor: authLoading ? "not-allowed" : "pointer",letterSpacing:".04em"}}>
+                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                  {authLoading ? "..." : "Continuer avec Google"}
+                </button>
               </div>
-
-              {/* 2. Google */}
-              <button onClick={handleGoogleLogin} disabled={authLoading}
-                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
-                  background:"#fff",color:"#111",border:"none",borderRadius:10,padding:"14px",
-                  fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
-                  cursor: authLoading ? "not-allowed" : "pointer",letterSpacing:".04em"}}>
-                <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-                {authLoading ? "..." : "Continuer avec Google"}
-              </button>
-            </div>
+            )}
 
             {/* 3. ESPACE LIVREUR — bien séparé, bloc bleu en bas */}
             <div style={{margin:"22px 24px 28px",
