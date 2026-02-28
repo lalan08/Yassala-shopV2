@@ -35,11 +35,12 @@ export default function LivreurPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<"available"|"mine"|"delivered">("available");
   const [toast, setToast] = useState({ msg: "", show: false });
-  const [stats, setStats] = useState({ today: 0, total: 0, todayRevenue: 0 });
+  const [stats, setStats] = useState({ today: 0, total: 0 });
   const [newOrderAlert, setNewOrderAlert] = useState(false);
   const prevOrderCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [walletTxns, setWalletTxns] = useState<any[]>([]);
+  const [driverDeliveries, setDriverDeliveries] = useState<any[]>([]);
   const [confirmAction, setConfirmAction] = useState<{id: string; type: "take"|"deliver"} | null>(null);
   const [expandedMap, setExpandedMap] = useState<string | null>(null);
   const [etaData, setEtaData] = useState<Record<string, {duration: string; distance: string}>>({});
@@ -252,7 +253,6 @@ export default function LivreurPage() {
       setStats({
         today: todayDelivered.length,
         total: delivered.length,
-        todayRevenue: todayDelivered.reduce((s, o) => s + Number(o.total), 0),
       });
     });
     return unsub;
@@ -435,6 +435,22 @@ export default function LivreurPage() {
     return () => unsub();
   }, [driverData?.id, loggedIn]);
 
+  // Listener deliveries temps réel — pour cashAReverser (argent cash à rendre)
+  useEffect(() => {
+    if (!driverData?.id || !loggedIn) return;
+    const unsub = onSnapshot(
+      query(
+        collection(db, "deliveries"),
+        where("driverId", "==", driverData.id),
+        orderBy("createdAt", "desc")
+      ),
+      snap => {
+        setDriverDeliveries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+    );
+    return () => unsub();
+  }, [driverData?.id, loggedIn]);
+
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const availableOrders = orders
@@ -449,18 +465,18 @@ export default function LivreurPage() {
   );
 
   // ── Calculs wallet depuis wallet_transactions ──────────────────────────
-  // Début de semaine = vendredi dernier (ou aujourd'hui si vendredi)
+  // Début de semaine = lundi (cumul lun→ven, paiement vendredi)
   const weekStartStr = (() => {
     const d = new Date();
-    const offset = (d.getDay() - 5 + 7) % 7; // 0 si vendredi
+    const offset = (d.getDay() - 1 + 7) % 7; // 0 si lundi, 6 si dimanche
     d.setDate(d.getDate() - offset);
     d.setHours(0, 0, 0, 0);
     return d.toISOString().slice(0, 10);
   })();
 
-  // Gains du jour (hors virements)
+  // Gains du jour — uniquement les livraisons ONLINE (les CASH vont dans cashAReverser)
   const gainsJour = walletTxns
-    .filter(t => t.type !== "payment" && (t.createdAt || "").slice(0, 10) === todayStr)
+    .filter(t => t.type !== "payment" && t.paymentType === "ONLINE" && (t.createdAt || "").slice(0, 10) === todayStr)
     .reduce((s, t) => s + (t.amount || 0), 0);
 
   // Portefeuille cette semaine (depuis dernier vendredi, hors virements)
@@ -849,7 +865,10 @@ export default function LivreurPage() {
   );
 
   // ── MAIN DASHBOARD (cyberpunk neon dark UI) ──────────────────────────────
-  const cashToReverser = deliveredOrders.filter(o=>!o.paidOnline).reduce((s,o)=>s+Number(o.total),0);
+  // Cash à reverser = montant cash collecté auprès des clients, non encore remis au business
+  const cashToReverser = driverDeliveries
+    .filter(d => d.paymentType === "CASH" && d.cashStatus === "unsettled")
+    .reduce((s, d) => s + (d.cashCollectedAmount || 0), 0);
 
   return (
     <>
