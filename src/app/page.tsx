@@ -8,7 +8,7 @@ import UpsellCarousel from "@/components/UpsellCarousel";
 import SmartThresholdSuggestions from "@/components/SmartThresholdSuggestions";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, onSnapshot, doc, addDoc, runTransaction, getDocs, getDoc, query, where, setDoc, updateDoc, increment } from "firebase/firestore";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, updateProfile, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, updateProfile, RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
@@ -166,6 +166,10 @@ const translateAuthError = (code: string) => {
     case "auth/invalid-email":         return "Adresse email invalide.";
     case "auth/popup-closed-by-user":  return "Connexion annulée.";
     case "auth/cancelled-popup-request": return "";
+    case "auth/popup-blocked":         return "Popup bloqué par le navigateur. Réessaie.";
+    case "auth/unauthorized-domain":   return "Domaine non autorisé dans Firebase. Contacte le support.";
+    case "auth/network-request-failed": return "Erreur réseau. Vérifie ta connexion.";
+    case "auth/too-many-requests":     return "Trop de tentatives. Réessaie dans quelques minutes.";
     default: return "Une erreur est survenue, réessaie.";
   }
 };
@@ -408,6 +412,20 @@ export default function Home() {
       setPromotions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Promotion)));
     });
     return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPickupLocs(); unsubPromos(); };
+  }, []);
+
+  // ── GOOGLE REDIRECT RESULT (mobile flow) ──
+  useEffect(() => {
+    getRedirectResult(auth).then(async (result) => {
+      if (!result?.user) return;
+      const user = result.user;
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid, name: user.displayName || "", email: user.email || "",
+        lastLoginAt: new Date().toISOString(),
+      }, { merge: true });
+      setShowAuthModal(false);
+      showToast("Connecté avec Google !");
+    }).catch(() => {});
   }, []);
 
   // ── CART PERSISTENCE ──
@@ -1023,8 +1041,14 @@ export default function Home() {
 
   const handleGoogleLogin = async () => {
     setAuthLoading(true); setAuthError("");
+    const provider = new GoogleAuthProvider();
+    const isMobile = /Mobi|Android|iPhone|iPad|IEMobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      // Sur mobile, les popups sont souvent bloqués → redirect
+      try { await signInWithRedirect(auth, provider); } catch { setAuthLoading(false); }
+      return;
+    }
     try {
-      const provider = new GoogleAuthProvider();
       const { user } = await signInWithPopup(auth, provider);
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid, name: user.displayName || "", email: user.email || "",
@@ -1033,6 +1057,10 @@ export default function Home() {
       setShowAuthModal(false);
       showToast("Connecté avec Google !");
     } catch (e: any) {
+      if (e.code === "auth/popup-blocked") {
+        // Popup bloqué → fallback redirect
+        try { await signInWithRedirect(auth, provider); return; } catch {}
+      }
       const msg = translateAuthError(e.code);
       if (msg) setAuthError(msg);
     }
