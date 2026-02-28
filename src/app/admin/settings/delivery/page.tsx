@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, doc, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { DEFAULT_DELIVERY_CONFIG, type DeliveryConfig } from "@/types/delivery";
 
 const firebaseConfig = {
@@ -28,14 +28,13 @@ export default function DeliverySettingsPage() {
     setTimeout(() => setToast(t => ({ ...t, show: false })), 3000);
   };
 
-  // Listener temps réel sur settings/delivery
+  // Lecture unique au montage — évite que Firestore écrase les modifications locales en cours
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "delivery"), snap => {
+    getDoc(doc(db, "settings", "delivery")).then(snap => {
       if (snap.exists()) {
         setConfig({ ...DEFAULT_DELIVERY_CONFIG, ...snap.data() } as DeliveryConfig);
       }
     });
-    return () => unsub();
   }, []);
 
   const handleSave = async () => {
@@ -56,8 +55,10 @@ export default function DeliverySettingsPage() {
     setSaving(false);
   };
 
-  const num = (key: keyof DeliveryConfig) => (val: string) =>
-    setConfig(c => ({ ...c, [key]: parseFloat(val) || 0 }));
+  const num = (key: keyof DeliveryConfig) => (val: string) => {
+    const n = parseFloat(val);
+    setConfig(c => ({ ...c, [key]: isNaN(n) ? 0 : n }));
+  };
 
   const tog = (key: keyof DeliveryConfig) => () =>
     setConfig(c => ({ ...c, [key]: !c[key] }));
@@ -70,6 +71,7 @@ export default function DeliverySettingsPage() {
     const night = isNight ? config.night_fee : 0;
     const rain = config.rain_mode_enabled ? config.rain_fee : 0;
     const rush = config.rush_mode_enabled ? config.rush_fee : 0;
+    // Distance non incluse dans la simulation (rayon inclus = distance 0)
     const total = parseFloat((base + night + rain + rush).toFixed(2));
     const driverPay = parseFloat((
       config.driver_base_pay
@@ -225,24 +227,54 @@ export default function DeliverySettingsPage() {
         </div>
 
         {/* Section DISTANCE */}
-        <div style={sectionStyle}>
-          <div style={{
-            fontFamily: "'Share Tech Mono',monospace", fontSize: ".72rem",
-            color: "#a78bfa", letterSpacing: ".15em", marginBottom: 2,
-          }}>DISTANCE</div>
-          <div style={{ fontFamily: "'Inter',sans-serif", fontSize: ".8rem", color: "#5a5470", marginBottom: 12 }}>
-            Les km au-delà du rayon inclus génèrent un supplément
+        <div style={{
+          ...sectionStyle,
+          border: config.distance_fee_enabled
+            ? "1px solid rgba(167,139,250,.4)"
+            : "1px solid rgba(255,255,255,.07)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div>
+              <div style={{
+                fontFamily: "'Share Tech Mono',monospace", fontSize: ".72rem",
+                color: config.distance_fee_enabled ? "#a78bfa" : "#5a5470", letterSpacing: ".15em", marginBottom: 2,
+              }}>DISTANCE 📍</div>
+              <div style={{ fontFamily: "'Inter',sans-serif", fontSize: ".8rem", color: "#5a5470" }}>
+                Les km au-delà du rayon inclus génèrent un supplément
+              </div>
+            </div>
+            <button onClick={tog("distance_fee_enabled")} style={{
+              width: 52, height: 28, borderRadius: 14, border: "none",
+              background: config.distance_fee_enabled
+                ? "linear-gradient(135deg,#a78bfa,#7c3aed)"
+                : "rgba(255,255,255,.08)",
+              cursor: "pointer", position: "relative", transition: "all .25s",
+              flexShrink: 0,
+            }}>
+              <span style={{
+                position: "absolute", top: 3,
+                left: config.distance_fee_enabled ? 26 : 3,
+                width: 22, height: 22, borderRadius: "50%", background: "#fff",
+                transition: "left .25s", boxShadow: "0 1px 4px rgba(0,0,0,.4)",
+              }} />
+            </button>
           </div>
-          <div style={rowStyle}>
+          <div style={{
+            ...rowStyle,
+            opacity: config.distance_fee_enabled ? 1 : 0.4,
+            pointerEvents: config.distance_fee_enabled ? "auto" : "none",
+          }}>
             <div>
               <span style={labelStyle}>RAYON INCLUS (km)</span>
               <input type="number" step="0.5" min="0" value={config.base_radius_km}
-                onChange={e => num("base_radius_km")(e.target.value)} style={inputStyle} />
+                onChange={e => num("base_radius_km")(e.target.value)} style={inputStyle}
+                disabled={!config.distance_fee_enabled} />
             </div>
             <div>
               <span style={labelStyle}>SUPPLÉMENT PAR KM AU-DELÀ (€/km)</span>
               <input type="number" step="0.1" min="0" value={config.extra_fee_per_km}
-                onChange={e => num("extra_fee_per_km")(e.target.value)} style={inputStyle} />
+                onChange={e => num("extra_fee_per_km")(e.target.value)} style={inputStyle}
+                disabled={!config.distance_fee_enabled} />
             </div>
           </div>
         </div>

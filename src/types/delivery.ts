@@ -23,6 +23,7 @@ export interface DeliveryConfig {
   rush_fee: number;           // Supplément rush (€)
 
   // Distance
+  distance_fee_enabled: boolean; // Frais de distance activés
   base_radius_km: number;    // Rayon inclus dans le prix de base (km)
   extra_fee_per_km: number;  // Tarif par km au-delà du rayon (€/km)
 
@@ -44,6 +45,7 @@ export const DEFAULT_DELIVERY_CONFIG: DeliveryConfig = {
   rain_fee: 1,
   rush_mode_enabled: false,
   rush_fee: 1,
+  distance_fee_enabled: true,
   base_radius_km: 3,
   extra_fee_per_km: 1,
   driver_base_pay: 2.5,
@@ -95,7 +97,9 @@ export function computeDeliveryFee(
   const base = config.delivery_base_fee;
 
   // Distance au-delà du rayon inclus
-  const extraKm = Math.max(0, distanceKm - config.base_radius_km);
+  const extraKm = config.distance_fee_enabled
+    ? Math.max(0, distanceKm - config.base_radius_km)
+    : 0;
   const distance = parseFloat((extraKm * config.extra_fee_per_km).toFixed(2));
 
   // Nuit : ex. >= 22h OU < 5h
