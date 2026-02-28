@@ -467,13 +467,12 @@ export default function AdminPage() {
 
   const saveBanner = async (b: Banner) => {
     try {
-      const res = await fetch("/api/banners", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(b),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Erreur serveur");
+      const { id, ...data } = b;
+      if (id) {
+        await setDoc(doc(db, "banners", id), data, { merge: true });
+      } else {
+        await addDoc(collection(db, "banners"), data);
+      }
       showToast(b.id ? "Bannière mise à jour ✓" : "Bannière ajoutée ✓");
       setShowBannerForm(false); setEditBanner(null);
     } catch (e: any) { showToast(e.message || "Erreur lors de la sauvegarde", "err"); }
@@ -482,7 +481,7 @@ export default function AdminPage() {
   const deleteBanner = async (id: string) => {
     if (!confirm("Supprimer cette bannière ?")) return;
     try {
-      await fetch(`/api/banners?id=${id}`, { method: "DELETE" });
+      await deleteDoc(doc(db, "banners", id));
       showToast("Bannière supprimée");
     } catch { showToast("Erreur suppression", "err"); }
   };

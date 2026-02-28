@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { DEFAULT_DELIVERY_CONFIG, type DeliveryConfig } from "@/types/delivery";
 
 const firebaseConfig = {
@@ -40,12 +40,8 @@ export default function DeliverySettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/api/delivery-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      });
-      if (!res.ok) throw new Error();
+      const safe = { ...DEFAULT_DELIVERY_CONFIG, ...config };
+      await setDoc(doc(db, "settings", "delivery"), safe);
       setSaved(true);
       showToast("✓ Configuration sauvegardée et appliquée instantanément");
       setTimeout(() => setSaved(false), 3000);
