@@ -2,10 +2,12 @@
  * POST /api/driver-wallet-credit
  *
  * Crédite le portefeuille du livreur après une livraison.
- * Crée un document wallet_transactions ET un document deliveries dans Firestore.
+ * Crée un document wallet_transactions, deliveries ET platform_commissions dans Firestore.
  *
  * Body : { driverId: string, orderId: string, orderNumber?: number, paidOnline?: boolean, orderTotal?: number }
  */
+
+const PLATFORM_COMMISSION = 0.50; // Commission Yassala par livraison (€)
 
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-server';
@@ -101,9 +103,23 @@ export async function POST(request: Request) {
       });
     }
 
-    console.log(`[driver-wallet-credit] +${totalAmount}€ → driver=${driverId} order=${orderId} delivery=${deliveryId}`);
+    // 3. Créer la commission plateforme (idempotente : 1 doc par commande)
+    const commissionId = `commission_${orderId}`;
+    const existingCommission = await db.collection('platform_commissions').doc(commissionId).get();
+    if (!existingCommission.exists) {
+      await db.collection('platform_commissions').doc(commissionId).set({
+        orderId,
+        driverId,
+        orderNumber: orderNumber ?? null,
+        amount: PLATFORM_COMMISSION,
+        paymentType,
+        createdAt: now,
+      });
+    }
 
-    return NextResponse.json({ ok: true, amount: totalAmount });
+    console.log(`[driver-wallet-credit] +${totalAmount}€ livreur / +${PLATFORM_COMMISSION}€ plateforme → driver=${driverId} order=${orderId}`);
+
+    return NextResponse.json({ ok: true, amount: totalAmount, commission: PLATFORM_COMMISSION });
   } catch (error: any) {
     console.error('[driver-wallet-credit]', error?.message ?? error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
