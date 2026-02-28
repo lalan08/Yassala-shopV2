@@ -296,7 +296,7 @@ function ConfirmContent() {
           <div style={{background:'rgba(255,45,120,.08)',border:'1px solid rgba(255,45,120,.15)',
             borderRadius:8,padding:'8px 14px',textAlign:'center',
             fontFamily:"'Share Tech Mono',monospace",fontSize:'.72rem',color:'#5a5470',letterSpacing:'.08em'}}>
-            COMMANDE <span style={{color:'#ff2d78',fontFamily:"'Black Ops One',cursive",fontSize:'.9rem"}}>
+            COMMANDE <span style={{color:'#ff2d78',fontFamily:"'Black Ops One',cursive",fontSize:'.9rem'}}>
               #{order.orderNumber}
             </span>
           </div>
