@@ -1814,6 +1814,7 @@ export default function AdminPage() {
                   onSave={saveProd}
                   onClose={() => { setShowProdForm(false); setEditProd(null); }}
                   showToast={showToast}
+                  settings={settings}
                 />
               )}
             </div>
@@ -2831,6 +2832,7 @@ export default function AdminPage() {
                   onSave={saveBanner}
                   onClose={() => { setShowBannerForm(false); setEditBanner(null); }}
                   showToast={showToast}
+                  settings={settings}
                 />
               )}
             </div>
@@ -3963,7 +3965,7 @@ function Field({ label, value, onChange, type="text" }: { label:string; value:st
   );
 }
 
-function ProductForm({ prod, cats, onSave, onClose, showToast }: { prod:Product; cats:Category[]; onSave:(p:Product)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void }) {
+function ProductForm({ prod, cats, onSave, onClose, showToast, settings }: { prod:Product; cats:Category[]; onSave:(p:Product)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void; settings:Settings }) {
   const [p, setP] = useState(prod);
   const [uploading, setUploading] = useState(false);
   const [imgSrc, setImgSrc]       = useState("");          // raw file → cropper
@@ -4179,7 +4181,7 @@ const GRADIENT_PRESETS = [
   { label:"NUIT",   color:"#140a3c", value:"linear-gradient(135deg,rgba(20,10,60,.96) 0%,rgba(4,2,10,.98) 100%)" },
 ];
 
-function BannerForm({ banner, onSave, onClose, showToast }: { banner:Banner; onSave:(b:Banner)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void }) {
+function BannerForm({ banner, onSave, onClose, showToast, settings }: { banner:Banner; onSave:(b:Banner)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void; settings:Settings }) {
   const [b, setB] = useState<Banner>({ ...banner, brightness: banner.brightness ?? 0.28 });
   const [uploading, setUploading] = useState(false);
   const [imgSrc, setImgSrc]       = useState("");
