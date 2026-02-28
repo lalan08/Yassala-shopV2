@@ -8,6 +8,7 @@ import {
   onSnapshot,
   doc,
   updateDoc,
+  addDoc,
   query,
   where,
   orderBy,
@@ -85,12 +86,27 @@ const NAV = [
 
 const ITEMS_PER_PAGE = 10;
 
+type NewOrderForm = {
+  name: string;
+  phone: string;
+  address: string;
+  items: string;
+  total: string;
+  paidOnline: boolean;
+};
+
 export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState("dashboard");
   const [orders, setOrders] = useState<Order[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [page, setPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [newOrderForm, setNewOrderForm] = useState<NewOrderForm>({
+    name: "", phone: "", address: "", items: "", total: "", paidOnline: false,
+  });
+  const [savingOrder, setSavingOrder] = useState(false);
 
   // ── Firebase realtime listeners ──
   useEffect(() => {
@@ -184,6 +200,29 @@ export default function AdminDashboard() {
   // ── Update order status ──
   const updateStatus = async (id: string, status: string) => {
     await updateDoc(doc(db, "orders", id), { status });
+  };
+
+  // ── Save new manual order ──
+  const saveNewOrder = async () => {
+    if (!newOrderForm.items || !newOrderForm.total) return;
+    setSavingOrder(true);
+    try {
+      await addDoc(collection(db, "orders"), {
+        name: newOrderForm.name || "Client",
+        phone: newOrderForm.phone,
+        address: newOrderForm.address,
+        items: newOrderForm.items,
+        total: parseFloat(newOrderForm.total) || 0,
+        paidOnline: newOrderForm.paidOnline,
+        status: "nouveau",
+        createdAt: new Date().toISOString(),
+        fulfillmentType: "delivery",
+      });
+      setShowNewOrderModal(false);
+      setNewOrderForm({ name: "", phone: "", address: "", items: "", total: "", paidOnline: false });
+    } finally {
+      setSavingOrder(false);
+    }
   };
 
   return (
@@ -285,7 +324,7 @@ export default function AdminDashboard() {
         {/* Top bar */}
         <div
           style={{
-            padding: "18px 28px",
+            padding: "14px 28px",
             background: "#fff",
             borderBottom: "1px solid #e5e7eb",
             display: "flex",
@@ -294,15 +333,67 @@ export default function AdminDashboard() {
             flexShrink: 0,
           }}
         >
-          <div style={{ fontWeight: 700, fontSize: "1.05rem", color: "#111827" }}>
-            NOUVELLES COMMANDES
+          <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#111827", letterSpacing: "0.05em" }}>
+            YASSALA ADMIN
           </div>
-          <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
-            {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+              {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+            </div>
+            {/* Notification bell */}
+            <button
+              style={{
+                width: 36, height: 36, borderRadius: 8, border: "1px solid #e5e7eb",
+                background: "#fff", cursor: "pointer", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: "1rem", color: "#374151",
+              }}
+            >
+              🔔
+            </button>
+            {/* + Nouvelle commande */}
+            <button
+              onClick={() => setShowNewOrderModal(true)}
+              style={{
+                padding: "8px 14px", borderRadius: 8, border: "none",
+                background: "#f97316", color: "#fff", fontWeight: 700,
+                fontSize: "0.78rem", cursor: "pointer", letterSpacing: "0.04em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              + Nouvelle commande
+            </button>
+            {/* User avatar */}
+            <div
+              style={{
+                width: 34, height: 34, borderRadius: "50%", background: "#111827",
+                color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 700, fontSize: "0.75rem", flexShrink: 0, cursor: "pointer",
+              }}
+            >
+              CB
+            </div>
           </div>
         </div>
 
         <div style={{ flex: 1, overflow: "auto", padding: "24px 28px" }}>
+          {/* ── SECTION HEADING ── */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, fontSize: "1rem", color: "#111827", letterSpacing: "0.06em" }}>
+              NOUVELLES COMMANDES
+            </div>
+            <button
+              onClick={() => setRefreshKey((k) => k + 1)}
+              title="Rafraîchir"
+              style={{
+                width: 32, height: 32, borderRadius: 8, border: "1px solid #e5e7eb",
+                background: "#fff", cursor: "pointer", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: "1rem", color: "#6b7280",
+              }}
+            >
+              ↻
+            </button>
+          </div>
+
           {/* ── STAT CARDS ── */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 28 }}>
             <StatCard
@@ -386,8 +477,15 @@ export default function AdminDashboard() {
                         background: isEven ? "#fff" : "#fafafa",
                       }}
                     >
-                      <td style={{ padding: "12px 16px", fontWeight: 700, fontSize: "0.85rem", color: "#111827" }}>
-                        #{order.orderNumber ?? order.id.slice(-4).toUpperCase()}
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111827" }}>
+                          #{order.orderNumber ?? order.id.slice(-4).toUpperCase()}
+                        </div>
+                        {order.items && (
+                          <div style={{ fontSize: "0.7rem", color: "#6b7280", marginTop: 2, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {order.items}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: "12px 16px" }}>
                         <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "#111827" }}>
@@ -516,6 +614,91 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* ── MODAL NOUVELLE COMMANDE ── */}
+      {showNewOrderModal && (
+        <div
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowNewOrderModal(false); }}
+        >
+          <div
+            style={{
+              background: "#fff", borderRadius: 12, padding: 28, width: 440,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)", maxHeight: "90vh", overflowY: "auto",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+              <div style={{ fontWeight: 700, fontSize: "1rem", color: "#111827" }}>Nouvelle commande</div>
+              <button
+                onClick={() => setShowNewOrderModal(false)}
+                style={{ border: "none", background: "transparent", fontSize: "1.2rem", cursor: "pointer", color: "#6b7280" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <ModalField label="Nom client" placeholder="Ex: Jean Dupont"
+                value={newOrderForm.name}
+                onChange={(v) => setNewOrderForm((f) => ({ ...f, name: v }))} />
+              <ModalField label="Téléphone" placeholder="Ex: +594 6XX XXX XXX"
+                value={newOrderForm.phone}
+                onChange={(v) => setNewOrderForm((f) => ({ ...f, phone: v }))} />
+              <ModalField label="Adresse livraison" placeholder="Ex: 12 rue des fleurs, Cayenne"
+                value={newOrderForm.address}
+                onChange={(v) => setNewOrderForm((f) => ({ ...f, address: v }))} />
+              <ModalField label="Articles commandés *" placeholder="Ex: 2 pizzas, 1 coca"
+                value={newOrderForm.items}
+                onChange={(v) => setNewOrderForm((f) => ({ ...f, items: v }))} />
+              <ModalField label="Montant total (€) *" placeholder="Ex: 25"
+                value={newOrderForm.total}
+                onChange={(v) => setNewOrderForm((f) => ({ ...f, total: v }))}
+                type="number" />
+
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+                <input
+                  type="checkbox"
+                  id="paidOnline"
+                  checked={newOrderForm.paidOnline}
+                  onChange={(e) => setNewOrderForm((f) => ({ ...f, paidOnline: e.target.checked }))}
+                  style={{ width: 16, height: 16, cursor: "pointer" }}
+                />
+                <label htmlFor="paidOnline" style={{ fontSize: "0.85rem", color: "#374151", cursor: "pointer" }}>
+                  Payé en ligne
+                </label>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+              <button
+                onClick={() => setShowNewOrderModal(false)}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #e5e7eb",
+                  background: "#fff", color: "#374151", fontWeight: 600, fontSize: "0.85rem", cursor: "pointer",
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveNewOrder}
+                disabled={savingOrder || !newOrderForm.items || !newOrderForm.total}
+                style={{
+                  flex: 2, padding: "10px", borderRadius: 8, border: "none",
+                  background: savingOrder || !newOrderForm.items || !newOrderForm.total ? "#d1d5db" : "#f97316",
+                  color: "#fff", fontWeight: 700, fontSize: "0.85rem",
+                  cursor: savingOrder || !newOrderForm.items || !newOrderForm.total ? "default" : "pointer",
+                }}
+              >
+                {savingOrder ? "Enregistrement..." : "Créer la commande"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── RIGHT PANEL ── */}
       <aside
@@ -782,6 +965,31 @@ function PayRow({ label, value, color }: { label: string; value: string; color: 
     >
       <span style={{ fontSize: "0.78rem", color: "#374151" }}>{label}</span>
       <span style={{ fontSize: "0.88rem", fontWeight: 700, color }}>{value}</span>
+    </div>
+  );
+}
+
+function ModalField({
+  label, placeholder, value, onChange, type = "text",
+}: {
+  label: string; placeholder: string; value: string; onChange: (v: string) => void; type?: string;
+}) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "#374151", marginBottom: 5 }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: "100%", padding: "9px 12px", borderRadius: 8,
+          border: "1px solid #d1d5db", fontSize: "0.85rem", color: "#111827",
+          outline: "none", boxSizing: "border-box",
+        }}
+      />
     </div>
   );
 }
