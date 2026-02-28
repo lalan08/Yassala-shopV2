@@ -3584,7 +3584,7 @@ export default function AdminPage() {
                     </a>
                   </div>
                   <div style={{display:"grid",gap:12}}>
-                    {/* Base + Distance */}
+                    {/* Base */}
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                       <div>
                         <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>FRAIS DE BASE (€)</div>
@@ -3594,27 +3594,44 @@ export default function AdminPage() {
                             padding:"10px 12px",color:"#00f5ff",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
                       </div>
                       <div>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>RAYON INCLUS (km)</div>
-                        <input type="number" min={0} step={0.5} value={deliveryConfig.base_radius_km}
-                          onChange={e => setDeliveryConfig(c => ({...c, base_radius_km: parseFloat(e.target.value)||0}))}
-                          style={{width:"100%",background:"#080514",border:"1px solid rgba(0,245,255,.2)",borderRadius:6,
-                            padding:"10px 12px",color:"#00f5ff",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
-                      </div>
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                      <div>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>PAR KM SUPPL. (€)</div>
-                        <input type="number" min={0} step={0.25} value={deliveryConfig.extra_fee_per_km}
-                          onChange={e => setDeliveryConfig(c => ({...c, extra_fee_per_km: parseFloat(e.target.value)||0}))}
-                          style={{width:"100%",background:"#080514",border:"1px solid rgba(0,245,255,.2)",borderRadius:6,
-                            padding:"10px 12px",color:"#00f5ff",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
-                      </div>
-                      <div>
                         <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>LIVRAISON OFFERTE (€)</div>
                         <input type="number" min={0} step={1} value={deliveryConfig.free_delivery_threshold}
                           onChange={e => setDeliveryConfig(c => ({...c, free_delivery_threshold: parseFloat(e.target.value)||0}))}
                           style={{width:"100%",background:"#080514",border:"1px solid rgba(184,255,0,.2)",borderRadius:6,
                             padding:"10px 12px",color:"#b8ff00",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
+                      </div>
+                    </div>
+                    {/* Toggle Distance */}
+                    <div style={{background:"#080514",border:`1px solid ${deliveryConfig.distance_fee_enabled ? "rgba(167,139,250,.4)":"rgba(255,255,255,.06)"}`,
+                      borderRadius:6,padding:"10px 12px"}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                          color:deliveryConfig.distance_fee_enabled ? "#a78bfa":"#5a5470",letterSpacing:".06em"}}>📍 FRAIS DE DISTANCE</span>
+                        <div onClick={() => setDeliveryConfig(c => ({...c, distance_fee_enabled:!c.distance_fee_enabled}))}
+                          style={{width:36,height:20,borderRadius:10,position:"relative",cursor:"pointer",flexShrink:0,
+                            background:deliveryConfig.distance_fee_enabled ? "#a78bfa":"rgba(255,255,255,.1)",transition:"background .2s"}}>
+                          <div style={{position:"absolute",top:2,left:deliveryConfig.distance_fee_enabled?18:2,
+                            width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s"}} />
+                        </div>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,
+                        opacity:deliveryConfig.distance_fee_enabled?1:0.4,pointerEvents:deliveryConfig.distance_fee_enabled?"auto":"none"}}>
+                        <div>
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginBottom:4}}>RAYON INCLUS (km)</div>
+                          <input type="number" min={0} step={0.5} value={deliveryConfig.base_radius_km}
+                            disabled={!deliveryConfig.distance_fee_enabled}
+                            onChange={e => setDeliveryConfig(c => ({...c, base_radius_km: parseFloat(e.target.value)||0}))}
+                            style={{width:"100%",background:"rgba(0,0,0,.3)",border:"1px solid rgba(167,139,250,.2)",
+                              borderRadius:4,padding:"6px 10px",color:"#a78bfa",fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem"}} />
+                        </div>
+                        <div>
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginBottom:4}}>PAR KM SUPPL. (€)</div>
+                          <input type="number" min={0} step={0.25} value={deliveryConfig.extra_fee_per_km}
+                            disabled={!deliveryConfig.distance_fee_enabled}
+                            onChange={e => setDeliveryConfig(c => ({...c, extra_fee_per_km: parseFloat(e.target.value)||0}))}
+                            style={{width:"100%",background:"rgba(0,0,0,.3)",border:"1px solid rgba(167,139,250,.2)",
+                              borderRadius:4,padding:"6px 10px",color:"#a78bfa",fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem"}} />
+                        </div>
                       </div>
                     </div>
                     {/* Toggles Rush + Pluie */}
