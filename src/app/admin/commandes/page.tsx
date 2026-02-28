@@ -9,8 +9,10 @@ import {
   onSnapshot,
   doc,
   updateDoc,
+  addDoc,
   query,
   orderBy,
+  where,
 } from "firebase/firestore";
 
 // ── FIREBASE ──
@@ -41,38 +43,124 @@ type Order = {
   fulfillmentType?: "delivery" | "pickup";
 };
 
-// ── DESIGN TOKENS ──
-const C = {
-  bg: "rgba(10,10,20,0.82)",
-  sidebar: "rgba(8,8,16,0.92)",
-  card: "rgba(255,255,255,0.05)",
-  cardBorder: "rgba(255,255,255,0.09)",
-  text: "#f1f5f9",
-  textMuted: "#94a3b8",
-  textFaint: "#475569",
-  accent: "#f97316",
-  blue: "#3b82f6",
-  green: "#22c55e",
-  red: "#ef4444",
-  yellow: "#eab308",
-  cyan: "#06b6d4",
-  purple: "#a855f7",
-  border: "rgba(255,255,255,0.08)",
-  navActive: "rgba(249,115,22,0.12)",
-  glass: "blur(16px)",
+type Driver = {
+  uid: string;
+  name: string;
+  status: "online" | "offline" | "busy";
+  isOnline: boolean;
+  zone?: string;
+  currentOrderId?: string;
+  lastSeen?: any;
 };
 
-// ── STATUS CONFIG ──
-type StatusKey = "nouveau" | "en_cours" | "livree" | "probleme" | "confirmed" | "delivering";
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  nouveau: { label: "NOUVEAU", color: "#3b82f6", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.35)" },
-  en_cours: { label: "EN COURS", color: "#eab308", bg: "rgba(234,179,8,0.12)", border: "rgba(234,179,8,0.35)" },
-  confirmed: { label: "EN COURS", color: "#eab308", bg: "rgba(234,179,8,0.12)", border: "rgba(234,179,8,0.35)" },
-  livree: { label: "LIVRÉE", color: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.35)" },
-  delivered: { label: "LIVRÉE", color: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.35)" },
-  probleme: { label: "PROBLÈME", color: "#ef4444", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.35)" },
-  annulee: { label: "ANNULÉE", color: "#6b7280", bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.35)" },
+// ── SOUND ──
+function playNotificationSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch { /* ignore */ }
+}
+
+// ── MODAL NOUVELLE COMMANDE ──
+type NewOrderModalProps = {
+  onClose: () => void;
+  onSave: (data: { name: string; phone: string; address: string; items: string; total: string; paidOnline: boolean }) => void;
 };
+
+function NewOrderModal({ onClose, onSave }: NewOrderModalProps) {
+  const [form, setForm] = useState({ name: "", phone: "", address: "", items: "", total: "", paidOnline: false });
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "rgba(14,14,28,0.97)", border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 18, padding: "32px 28px", width: 420,
+          boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff", letterSpacing: "0.06em", marginBottom: 22 }}>
+          NOUVELLE COMMANDE
+        </div>
+        {[
+          { key: "name", label: "Nom client", placeholder: "Ex: Allan" },
+          { key: "phone", label: "Téléphone", placeholder: "06 12 34 56 78" },
+          { key: "address", label: "Adresse", placeholder: "12 rue de la Paix, Alençon" },
+          { key: "items", label: "Articles", placeholder: "2x Burger, 1x Frites" },
+          { key: "total", label: "Montant (€)", placeholder: "24" },
+        ].map(({ key, label, placeholder }) => (
+          <div key={key} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.1em", marginBottom: 5, textTransform: "uppercase" }}>
+              {label}
+            </div>
+            <input
+              value={(form as any)[key]}
+              onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+              placeholder={placeholder}
+              style={{
+                width: "100%", padding: "9px 13px", borderRadius: 9,
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(255,255,255,0.04)", color: "#f1f5f9",
+                fontSize: "0.85rem", outline: "none", boxSizing: "border-box",
+              }}
+            />
+          </div>
+        ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.82rem", color: "rgba(255,255,255,0.6)" }}>
+            <input
+              type="checkbox"
+              checked={form.paidOnline}
+              onChange={(e) => setForm((f) => ({ ...f, paidOnline: e.target.checked }))}
+              style={{ accentColor: "#06b6d4", width: 16, height: 16 }}
+            />
+            Payé en ligne
+          </label>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1, padding: "10px 0", borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.5)", fontSize: "0.83rem", fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={() => { onSave(form); onClose(); }}
+            style={{
+              flex: 2, padding: "10px 0", borderRadius: 10,
+              border: "none", background: "#f97316",
+              color: "#fff", fontSize: "0.83rem", fontWeight: 700, cursor: "pointer",
+              letterSpacing: "0.04em",
+            }}
+          >
+            Créer la commande
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const NAV = [
   {
@@ -81,334 +169,172 @@ const NAV = [
       { key: "dashboard", label: "Tableau de bord", icon: "⊞", href: "/admin/dashboard" },
       { key: "commandes", label: "Commandes", icon: "📋", href: "/admin/commandes" },
       { key: "dispatch", label: "Dispatch", icon: "🏍️", href: "/admin?tab=dispatch" },
-      { key: "livreurs", label: "Livreurs en ligne", icon: "🟢", href: "/admin?tab=online_drivers" },
-      { key: "clients", label: "Clients", icon: "👤", href: "/admin?tab=users" },
-      { key: "candidature", label: "Candidature", icon: "📝", href: "/admin?tab=drivers" },
+      { key: "paiements", label: "Paiements", icon: "💳", href: "/admin?tab=payouts" },
     ],
   },
   {
     section: "FINANCE",
     items: [
-      { key: "paiements", label: "Paiements", icon: "💳", href: "/admin?tab=payouts" },
-      { key: "previsions", label: "Prévisions", icon: "📈", href: "/admin/analytics" },
+      { key: "finance-commandes", label: "Commandes", icon: "📊", href: "/admin/analytics" },
+      { key: "finance-dispatch", label: "Dispatch", icon: "📈", href: "/admin/payouts" },
     ],
   },
 ];
 
-type FilterKey = "tous" | "livraison" | "collect" | "nouveau" | "en_cours" | "terminees" | "probleme";
-
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "tous", label: "Tous" },
-  { key: "livraison", label: "Livraison" },
-  { key: "collect", label: "Collect" },
-  { key: "nouveau", label: "Nouveau" },
-  { key: "en_cours", label: "En cours" },
-  { key: "terminees", label: "Terminées" },
-  { key: "probleme", label: "Problème" },
-];
-
-// ── SOUND NOTIFICATION ──
-function playNotificationSound() {
-  try {
-    const ctx = new AudioContext();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.5);
-  } catch {
-    // AudioContext not available
-  }
-}
-
-// ── TIME AGO ──
-function timeAgo(dateStr: string) {
-  if (!dateStr) return "—";
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "À l'instant";
-  if (mins < 60) return `${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${h}h${m > 0 ? String(m).padStart(2, "0") : ""}`;
-}
-
-// ── EXPORT CSV ──
-function exportCSV(orders: Order[]) {
-  const headers = ["ID", "Numéro", "Client", "Téléphone", "Adresse", "Articles", "Total", "Statut", "Paiement", "Type", "Date"];
-  const rows = orders.map((o) => [
-    o.id,
-    o.orderNumber || "",
-    o.name || "Client",
-    o.phone || "",
-    (o.address || "").replace(/,/g, ";"),
-    (o.items || "").replace(/,/g, ";"),
-    o.total,
-    o.status,
-    o.paidOnline ? "En ligne" : "Cash",
-    o.fulfillmentType === "pickup" ? "Collect" : "Livraison",
-    o.createdAt,
-  ]);
-  const csvContent = [headers, ...rows].map((r) => r.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `commandes_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ── ACTION BUTTON CONFIG ──
-function getActionButton(status: string): { label: string; nextStatus: string; color: string } {
-  switch (status) {
-    case "nouveau":
-      return { label: "Prendre", nextStatus: "en_cours", color: C.blue };
-    case "en_cours":
-    case "confirmed":
-      return { label: "Livrée ✓", nextStatus: "livree", color: C.green };
-    case "livree":
-    case "delivered":
-      return { label: "Archiver", nextStatus: "archivee", color: C.textFaint };
-    case "probleme":
-      return { label: "Résoudre", nextStatus: "en_cours", color: C.yellow };
-    default:
-      return { label: "Voir", nextStatus: "", color: C.textMuted };
-  }
-}
+const PAGE_SIZE = 8;
 
 export default function CommandesPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filter, setFilter] = useState<FilterKey>("tous");
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [page, setPage] = useState(1);
+  const [showNewModal, setShowNewModal] = useState(false);
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
-  const [glowOrderIds, setGlowOrderIds] = useState<Set<string>>(new Set());
-  const [aiRunning, setAiRunning] = useState(false);
-  const [aiResult, setAiResult] = useState<string | null>(null);
   const prevOrderIds = useRef<Set<string>>(new Set());
-  const listRef = useRef<HTMLDivElement>(null);
   const isFirstLoad = useRef(true);
 
-  // ── Real-time Firebase listener ──
+  // ── Orders listener ──
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
+    return onSnapshot(q, (snap) => {
       const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Order));
-
       if (isFirstLoad.current) {
         isFirstLoad.current = false;
         prevOrderIds.current = new Set(data.map((o) => o.id));
         setOrders(data);
         return;
       }
-
-      // Detect new orders
       const incoming = data.filter((o) => !prevOrderIds.current.has(o.id));
       if (incoming.length > 0) {
         playNotificationSound();
-        const newIds = new Set(incoming.map((o) => o.id));
-        setNewOrderIds((prev) => new Set([...prev, ...newIds]));
-        setGlowOrderIds((prev) => new Set([...prev, ...newIds]));
-
-        // Remove glow after 6 seconds
+        setNewOrderIds((prev) => new Set([...prev, ...incoming.map((o) => o.id)]));
         setTimeout(() => {
-          setGlowOrderIds((prev) => {
+          setNewOrderIds((prev) => {
             const next = new Set(prev);
-            newIds.forEach((id) => next.delete(id));
+            incoming.forEach((o) => next.delete(o.id));
             return next;
           });
-        }, 6000);
-
-        // Auto-scroll to top
-        if (listRef.current) {
-          listRef.current.scrollTo({ top: 0, behavior: "smooth" });
-        }
-
+        }, 8000);
         prevOrderIds.current = new Set(data.map((o) => o.id));
       }
-
       setOrders(data);
     });
-
-    return () => unsub();
   }, []);
 
-  // ── Update order status ──
+  // ── Drivers listener ──
+  useEffect(() => {
+    return onSnapshot(collection(db, "drivers"), (snap) => {
+      setDrivers(snap.docs.map((d) => ({ uid: d.id, ...d.data() } as Driver)));
+    });
+  }, []);
+
   const updateStatus = useCallback(async (id: string, status: string) => {
     await updateDoc(doc(db, "orders", id), { status });
   }, []);
 
-  // ── Cancel order ──
-  const cancelOrder = useCallback(async (id: string) => {
-    await updateDoc(doc(db, "orders", id), { status: "annulee" });
+  const createOrder = useCallback(async (form: { name: string; phone: string; address: string; items: string; total: string; paidOnline: boolean }) => {
+    await addDoc(collection(db, "orders"), {
+      name: form.name,
+      phone: form.phone,
+      address: form.address,
+      items: form.items,
+      total: parseFloat(form.total) || 0,
+      paidOnline: form.paidOnline,
+      status: "nouveau",
+      fulfillmentType: "delivery",
+      createdAt: new Date().toISOString(),
+    });
   }, []);
 
-  // ── Filter logic ──
-  const filteredOrders = orders.filter((o) => {
-    switch (filter) {
-      case "livraison":
-        return o.fulfillmentType !== "pickup";
-      case "collect":
-        return o.fulfillmentType === "pickup";
-      case "nouveau":
-        return o.status === "nouveau";
-      case "en_cours":
-        return o.status === "en_cours" || o.status === "confirmed";
-      case "terminees":
-        return o.status === "livree" || o.status === "delivered" || o.status === "archivee";
-      case "probleme":
-        return o.status === "probleme";
-      default:
-        return true;
-    }
-  });
-
-  // ── Smart sort: nouveau > en_cours > livree > rest ──
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
-    const priority = (s: string) => {
-      if (s === "nouveau") return 0;
-      if (s === "en_cours" || s === "confirmed") return 1;
-      if (s === "probleme") return 2;
-      if (!a.paidOnline) return 3;
-      return 4;
-    };
-    const pa = priority(a.status);
-    const pb = priority(b.status);
-    if (pa !== pb) return pa - pb;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  // ── Filtered: only "nouvelles" for the main table ──
+  const newOrders = orders.filter((o) => o.status === "nouveau");
+  const enCours = orders.filter((o) => ["en_cours", "confirmed", "delivering"].includes(o.status));
+  const totalPages = Math.max(1, Math.ceil(newOrders.length / PAGE_SIZE));
+  const pagedOrders = newOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // ── Stats ──
-  const today = new Date().toISOString().slice(0, 10);
-  const todayOrders = orders.filter((o) => o.createdAt?.slice(0, 10) === today);
-  const activeOrders = orders.filter((o) => ["nouveau", "en_cours", "confirmed"].includes(o.status));
-  const cashOrders = activeOrders.filter((o) => !o.paidOnline);
-  const paidOrders = activeOrders.filter((o) => o.paidOnline);
+  const activeDrivers = drivers.filter((d) => d.isOnline);
+  const deliveringDrivers = drivers.filter((d) => d.currentOrderId);
+  const cashPending = newOrders.filter((o) => !o.paidOnline).reduce((s, o) => s + Number(o.total || 0), 0);
+  const cashValidated = orders.filter((o) => ["livree", "delivered"].includes(o.status) && !o.paidOnline)
+    .reduce((s, o) => s + Number(o.total || 0), 0);
 
-  // ── AI anomaly detection (mock) ──
-  const runAIDetection = async () => {
-    setAiRunning(true);
-    setAiResult(null);
-    await new Promise((r) => setTimeout(r, 1800));
-    const anomalies = orders.filter(
-      (o) => !o.paidOnline && o.total > 5000
-    );
-    if (anomalies.length > 0) {
-      setAiResult(`⚠️ ${anomalies.length} anomalie(s) détectée(s) : montants élevés cash non validés.`);
-    } else {
-      setAiResult("✅ Aucune anomalie détectée sur les commandes actives.");
+  // ── Driver status helpers ──
+  function driverLabel(d: Driver) {
+    if (d.currentOrderId) {
+      return { text: "En livraison", color: "#f97316", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.35)" };
     }
-    setAiRunning(false);
-  };
+    if (d.isOnline) {
+      return { text: "LIBRE", color: "#22c55e", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.35)" };
+    }
+    return { text: "Hors ligne", color: "#475569", bg: "rgba(71,85,105,0.1)", border: "rgba(71,85,105,0.25)" };
+  }
 
   return (
     <div
       style={{
-        display: "flex",
-        height: "100vh",
+        display: "flex", height: "100vh",
         fontFamily: "'Inter', system-ui, sans-serif",
-        position: "relative",
-        overflow: "hidden",
+        position: "relative", overflow: "hidden",
         background: "#07080f",
       }}
     >
-      {/* ── BACKGROUND ── */}
+      {/* ── BACKGROUND IMAGE ── */}
       <div
         style={{
-          position: "absolute",
-          inset: 0,
+          position: "absolute", inset: 0,
           backgroundImage: "url('/IMG_0964.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          filter: "brightness(0.3) saturate(0.6)",
-          zIndex: 0,
+          backgroundSize: "cover", backgroundPosition: "center",
+          filter: "brightness(0.28) saturate(0.5)", zIndex: 0,
         }}
       />
       <div
         style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(135deg, rgba(5,5,15,0.6) 0%, rgba(10,10,25,0.5) 100%)",
+          position: "absolute", inset: 0,
+          background: "linear-gradient(135deg, rgba(5,5,15,0.65) 0%, rgba(10,10,25,0.55) 100%)",
           zIndex: 1,
         }}
       />
 
-      {/* ── CSS ANIMATIONS ── */}
       <style>{`
-        @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-24px) scale(0.98); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
         @keyframes glowPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-          50%       { box-shadow: 0 0 28px 4px rgba(59,130,246,0.45), 0 0 0 2px rgba(59,130,246,0.2); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+          50%       { box-shadow: 0 0 22px 4px rgba(249,115,22,0.35); }
         }
-        @keyframes shimmerNew {
-          0%   { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(10px); }
+          to   { opacity: 1; transform: translateX(0); }
         }
-        @keyframes vibrate {
-          0%, 100% { transform: translateX(0); }
-          20%       { transform: translateX(-2px); }
-          40%       { transform: translateX(2px); }
-          60%       { transform: translateX(-2px); }
-          80%       { transform: translateX(2px); }
-        }
-        .order-new { animation: slideDown 0.4s cubic-bezier(.23,1,.32,1) forwards; }
-        .order-glow { animation: glowPulse 0.8s ease-in-out 3, vibrate 0.3s ease-in-out; }
-        .filter-btn-active { box-shadow: 0 0 14px 2px rgba(249,115,22,0.45); }
-        .action-btn:hover { filter: brightness(1.15); transform: scale(1.04); }
-        .cancel-btn:hover { filter: brightness(1.1); }
-        .order-card { transition: border-color 0.25s, box-shadow 0.25s; }
-        .order-card:hover { border-color: rgba(249,115,22,0.3) !important; box-shadow: 0 4px 30px rgba(249,115,22,0.08); }
+        .row-new { animation: glowPulse 0.9s ease-in-out 3; }
+        .nav-btn:hover { background: rgba(255,255,255,0.06) !important; color: #fff !important; }
+        .action-btn:hover { filter: brightness(1.18); transform: scale(1.04); }
+        .cancel-btn:hover { background: rgba(239,68,68,0.15) !important; }
+        .assign-btn:hover { filter: brightness(1.15); transform: scale(1.03); }
+        .driver-card { transition: border-color 0.2s; }
+        .driver-card:hover { border-color: rgba(249,115,22,0.3) !important; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
       `}</style>
 
-      {/* ── SIDEBAR ── */}
+      {/* ── LEFT SIDEBAR ── */}
       <aside
         style={{
-          width: 220,
-          background: C.sidebar,
-          backdropFilter: C.glass,
-          WebkitBackdropFilter: C.glass,
-          color: C.text,
-          display: "flex",
-          flexDirection: "column",
-          flexShrink: 0,
-          overflowY: "auto",
-          zIndex: 10,
-          borderRight: `1px solid ${C.border}`,
+          width: 210, background: "rgba(8,8,16,0.88)",
+          backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+          color: "#f1f5f9", display: "flex", flexDirection: "column",
+          flexShrink: 0, overflowY: "auto", zIndex: 10,
+          borderRight: "1px solid rgba(255,255,255,0.07)",
         }}
       >
-        {/* Logo */}
-        <div style={{ padding: "24px 20px 16px", borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "0.08em", color: "#fff" }}>
-            YASSALA
-          </div>
-          <div style={{ fontSize: "0.62rem", color: C.textFaint, letterSpacing: "0.16em", marginTop: 2 }}>
-            ADMIN PANEL
-          </div>
+        <div style={{ padding: "22px 20px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "0.1em", color: "#fff" }}>YASSALA</div>
+          <div style={{ fontSize: "0.58rem", color: "#475569", letterSpacing: "0.18em", marginTop: 2 }}>ADMIN PANEL</div>
         </div>
-
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: "16px 0" }}>
+        <nav style={{ flex: 1, padding: "14px 0" }}>
           {NAV.map((group) => (
-            <div key={group.section} style={{ marginBottom: 8 }}>
-              <div
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.18em",
-                  color: C.textFaint,
-                  padding: "8px 20px 6px",
-                  textTransform: "uppercase" as const,
-                }}
-              >
+            <div key={group.section} style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.18em", color: "#475569", padding: "8px 20px 5px", textTransform: "uppercase" as const }}>
                 {group.section}
               </div>
               {group.items.map((item) => {
@@ -416,25 +342,20 @@ export default function CommandesPage() {
                 return (
                   <button
                     key={item.key}
+                    className="nav-btn"
                     onClick={() => router.push(item.href)}
                     style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
+                      width: "100%", display: "flex", alignItems: "center", gap: 9,
                       padding: "9px 20px",
-                      background: isActive ? C.navActive : "transparent",
+                      background: isActive ? "rgba(249,115,22,0.1)" : "transparent",
                       border: "none",
-                      borderLeft: isActive ? `3px solid ${C.accent}` : "3px solid transparent",
-                      color: isActive ? "#fff" : C.textMuted,
-                      fontSize: "0.84rem",
-                      fontWeight: isActive ? 600 : 400,
-                      cursor: "pointer",
-                      textAlign: "left" as const,
-                      transition: "all 0.15s",
+                      borderLeft: isActive ? "3px solid #f97316" : "3px solid transparent",
+                      color: isActive ? "#fff" : "#94a3b8",
+                      fontSize: "0.82rem", fontWeight: isActive ? 600 : 400,
+                      cursor: "pointer", textAlign: "left" as const, transition: "all 0.15s",
                     }}
                   >
-                    <span style={{ fontSize: "0.8rem" }}>{item.icon}</span>
+                    <span style={{ fontSize: "0.78rem" }}>{item.icon}</span>
                     {item.label}
                   </button>
                 );
@@ -442,476 +363,483 @@ export default function CommandesPage() {
             </div>
           ))}
         </nav>
-
-        {/* Bottom link */}
-        <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.border}` }}>
-          <a
-            href="/admin"
-            style={{ display: "block", fontSize: "0.73rem", color: C.textFaint, textDecoration: "none", letterSpacing: "0.05em" }}
-          >
-            ← Admin complet
-          </a>
+        <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <a href="/admin" style={{ fontSize: "0.7rem", color: "#475569", textDecoration: "none" }}>← Admin complet</a>
         </div>
       </aside>
 
       {/* ── MAIN ── */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", zIndex: 10 }}>
 
-        {/* ── TOP BAR ── */}
-        <div
+        {/* ── HEADER ── */}
+        <header
           style={{
-            padding: "13px 28px",
-            background: "rgba(8,8,16,0.8)",
-            backdropFilter: C.glass,
-            WebkitBackdropFilter: C.glass,
-            borderBottom: `1px solid ${C.border}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            padding: "12px 24px",
+            background: "rgba(8,8,16,0.82)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
             flexShrink: 0,
           }}
         >
           <div>
-            <div style={{ fontWeight: 900, fontSize: "1.15rem", color: "#fff", letterSpacing: "0.12em" }}>
-              COMMANDES
+            <div style={{ fontWeight: 900, fontSize: "1.1rem", color: "#fff", letterSpacing: "0.12em" }}>
+              YASSALA ADMIN
             </div>
-            <div style={{ fontSize: "0.68rem", color: C.textMuted, marginTop: 1, letterSpacing: "0.04em" }}>
+            <div style={{ fontSize: "0.64rem", color: "#475569", marginTop: 1, letterSpacing: "0.04em" }}>
               {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
-              {" · "}
-              <span style={{ color: C.green }}>● LIVE</span>
+              {"  ·  "}
+              <span style={{ color: "#22c55e" }}>● LIVE</span>
             </div>
           </div>
-
-          {/* Action buttons top-right */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Bell */}
             <button
-              onClick={() => exportCSV(orders)}
               style={{
-                padding: "7px 14px",
-                borderRadius: 8,
-                border: `1px solid ${C.border}`,
-                background: C.card,
-                color: C.text,
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                letterSpacing: "0.03em",
-                backdropFilter: C.glass,
+                position: "relative", background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10,
+                padding: "7px 10px", cursor: "pointer", color: "#94a3b8", fontSize: "1rem",
               }}
             >
-              📥 Export CSV
+              🔔
+              {newOrderIds.size > 0 && (
+                <span style={{
+                  position: "absolute", top: 4, right: 4,
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: "#f97316", border: "2px solid #07080f",
+                }} />
+              )}
             </button>
+            {/* Nouvelle commande */}
             <button
-              onClick={runAIDetection}
-              disabled={aiRunning}
+              onClick={() => setShowNewModal(true)}
               style={{
-                padding: "7px 14px",
-                borderRadius: 8,
-                border: `1px solid rgba(168,85,247,0.4)`,
-                background: "rgba(168,85,247,0.1)",
-                color: "#c084fc",
-                fontSize: "0.75rem",
-                fontWeight: 600,
-                cursor: aiRunning ? "wait" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                letterSpacing: "0.03em",
-                opacity: aiRunning ? 0.7 : 1,
-                transition: "all 0.2s",
+                padding: "8px 18px", borderRadius: 10,
+                border: "none", background: "#f97316",
+                color: "#fff", fontSize: "0.8rem", fontWeight: 700,
+                cursor: "pointer", letterSpacing: "0.05em",
+                display: "flex", alignItems: "center", gap: 7,
+                transition: "all 0.15s",
               }}
             >
-              {aiRunning ? "⏳ Analyse..." : "🤖 Détection IA"}
+              + Nouvelle commande
             </button>
-          </div>
-        </div>
-
-        {/* ── AI RESULT BANNER ── */}
-        {aiResult && (
-          <div
-            style={{
-              padding: "9px 28px",
-              background: aiResult.startsWith("⚠️")
-                ? "rgba(234,179,8,0.12)"
-                : "rgba(34,197,94,0.10)",
-              borderBottom: `1px solid ${aiResult.startsWith("⚠️") ? "rgba(234,179,8,0.3)" : "rgba(34,197,94,0.25)"}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: "0.78rem", color: aiResult.startsWith("⚠️") ? "#fbbf24" : "#4ade80", fontWeight: 600 }}>
-              {aiResult}
-            </span>
-            <button
-              onClick={() => setAiResult(null)}
-              style={{ background: "none", border: "none", color: C.textFaint, cursor: "pointer", fontSize: "0.9rem" }}
+            {/* Avatar */}
+            <div
+              style={{
+                width: 34, height: 34, borderRadius: "50%",
+                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 800, fontSize: "0.8rem", color: "#fff", flexShrink: 0,
+              }}
             >
-              ✕
-            </button>
+              CB
+            </div>
           </div>
-        )}
+        </header>
 
         {/* ── SCROLLABLE BODY ── */}
-        <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
 
           {/* ── STAT CARDS ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 22 }}>
-            {/* Actives */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+            {/* En attente */}
             <div style={{
-              background: "rgba(34,197,94,0.08)",
-              border: "1px solid rgba(34,197,94,0.25)",
-              borderRadius: 14,
-              padding: "14px 18px",
-              backdropFilter: C.glass,
+              background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.22)",
+              borderRadius: 16, padding: "16px 20px", backdropFilter: "blur(16px)",
+              display: "flex", alignItems: "center", gap: 16,
             }}>
-              <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", color: C.green, textTransform: "uppercase" as const, marginBottom: 4 }}>
-                🟢 Actives
-              </div>
-              <div style={{ fontWeight: 900, fontSize: "2rem", color: "#fff", lineHeight: 1 }}>
-                {activeOrders.length}
-              </div>
-              <div style={{ fontSize: "0.64rem", color: C.textFaint, marginTop: 3 }}>commandes en cours</div>
-            </div>
-
-            {/* Cash */}
-            <div style={{
-              background: "rgba(249,115,22,0.08)",
-              border: "1px solid rgba(249,115,22,0.25)",
-              borderRadius: 14,
-              padding: "14px 18px",
-              backdropFilter: C.glass,
-            }}>
-              <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", color: C.accent, textTransform: "uppercase" as const, marginBottom: 4 }}>
-                🟡 Cash
-              </div>
-              <div style={{ fontWeight: 900, fontSize: "2rem", color: "#fff", lineHeight: 1 }}>
-                {cashOrders.length}
-              </div>
-              <div style={{ fontSize: "0.64rem", color: C.textFaint, marginTop: 3 }}>paiement livraison</div>
-            </div>
-
-            {/* Payées */}
-            <div style={{
-              background: "rgba(6,182,212,0.08)",
-              border: "1px solid rgba(6,182,212,0.25)",
-              borderRadius: 14,
-              padding: "14px 18px",
-              backdropFilter: C.glass,
-            }}>
-              <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", color: C.cyan, textTransform: "uppercase" as const, marginBottom: 4 }}>
-                🔵 Payées
-              </div>
-              <div style={{ fontWeight: 900, fontSize: "2rem", color: "#fff", lineHeight: 1 }}>
-                {paidOrders.length}
-              </div>
-              <div style={{ fontSize: "0.64rem", color: C.textFaint, marginTop: 3 }}>paiement en ligne</div>
-            </div>
-
-            {/* Total jour */}
-            <div style={{
-              background: "rgba(168,85,247,0.08)",
-              border: "1px solid rgba(168,85,247,0.25)",
-              borderRadius: 14,
-              padding: "14px 18px",
-              backdropFilter: C.glass,
-            }}>
-              <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.14em", color: C.purple, textTransform: "uppercase" as const, marginBottom: 4 }}>
-                🟣 Total jour
-              </div>
-              <div style={{ fontWeight: 900, fontSize: "2rem", color: "#fff", lineHeight: 1 }}>
-                {todayOrders.length}
-              </div>
-              <div style={{ fontSize: "0.64rem", color: C.textFaint, marginTop: 3 }}>
-                {todayOrders.reduce((s, o) => s + Number(o.total || 0), 0).toLocaleString("fr-FR")} €
-              </div>
-            </div>
-          </div>
-
-          {/* ── FILTER BAR ── */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" as const }}>
-            {FILTERS.map((f) => {
-              const isActive = filter === f.key;
-              // Count badge
-              let count = 0;
-              if (f.key === "tous") count = orders.length;
-              else if (f.key === "livraison") count = orders.filter((o) => o.fulfillmentType !== "pickup").length;
-              else if (f.key === "collect") count = orders.filter((o) => o.fulfillmentType === "pickup").length;
-              else if (f.key === "nouveau") count = orders.filter((o) => o.status === "nouveau").length;
-              else if (f.key === "en_cours") count = orders.filter((o) => ["en_cours", "confirmed"].includes(o.status)).length;
-              else if (f.key === "terminees") count = orders.filter((o) => ["livree", "delivered", "archivee"].includes(o.status)).length;
-              else if (f.key === "probleme") count = orders.filter((o) => o.status === "probleme").length;
-
-              return (
-                <button
-                  key={f.key}
-                  onClick={() => setFilter(f.key)}
-                  className={isActive ? "filter-btn-active" : ""}
-                  style={{
-                    padding: "7px 16px",
-                    borderRadius: 20,
-                    border: isActive ? `1px solid rgba(249,115,22,0.6)` : `1px solid ${C.border}`,
-                    background: isActive ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.04)",
-                    color: isActive ? C.accent : C.textMuted,
-                    fontSize: "0.78rem",
-                    fontWeight: isActive ? 700 : 400,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    transition: "all 0.15s",
-                    backdropFilter: C.glass,
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {f.label}
-                  {count > 0 && (
-                    <span style={{
-                      background: isActive ? C.accent : "rgba(255,255,255,0.1)",
-                      color: isActive ? "#fff" : C.textFaint,
-                      borderRadius: 10,
-                      padding: "1px 7px",
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      minWidth: 20,
-                      textAlign: "center" as const,
-                    }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* ── SECTION HEADING ── */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.8rem", color: C.textMuted, letterSpacing: "0.12em", textTransform: "uppercase" as const }}>
-              {sortedOrders.length} commande{sortedOrders.length !== 1 ? "s" : ""}
-            </div>
-            {newOrderIds.size > 0 && (
-              <div style={{ fontSize: "0.73rem", color: C.blue, fontWeight: 600, animation: "glowPulse 1s infinite" }}>
-                🔔 {newOrderIds.size} nouvelle{newOrderIds.size > 1 ? "s" : ""} commande{newOrderIds.size > 1 ? "s" : ""}
-              </div>
-            )}
-          </div>
-
-          {/* ── ORDER LIST ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {sortedOrders.length === 0 ? (
               <div style={{
-                textAlign: "center" as const,
-                padding: "60px 20px",
-                color: C.textFaint,
-                fontSize: "0.85rem",
-              }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>📭</div>
-                Aucune commande dans cette catégorie
+                width: 44, height: 44, borderRadius: 12,
+                background: "rgba(249,115,22,0.15)", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1.3rem", flexShrink: 0,
+              }}>⏳</div>
+              <div>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.14em", color: "#f97316", textTransform: "uppercase" as const, marginBottom: 3 }}>
+                  En attente
+                </div>
+                <div style={{ fontWeight: 900, fontSize: "2rem", color: "#fff", lineHeight: 1 }}>{newOrders.length}</div>
+                <div style={{ fontSize: "0.62rem", color: "#475569", marginTop: 2 }}>nouvelles commandes</div>
+              </div>
+            </div>
+
+            {/* En livraison */}
+            <div style={{
+              background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)",
+              borderRadius: 16, padding: "16px 20px", backdropFilter: "blur(16px)",
+              display: "flex", alignItems: "center", gap: 16,
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1.3rem", flexShrink: 0,
+              }}>🏍️</div>
+              <div>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.14em", color: "#22c55e", textTransform: "uppercase" as const, marginBottom: 3 }}>
+                  En livraison
+                </div>
+                <div style={{ fontWeight: 900, fontSize: "2rem", color: "#fff", lineHeight: 1 }}>{enCours.length}</div>
+                <div style={{ fontSize: "0.62rem", color: "#475569", marginTop: 2 }}>en cours de livraison</div>
+              </div>
+            </div>
+
+            {/* Livreurs actifs */}
+            <div style={{
+              background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.2)",
+              borderRadius: 16, padding: "16px 20px", backdropFilter: "blur(16px)",
+              display: "flex", alignItems: "center", gap: 16,
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: "rgba(59,130,246,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "1.3rem", flexShrink: 0,
+              }}>👤</div>
+              <div>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.14em", color: "#3b82f6", textTransform: "uppercase" as const, marginBottom: 3 }}>
+                  Livreurs actifs
+                </div>
+                <div style={{ fontWeight: 900, fontSize: "2rem", color: "#fff", lineHeight: 1 }}>{activeDrivers.length}</div>
+                <div style={{ fontSize: "0.62rem", color: "#475569", marginTop: 2 }}>connectés maintenant</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── TABLE CONTAINER ── */}
+          <div style={{
+            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 18, overflow: "hidden", backdropFilter: "blur(16px)",
+          }}>
+            {/* Table header */}
+            <div style={{
+              padding: "14px 22px",
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ fontWeight: 800, fontSize: "0.85rem", color: "#fff", letterSpacing: "0.12em" }}>
+                NOUVELLES COMMANDES
+                {newOrderIds.size > 0 && (
+                  <span style={{
+                    marginLeft: 10, background: "rgba(249,115,22,0.15)",
+                    border: "1px solid rgba(249,115,22,0.4)",
+                    color: "#f97316", borderRadius: 8, padding: "2px 9px",
+                    fontSize: "0.65rem", fontWeight: 700, animation: "glowPulse 1s infinite",
+                  }}>
+                    +{newOrderIds.size} nouvelle{newOrderIds.size > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: "0.7rem", color: "#475569" }}>
+                {newOrders.length} commande{newOrders.length !== 1 ? "s" : ""}
+              </div>
+            </div>
+
+            {/* Column headers */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "72px 1fr 100px 90px 180px",
+              padding: "10px 22px",
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              background: "rgba(255,255,255,0.02)",
+            }}>
+              {["N°", "CLIENT", "MONTANT", "PAIEMENT", "ACTIONS"].map((h) => (
+                <div key={h} style={{ fontSize: "0.6rem", fontWeight: 700, color: "#475569", letterSpacing: "0.14em", textTransform: "uppercase" as const }}>
+                  {h}
+                </div>
+              ))}
+            </div>
+
+            {/* Rows */}
+            {pagedOrders.length === 0 ? (
+              <div style={{ textAlign: "center" as const, padding: "48px 20px", color: "#475569" }}>
+                <div style={{ fontSize: "2.2rem", marginBottom: 10 }}>📭</div>
+                <div style={{ fontSize: "0.82rem" }}>Aucune nouvelle commande</div>
               </div>
             ) : (
-              sortedOrders.map((order) => {
-                const statusCfg = STATUS_CONFIG[order.status] || {
-                  label: order.status?.toUpperCase(),
-                  color: C.textMuted,
-                  bg: "rgba(255,255,255,0.04)",
-                  border: C.border,
-                };
-                const actionBtn = getActionButton(order.status);
+              pagedOrders.map((order, idx) => {
                 const isNew = newOrderIds.has(order.id);
-                const isGlowing = glowOrderIds.has(order.id);
-                const isTerminee = ["livree", "delivered", "archivee"].includes(order.status);
-
                 return (
                   <div
                     key={order.id}
-                    className={`order-card${isNew ? " order-new" : ""}${isGlowing ? " order-glow" : ""}`}
+                    className={isNew ? "row-new" : ""}
                     style={{
-                      background: isNew
-                        ? "rgba(59,130,246,0.07)"
-                        : isTerminee
-                        ? "rgba(255,255,255,0.025)"
-                        : "rgba(255,255,255,0.045)",
-                      border: `1px solid ${isGlowing ? "rgba(59,130,246,0.5)" : isNew ? "rgba(59,130,246,0.2)" : C.border}`,
-                      borderRadius: 14,
-                      padding: "14px 18px",
-                      display: "flex",
+                      display: "grid",
+                      gridTemplateColumns: "72px 1fr 100px 90px 180px",
+                      padding: "13px 22px",
+                      borderBottom: idx < pagedOrders.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                      background: isNew ? "rgba(249,115,22,0.04)" : "transparent",
                       alignItems: "center",
-                      gap: 16,
-                      backdropFilter: C.glass,
-                      opacity: isTerminee ? 0.7 : 1,
-                      position: "relative" as const,
-                      overflow: "hidden" as const,
+                      transition: "background 0.2s",
                     }}
                   >
-                    {/* NEW indicator strip */}
-                    {isNew && (
-                      <div style={{
-                        position: "absolute",
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: 3,
-                        background: "linear-gradient(180deg, #3b82f6, #06b6d4)",
-                        borderRadius: "14px 0 0 14px",
-                      }} />
-                    )}
+                    {/* N° */}
+                    <div style={{ fontWeight: 800, fontSize: "0.88rem", color: "#f97316", letterSpacing: "0.04em" }}>
+                      #{String(order.orderNumber || order.id.slice(-3).toUpperCase()).padStart(3, "0")}
+                    </div>
 
-                    {/* LEFT: Order info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {/* Row 1: ID + Name + Status badge */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7 }}>
-                        <span style={{ fontWeight: 800, fontSize: "0.9rem", color: "#fff", letterSpacing: "0.03em", flexShrink: 0 }}>
-                          #{order.orderNumber || order.id.slice(-4).toUpperCase()}
-                        </span>
-                        <span style={{ fontWeight: 600, fontSize: "0.85rem", color: C.text, flexShrink: 0 }}>
-                          {order.name || "Client"}
-                        </span>
-                        {/* Status badge */}
-                        <span style={{
-                          background: statusCfg.bg,
-                          border: `1px solid ${statusCfg.border}`,
-                          color: statusCfg.color,
-                          borderRadius: 6,
-                          padding: "2px 9px",
-                          fontSize: "0.65rem",
-                          fontWeight: 700,
-                          letterSpacing: "0.08em",
-                          flexShrink: 0,
-                        }}>
-                          {statusCfg.label}
-                        </span>
-                        {/* Payment badge */}
-                        <span style={{
-                          background: order.paidOnline ? "rgba(6,182,212,0.12)" : "rgba(249,115,22,0.12)",
-                          border: `1px solid ${order.paidOnline ? "rgba(6,182,212,0.35)" : "rgba(249,115,22,0.35)"}`,
-                          color: order.paidOnline ? C.cyan : C.accent,
-                          borderRadius: 6,
-                          padding: "2px 9px",
-                          fontSize: "0.65rem",
-                          fontWeight: 700,
-                          letterSpacing: "0.06em",
-                          flexShrink: 0,
-                        }}>
-                          {order.paidOnline ? "PAYÉ" : "CASH"}
-                        </span>
-                        {/* Fulfillment type badge */}
-                        {order.fulfillmentType && (
-                          <span style={{
-                            background: "rgba(255,255,255,0.06)",
-                            border: `1px solid ${C.border}`,
-                            color: C.textMuted,
-                            borderRadius: 6,
-                            padding: "2px 9px",
-                            fontSize: "0.65rem",
-                            fontWeight: 600,
-                            flexShrink: 0,
-                          }}>
-                            {order.fulfillmentType === "pickup" ? "🏪 COLLECT" : "🏍️ LIVRAISON"}
+                    {/* CLIENT */}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.86rem", color: "#f1f5f9", marginBottom: 3 }}>
+                        {order.name || "Client"}
+                        {order.phone && (
+                          <span style={{ fontWeight: 400, color: "#475569", marginLeft: 8, fontSize: "0.76rem" }}>
+                            {order.phone}
                           </span>
                         )}
                       </div>
-
-                      {/* Row 2: Address + Items */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 6 }}>
+                      <div style={{
+                        fontSize: "0.73rem", color: "#64748b",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const,
+                      }}>
+                        {order.items}
                         {order.address && (
-                          <div style={{ fontSize: "0.77rem", color: C.textMuted, display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
-                            <span style={{ flexShrink: 0 }}>📍</span>
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                              {order.address}
-                            </span>
-                          </div>
+                          <span style={{ color: "#475569" }}> · 📍 {order.address}</span>
                         )}
-                        {order.phone && (
-                          <div style={{ fontSize: "0.76rem", color: C.textMuted, flexShrink: 0 }}>
-                            📞 {order.phone}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Row 3: Items + Total + Time */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" as const }}>
-                        {order.items && (
-                          <div style={{
-                            fontSize: "0.73rem",
-                            color: C.textFaint,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap" as const,
-                            maxWidth: 300,
-                          }}>
-                            🛒 {order.items}
-                          </div>
-                        )}
-                        <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                          {Number(order.total || 0).toLocaleString("fr-FR")} €
-                        </div>
-                        <div style={{ fontSize: "0.72rem", color: C.textFaint, flexShrink: 0 }}>
-                          🕐 {timeAgo(order.createdAt)}
-                        </div>
                       </div>
                     </div>
 
-                    {/* RIGHT: Action buttons */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 7, flexShrink: 0, alignItems: "flex-end" }}>
-                      {/* Primary action */}
-                      {actionBtn.nextStatus && (
-                        <button
-                          className="action-btn"
-                          onClick={() => updateStatus(order.id, actionBtn.nextStatus)}
+                    {/* MONTANT */}
+                    <div style={{ fontWeight: 800, fontSize: "0.92rem", color: "#fff" }}>
+                      {Number(order.total || 0).toLocaleString("fr-FR")} €
+                    </div>
+
+                    {/* PAIEMENT */}
+                    <div>
+                      <span style={{
+                        background: order.paidOnline ? "rgba(6,182,212,0.12)" : "rgba(249,115,22,0.12)",
+                        border: `1px solid ${order.paidOnline ? "rgba(6,182,212,0.35)" : "rgba(249,115,22,0.35)"}`,
+                        color: order.paidOnline ? "#06b6d4" : "#f97316",
+                        borderRadius: 7, padding: "4px 10px",
+                        fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.08em",
+                      }}>
+                        {order.paidOnline ? "PAYÉ" : "CASH"}
+                      </span>
+                    </div>
+
+                    {/* ACTIONS */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <button
+                        className="assign-btn"
+                        onClick={() => updateStatus(order.id, "en_cours")}
+                        style={{
+                          padding: "6px 14px", borderRadius: 8,
+                          border: "none", background: "#f97316",
+                          color: "#fff", fontSize: "0.74rem", fontWeight: 700,
+                          cursor: "pointer", letterSpacing: "0.04em",
+                          transition: "all 0.15s", whiteSpace: "nowrap" as const,
+                        }}
+                      >
+                        Assigner
+                      </button>
+                      {order.phone && (
+                        <a
+                          href={`tel:${order.phone}`}
                           style={{
-                            padding: "8px 18px",
-                            borderRadius: 9,
-                            border: "none",
-                            background: actionBtn.color,
-                            color: "#fff",
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            letterSpacing: "0.04em",
-                            transition: "all 0.15s",
-                            whiteSpace: "nowrap" as const,
-                            minWidth: 90,
+                            width: 30, height: 30, borderRadius: 8,
+                            background: "rgba(34,197,94,0.1)",
+                            border: "1px solid rgba(34,197,94,0.25)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "0.85rem", textDecoration: "none", flexShrink: 0,
                           }}
                         >
-                          {actionBtn.label}
-                        </button>
+                          📞
+                        </a>
                       )}
-                      {/* Cancel (only for active orders) */}
-                      {!isTerminee && order.status !== "annulee" && (
-                        <button
-                          className="cancel-btn"
-                          onClick={() => cancelOrder(order.id)}
-                          style={{
-                            padding: "5px 14px",
-                            borderRadius: 7,
-                            border: `1px solid rgba(239,68,68,0.3)`,
-                            background: "rgba(239,68,68,0.08)",
-                            color: "#f87171",
-                            fontSize: "0.7rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            transition: "all 0.15s",
-                            whiteSpace: "nowrap" as const,
-                          }}
-                        >
-                          Annuler
-                        </button>
-                      )}
+                      <button
+                        className="cancel-btn"
+                        onClick={() => updateStatus(order.id, "annulee")}
+                        style={{
+                          padding: "6px 10px", borderRadius: 8,
+                          border: "1px solid rgba(239,68,68,0.25)",
+                          background: "rgba(239,68,68,0.07)",
+                          color: "#f87171", fontSize: "0.72rem", fontWeight: 600,
+                          cursor: "pointer", transition: "all 0.15s",
+                        }}
+                      >
+                        Annuler
+                      </button>
                     </div>
                   </div>
                 );
               })
             )}
+
+            {/* ── TABLE FOOTER ── */}
+            <div style={{
+              padding: "12px 22px",
+              borderTop: "1px solid rgba(255,255,255,0.07)",
+              background: "rgba(255,255,255,0.02)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ fontSize: "0.76rem", color: "#94a3b8", fontWeight: 600 }}>
+                Total CASH en attente :{" "}
+                <span style={{ color: "#f97316", fontWeight: 800 }}>
+                  {cashPending.toLocaleString("fr-FR")} €
+                </span>
+              </div>
+              {/* Pagination */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  style={{
+                    padding: "5px 12px", borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: page === 1 ? "transparent" : "rgba(255,255,255,0.05)",
+                    color: page === 1 ? "#475569" : "#94a3b8",
+                    fontSize: "0.74rem", fontWeight: 600, cursor: page === 1 ? "default" : "pointer",
+                  }}
+                >
+                  Précédent
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    style={{
+                      width: 30, height: 30, borderRadius: 8,
+                      border: p === page ? "1px solid rgba(249,115,22,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                      background: p === page ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.04)",
+                      color: p === page ? "#f97316" : "#64748b",
+                      fontSize: "0.78rem", fontWeight: p === page ? 700 : 400,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  style={{
+                    padding: "5px 12px", borderRadius: 8,
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: page === totalPages ? "transparent" : "rgba(255,255,255,0.05)",
+                    color: page === totalPages ? "#475569" : "#94a3b8",
+                    fontSize: "0.74rem", fontWeight: 600,
+                    cursor: page === totalPages ? "default" : "pointer",
+                  }}
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Bottom spacer */}
-          <div style={{ height: 32 }} />
+          <div style={{ height: 28 }} />
         </div>
       </main>
+
+      {/* ── RIGHT PANEL ── */}
+      <aside
+        style={{
+          width: 268, background: "rgba(8,8,16,0.88)",
+          backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+          borderLeft: "1px solid rgba(255,255,255,0.07)",
+          display: "flex", flexDirection: "column", flexShrink: 0,
+          overflowY: "auto", zIndex: 10, padding: "20px 16px",
+          gap: 24,
+        }}
+      >
+        {/* ── LIVREURS ── */}
+        <div>
+          <div style={{
+            fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.18em",
+            color: "#475569", textTransform: "uppercase" as const, marginBottom: 12,
+          }}>
+            Livreurs
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {drivers.length === 0 ? (
+              <div style={{ fontSize: "0.76rem", color: "#475569", textAlign: "center" as const, padding: "16px 0" }}>
+                Aucun livreur trouvé
+              </div>
+            ) : (
+              drivers.map((driver) => {
+                const lbl = driverLabel(driver);
+                return (
+                  <div
+                    key={driver.uid}
+                    className="driver-card"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.07)",
+                      borderRadius: 12, padding: "11px 13px",
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.84rem", color: "#f1f5f9", marginBottom: 2 }}>
+                        {driver.name}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                        {driver.zone || "—"}
+                        {driver.currentOrderId && (
+                          <span style={{ color: "#f97316" }}> · En livraison</span>
+                        )}
+                      </div>
+                    </div>
+                    <span style={{
+                      background: lbl.bg, border: `1px solid ${lbl.border}`,
+                      color: lbl.color, borderRadius: 8,
+                      padding: "4px 10px", fontSize: "0.62rem", fontWeight: 700,
+                      letterSpacing: "0.06em", flexShrink: 0,
+                    }}>
+                      {lbl.text}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Ajouter livreur */}
+            <button
+              onClick={() => router.push("/admin?tab=drivers")}
+              style={{
+                width: "100%", padding: "9px 0", borderRadius: 12,
+                border: "1px dashed rgba(255,255,255,0.1)",
+                background: "transparent", color: "#475569",
+                fontSize: "0.76rem", fontWeight: 600, cursor: "pointer",
+                letterSpacing: "0.04em", transition: "all 0.15s",
+              }}
+            >
+              + Ajouter livreur
+            </button>
+          </div>
+        </div>
+
+        {/* ── PAIEMENTS ── */}
+        <div>
+          <div style={{
+            fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.18em",
+            color: "#475569", textTransform: "uppercase" as const, marginBottom: 12,
+          }}>
+            Paiements
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[
+              { label: "En attente cash", value: `${cashPending.toLocaleString("fr-FR")} €`, color: "#f97316", bg: "rgba(249,115,22,0.08)", border: "rgba(249,115,22,0.2)" },
+              { label: "Validés (aujourd'hui)", value: `${cashValidated.toLocaleString("fr-FR")} €`, color: "#22c55e", bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)" },
+              { label: "Erreurs de paiement", value: "0 €", color: "#ef4444", bg: "rgba(239,68,68,0.07)", border: "rgba(239,68,68,0.18)" },
+            ].map(({ label, value, color, bg, border }) => (
+              <div key={label} style={{
+                background: bg, border: `1px solid ${border}`,
+                borderRadius: 12, padding: "11px 14px",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <div style={{ fontSize: "0.74rem", color: "#94a3b8" }}>{label}</div>
+                <div style={{ fontWeight: 800, fontSize: "0.9rem", color }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      {/* ── MODAL ── */}
+      {showNewModal && (
+        <NewOrderModal
+          onClose={() => setShowNewModal(false)}
+          onSave={createOrder}
+        />
+      )}
     </div>
   );
 }
