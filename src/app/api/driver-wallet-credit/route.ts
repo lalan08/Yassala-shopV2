@@ -2,9 +2,9 @@
  * POST /api/driver-wallet-credit
  *
  * Crédite le portefeuille du livreur après une livraison.
- * Crée un document wallet_transactions dans Firestore.
+ * Crée un document wallet_transactions ET un document deliveries dans Firestore.
  *
- * Body : { driverId: string, orderId: string, orderNumber?: number }
+ * Body : { driverId: string, orderId: string, orderNumber?: number, paidOnline?: boolean, orderTotal?: number }
  */
 
 import { NextResponse } from 'next/server';
@@ -14,10 +14,12 @@ import { DEFAULT_DELIVERY_CONFIG } from '@/types/delivery';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { driverId, orderId, orderNumber } = body as {
+    const { driverId, orderId, orderNumber, paidOnline, orderTotal } = body as {
       driverId?: string;
       orderId?: string;
       orderNumber?: number;
+      paidOnline?: boolean;
+      orderTotal?: number;
     };
 
     if (!driverId || !orderId) {
@@ -26,48 +28,46 @@ export async function POST(request: Request) {
 
     const db = getAdminDb();
 
-    // Vérifier que la transaction n'existe pas déjà pour cette commande
-    const existing = await db
-      .collection('wallet_transactions')
-      .where('orderId', '==', orderId)
-      .where('driverId', '==', driverId)
-      .limit(1)
-      .get();
+    // ID déterministe pour éviter les doublons
+    const txId = `${driverId}_${orderId}`;
+    const existingTx = await db.collection('wallet_transactions').doc(txId).get();
 
-    if (!existing.empty) {
+    if (existingTx.exists) {
       return NextResponse.json({ ok: true, skipped: true, reason: 'already_exists' });
     }
 
     // Lire la config de livraison pour obtenir la rémunération de base
     let basePay = DEFAULT_DELIVERY_CONFIG.driver_base_pay;
+    let isRush = false;
+    let rushBonus = 0;
     try {
       const configSnap = await db.collection('settings').doc('delivery').get();
       if (configSnap.exists && typeof configSnap.data()?.driver_base_pay === 'number') {
         basePay = configSnap.data()!.driver_base_pay;
       }
-    } catch {
-      // fallback sur la valeur par défaut
-    }
-
-    // Vérifier si la commande est une commande rush pour ajouter le bonus
-    let rushBonus = 0;
-    try {
+      // Vérifier si la commande est rush
       const orderSnap = await db.collection('orders').doc(orderId).get();
       if (orderSnap.exists && orderSnap.data()?.isRush === true) {
-        const configSnap = await db.collection('settings').doc('delivery').get();
+        isRush = true;
         const rushBonusConfig = configSnap.exists
           ? (configSnap.data()?.driver_rush_bonus ?? DEFAULT_DELIVERY_CONFIG.driver_rush_bonus)
           : DEFAULT_DELIVERY_CONFIG.driver_rush_bonus;
         rushBonus = rushBonusConfig;
       }
     } catch {
-      // ignore
+      // fallback sur les valeurs par défaut
     }
 
     const totalAmount = parseFloat((basePay + rushBonus).toFixed(2));
     const label = orderNumber ? `Livraison #${orderNumber}` : `Livraison ${orderId.slice(-6).toUpperCase()}`;
+    const now = new Date().toISOString();
+    const hour = new Date().getHours();
+    const isNight = hour >= 22 || hour < 6;
+    const paymentType = paidOnline === false ? 'CASH' : 'ONLINE';
+    const cashAmount = paymentType === 'CASH' ? (orderTotal ?? 0) : 0;
 
-    await db.collection('wallet_transactions').add({
+    // 1. Créer la transaction wallet
+    await db.collection('wallet_transactions').doc(txId).set({
       driverId,
       orderId,
       orderNumber: orderNumber ?? null,
@@ -76,10 +76,31 @@ export async function POST(request: Request) {
       basePay,
       rushBonus,
       description: label,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     });
 
-    console.log(`[driver-wallet-credit] +${totalAmount}€ → driver=${driverId} order=${orderId}`);
+    // 2. Créer le document deliveries pour le suivi admin (si pas déjà existant)
+    const deliveryId = `del_${driverId}_${orderId}`;
+    const existingDelivery = await db.collection('deliveries').doc(deliveryId).get();
+    if (!existingDelivery.exists) {
+      await db.collection('deliveries').doc(deliveryId).set({
+        driverId,
+        orderId,
+        orderNumber: orderNumber ?? null,
+        createdAt: now,
+        isNight,
+        isRush,
+        paymentType,
+        cashCollectedAmount: cashAmount,
+        cashStatus: paymentType === 'CASH' ? 'unsettled' : 'settled',
+        basePay,
+        bonusPay: rushBonus,
+        totalPay: totalAmount,
+        status: 'pending',
+      });
+    }
+
+    console.log(`[driver-wallet-credit] +${totalAmount}€ → driver=${driverId} order=${orderId} delivery=${deliveryId}`);
 
     return NextResponse.json({ ok: true, amount: totalAmount });
   } catch (error: any) {

@@ -37,6 +37,7 @@ type DriverRow = {
   cashToReturn: number;
   netPayout: number;
   countValidated: number;
+  countPending: number;
   payoutStatus: "unpaid" | "paid" | "partial";
   boostTotal: number;
 };
@@ -183,6 +184,7 @@ export default function AdminPayouts() {
         });
 
         const validated  = drDels.filter(d => d.status === "validated");
+        const pendingDels = drDels.filter(d => d.status === "pending");
         const cashUnset  = drDels.filter(d => d.paymentType === "CASH" && d.cashStatus === "unsettled");
         const earn       = validated.reduce((s, d) => s + d.totalPay, 0);
         const cash       = cashUnset.reduce((s, d) => s + (d.cashCollectedAmount || 0), 0);
@@ -203,6 +205,7 @@ export default function AdminPayouts() {
           cashToReturn: cash,
           netPayout: net,
           countValidated: validated.length,
+          countPending: pendingDels.length,
           payoutStatus: paid ? "paid" : earn > 0 ? "unpaid" : "unpaid",
           boostTotal,
         } as DriverRow;
@@ -414,6 +417,16 @@ export default function AdminPayouts() {
                       </td>
                       <td style={{ fontFamily: "'Black Ops One',cursive", color: "#00f5ff" }}>
                         {r.countValidated}
+                        {r.countPending > 0 && (
+                          <span style={{
+                            marginLeft: 6, fontFamily: "'Share Tech Mono',monospace",
+                            fontSize: ".65rem", color: "#ff9500",
+                            background: "rgba(255,149,0,.12)", border: "1px solid rgba(255,149,0,.3)",
+                            borderRadius: 10, padding: "1px 6px",
+                          }}>
+                            +{r.countPending} à valider
+                          </span>
+                        )}
                       </td>
                       <td style={{ fontFamily: "'Black Ops One',cursive", color: "#b8ff00" }}>
                         {fmt(r.earningsValidated)}
