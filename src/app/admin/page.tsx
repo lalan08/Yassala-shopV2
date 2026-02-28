@@ -3711,11 +3711,8 @@ export default function AdminPage() {
                       onClick={async () => {
                         setDeliverySaving(true);
                         try {
-                          const res = await fetch("/api/delivery-config", {
-                            method:"POST", headers:{"Content-Type":"application/json"},
-                            body: JSON.stringify(deliveryConfig),
-                          });
-                          if (!res.ok) throw new Error();
+                          const safe = { ...DEFAULT_DELIVERY_CONFIG, ...deliveryConfig };
+                          await setDoc(doc(db, "settings", "delivery"), safe);
                           showToast("✓ Frais de livraison sauvegardés !");
                         } catch { showToast("Erreur sauvegarde frais", "err"); }
                         setDeliverySaving(false);
