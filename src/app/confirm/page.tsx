@@ -37,7 +37,7 @@ function ConfirmContent() {
       if (snap.exists()) {
         const data = snap.data();
         setOrder(data);
-        if (data.status === 'confirmed') setConfirmed(true);
+        if (data.status === 'confirmed' || data.status === 'nouveau' || data.status === 'en_cours' || data.status === 'livre') setConfirmed(true);
         if (data.otpExpiry && new Date() > new Date(data.otpExpiry)) {
           setExpired(true);
         }
