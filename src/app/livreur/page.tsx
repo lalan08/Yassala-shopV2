@@ -307,41 +307,18 @@ export default function LivreurPage() {
       activeOrderIds: arrayRemove(orderId),
     }, { merge: true }).catch(() => {});
     const order = orders.find(o => o.id === orderId);
-    // Créditer le portefeuille du livreur — écriture directe Firestore (fiable, sans dépendance serveur)
-    const txId = `${driverData.id}_${orderId}`;
-    const txRef = doc(db, "wallet_transactions", txId);
-    try {
-      const existingTx = await getDoc(txRef);
-      if (!existingTx.exists()) {
-        let basePay = 2.5;
-        try {
-          const configSnap = await getDoc(doc(db, "settings", "delivery"));
-          if (configSnap.exists() && typeof configSnap.data()?.driver_base_pay === 'number') {
-            basePay = configSnap.data()!.driver_base_pay;
-          }
-        } catch {}
-        const rushBonus = order?.isRush ? (order.rushFee ?? 0.5) : 0;
-        const totalAmount = parseFloat((basePay + rushBonus).toFixed(2));
-        await setDoc(txRef, {
-          driverId: driverData.id,
-          orderId,
-          orderNumber: order?.orderNumber ?? null,
-          type: 'delivery',
-          amount: totalAmount,
-          basePay,
-          rushBonus,
-          description: order?.orderNumber ? `Livraison #${order.orderNumber}` : `Livraison ${orderId.slice(-6).toUpperCase()}`,
-          createdAt: new Date().toISOString(),
-        });
-      }
-    } catch {
-      // Fallback sur l'API serveur si l'écriture client échoue
-      fetch('/api/driver-wallet-credit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driverId: driverData.id, orderId, orderNumber: order?.orderNumber ?? null }),
-      }).catch(() => {});
-    }
+    // Créditer le portefeuille + créer le document deliveries via API serveur (Admin SDK, fiable)
+    fetch('/api/driver-wallet-credit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        driverId: driverData.id,
+        orderId,
+        orderNumber: order?.orderNumber ?? null,
+        paidOnline: order?.paidOnline !== false,
+        orderTotal: order?.total ?? 0,
+      }),
+    }).catch(() => {});
     if (order?.email) {
       fetch('/api/email', {
         method: 'POST',
