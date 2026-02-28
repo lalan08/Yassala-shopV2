@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       orderId,
       orderNumber: orderNumber ?? null,
       type: 'delivery',
+      paymentType,          // 'ONLINE' | 'CASH' — nécessaire pour filtrer gainsDuJour
       amount: totalAmount,
       basePay,
       rushBonus,
