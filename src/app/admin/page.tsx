@@ -2134,7 +2134,7 @@ export default function AdminPage() {
               <div style={{display:"flex",gap:0,marginBottom:20,borderBottom:"1px solid rgba(255,255,255,.08)"}}>
                 {([
                   { val:"active",   label:"⚡ ACTIVES",  color:"#ff2d78",
-                    count: orders.filter(o => o.status === "nouveau" || o.status === "en_cours").length },
+                    count: orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation").length },
                   { val:"archived", label:"🗂 ARCHIVES", color:"#5a5470",
                     count: orders.filter(o => o.status === "livre" || o.status === "annule").length },
                 ] as const).map(t => (
@@ -2173,9 +2173,10 @@ export default function AdminPage() {
                 {/* Filtres par statut — actives uniquement */}
                 <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
                   {([
-                    { val:"all",      label:"TOUTES",   color:"#5a5470" },
-                    { val:"nouveau",  label:"NOUVEAU",  color:"#ff2d78" },
-                    { val:"en_cours", label:"EN COURS", color:"#ff9500" },
+                    { val:"all",                  label:"TOUTES",      color:"#5a5470" },
+                    { val:"pending_confirmation", label:"⏳ EN ATTENTE", color:"#a855f7" },
+                    { val:"nouveau",              label:"NOUVEAU",      color:"#ff2d78" },
+                    { val:"en_cours",             label:"EN COURS",     color:"#ff9500" },
                   ] as const).map(f => (
                     <button key={f.val} onClick={() => setOrderFilter(f.val)}
                       style={{background: orderFilter===f.val ? `${f.color}22` : "transparent",
@@ -2194,7 +2195,7 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {orders.filter(o => o.status === "nouveau" || o.status === "en_cours").length === 0 ? (
+                {orders.filter(o => o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation").length === 0 ? (
                   <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
                     padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
                     // aucune commande active
@@ -2202,7 +2203,7 @@ export default function AdminPage() {
                 ) : (
                   <div style={{display:"grid",gap:10}}>
                     {orders.filter(o =>
-                      (o.status === "nouveau" || o.status === "en_cours") &&
+                      (o.status === "nouveau" || o.status === "en_cours" || o.status === "pending_confirmation") &&
                       (orderFilter === "all" || o.status === orderFilter) &&
                       (fulfillmentFilter === "all" || (o as any).fulfillmentType === fulfillmentFilter || (fulfillmentFilter === "delivery" && !(o as any).fulfillmentType))
                     ).map(o => (
@@ -2246,6 +2247,13 @@ export default function AdminPage() {
                                 background:"rgba(0,245,255,.12)",color:"#00f5ff",borderRadius:3,
                                 padding:"2px 7px",letterSpacing:".08em"}}>🏪 COLLECT</span>
                             )}
+                            {o.status === "pending_confirmation" && (
+                              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                                background:"rgba(168,85,247,.15)",color:"#a855f7",borderRadius:3,
+                                padding:"2px 7px",letterSpacing:".08em",border:"1px solid rgba(168,85,247,.3)"}}>
+                                ⏳ ATTENTE OTP
+                              </span>
+                            )}
                             {o.isRush && (
                               <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
                                 background:"rgba(239,68,68,.2)",color:"#ef4444",borderRadius:3,
@@ -2276,13 +2284,36 @@ export default function AdminPage() {
                             color:"#b8ff00",textShadow:"0 0 10px rgba(184,255,0,.4)"}}>
                             {Number(o.total).toFixed(2)}€
                           </div>
+                          {/* OTP block — visible uniquement pour commandes en attente de confirmation */}
+                          {o.status === "pending_confirmation" && (o as any).otpCode && (
+                            <div style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.35)",
+                              borderRadius:8,padding:"8px 12px",textAlign:"center",minWidth:130}}>
+                              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",
+                                color:"#a855f7",letterSpacing:".1em",marginBottom:4}}>CODE OTP</div>
+                              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",
+                                color:"#f0eeff",letterSpacing:".3em",textShadow:"0 0 12px rgba(168,85,247,.5)"}}>
+                                {(o as any).otpCode}
+                              </div>
+                              <a
+                                href={`https://wa.me/${o.phone?.replace(/\D/g,"")}?text=${encodeURIComponent(`🔐 *Yassala Night Shop*\n\nBonjour ${(o as any).name || ""}!\n\nVoici votre code de confirmation pour la commande #${(o as any).orderNumber || o.id?.slice(-6).toUpperCase()} :\n\n*${(o as any).otpCode}*\n\nSaisissez ce code sur la page de confirmation pour valider votre commande.\n\nMerci 🙏`)}`}
+                                target="_blank" rel="noreferrer"
+                                style={{display:"block",marginTop:6,background:"rgba(37,211,102,.15)",
+                                  border:"1px solid rgba(37,211,102,.4)",color:"#25d366",borderRadius:6,
+                                  padding:"5px 8px",textDecoration:"none",fontFamily:"'Share Tech Mono',monospace",
+                                  fontSize:".68rem",letterSpacing:".06em"}}>
+                                📲 ENVOYER VIA WHATSAPP
+                              </a>
+                            </div>
+                          )}
                           <select value={o.status} onChange={e => updateOrderStatus(o.id!, e.target.value)}
                             style={{background:"#080514",border:"1px solid rgba(255,45,120,.4)",
                               color:"#ff2d78",padding:"7px 12px",borderRadius:4,
                               fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
                               letterSpacing:".06em",cursor:"pointer",minWidth:130}}>
+                            <option value="pending_confirmation">⏳ EN ATTENTE</option>
                             <option value="nouveau">🔴 NOUVEAU</option>
                             <option value="en_cours">🟠 EN COURS</option>
+                            <option value="confirmed">✅ CONFIRMÉ</option>
                             <option value="livre">🟢 {(o as any).fulfillmentType === 'pickup' ? 'RETIRÉ' : 'LIVRÉ'}</option>
                             <option value="annule">⚫ ANNULÉ</option>
                           </select>

@@ -656,12 +656,9 @@ export default function Home() {
       return;
     }
 
-    // ── Cash : vérification SMS obligatoire ──
-    if (paymentMethod === 'cash' && !cashSmsVerifiedRef.current) {
-      setShowSmsVerify(true);
-      return;
-    }
-    cashSmsVerifiedRef.current = false; // reset après usage
+    // ── Cash : générer OTP 4 chiffres ──
+    const cashOtpCode = paymentMethod === 'cash' ? String(Math.floor(1000 + Math.random() * 9000)) : null;
+    const cashOtpExpiry = paymentMethod === 'cash' ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
 
     setSubmitting(true);
 
@@ -744,7 +741,9 @@ export default function Home() {
           pickupLocationId: fulfillmentType === 'pickup' ? (pickupType === 'relay' ? pickupLocationId : 'stock_default') : null,
           pickupLocationSnapshot: pickupSnapshot,
           pickupTime: resolvedPickupTime,
-          status: "nouveau",
+          status: paymentMethod === 'cash' ? "pending_confirmation" : "nouveau",
+          otpCode: cashOtpCode,
+          otpExpiry: cashOtpExpiry,
           createdAt: new Date().toISOString(),
           phone: orderForm.phone,
           name: orderForm.name,
@@ -860,22 +859,11 @@ export default function Home() {
         }
 
         setCart([]);
-        // On garde toutes les infos pour la prochaine commande
-        setOrderForm(f => ({
-          name:    f.name,
-          phone:   f.phone,
-          email:   f.email,
-          address: f.address,
-          lat:     f.lat,
-          lng:     f.lng,
-        }));
-        setCoupon(null); setCouponInput("");
-        setFulfillmentType('delivery'); setPickupType('stock');
-        setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
-        setLastConfirmPickup(fulfillmentType === 'pickup' ? { type: pickupType, snapshot: pickupSnapshot, time: resolvedPickupTime ?? undefined } : null);
+        try { localStorage.removeItem("yassala_cart"); } catch {}
         setShowCart(false);
-        setOrderConfirmId(orderRef.id);
-        setOrderConfirmNum(orderNum);
+        // Rediriger vers la page de confirmation OTP
+        window.location.href = `/confirm?id=${orderRef.id}`;
+        return;
       }
 
     } catch (err: any) {
