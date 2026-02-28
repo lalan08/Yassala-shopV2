@@ -124,6 +124,8 @@ export default function AdminDashboard() {
     name: "", phone: "", address: "", items: "", total: "", paidOnline: false,
   });
   const [savingOrder, setSavingOrder] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<"all" | "nouveau" | "en_cours">("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ── Firebase realtime listeners ──
   useEffect(() => {
@@ -176,10 +178,29 @@ export default function AdminDashboard() {
   ).length;
 
   // ── New orders table ──
-  const newOrders = orders.filter((o) => ["nouveau", "en_cours", "confirmed"].includes(o.status));
+  const allNewOrders = orders.filter((o) => ["nouveau", "en_cours", "confirmed"].includes(o.status));
+  const newOrders = allNewOrders
+    .filter((o) => filterStatus === "all" || o.status === filterStatus)
+    .filter((o) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (o.name || "").toLowerCase().includes(q) || (o.phone || "").includes(q);
+    });
   const totalPages = Math.max(1, Math.ceil(newOrders.length / ITEMS_PER_PAGE));
   const pagedOrders = newOrders.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-  const cashPendingOrders = newOrders.filter((o) => !o.paidOnline).reduce((s, o) => s + Number(o.total), 0);
+  const cashPendingOrders = allNewOrders.filter((o) => !o.paidOnline).reduce((s, o) => s + Number(o.total), 0);
+
+  // ── Time since order ──
+  const timeAgo = (dateStr: string) => {
+    if (!dateStr) return "—";
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "À l'instant";
+    if (mins < 60) return `${mins} min`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h${m > 0 ? String(m).padStart(2, "0") : ""}`;
+  };
 
   // ── Driver status label ──
   const driverLabel = (d: Driver) => {
@@ -393,16 +414,22 @@ export default function AdminDashboard() {
         </div>
 
         <div style={{ flex: 1, overflow: "auto", padding: "22px 24px" }}>
+
           {/* ── SECTION HEADING ── */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "#fff", letterSpacing: "0.1em" }}>
-              NOUVELLES COMMANDES
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: "0.95rem", color: "#fff", letterSpacing: "0.1em" }}>
+                NOUVELLES COMMANDES
+              </div>
+              <div style={{ fontSize: "0.71rem", color: C.textMuted, marginTop: 3 }}>
+                {allNewOrders.length} commande{allNewOrders.length !== 1 ? "s" : ""} active{allNewOrders.length !== 1 ? "s" : ""}
+              </div>
             </div>
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
               title="Rafraîchir"
               style={{
-                width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`,
+                width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.border}`,
                 background: C.card, backdropFilter: C.glass, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "1rem", color: C.textMuted,
@@ -413,33 +440,100 @@ export default function AdminDashboard() {
           </div>
 
           {/* ── STAT CARDS ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
-            <StatCard label="En attente" value={pending.length} color={C.accent} />
-            <StatCard label="En livraison" value={inDelivery.length} color={C.blue} />
-            <StatCard label="Livreurs actifs" value={activeDrivers.length} color={C.green} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 20 }}>
+            {/* Card En attente */}
+            <div style={{ background: `${C.accent}0d`, border: `1px solid ${C.accent}28`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: `${C.accent}1a`, border: `1px solid ${C.accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", flexShrink: 0 }}>
+                ⏳
+              </div>
+              <div>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", color: C.textMuted, textTransform: "uppercase" as const }}>En attente</div>
+                <div style={{ fontWeight: 800, fontSize: "1.8rem", color: C.accent, lineHeight: 1, marginTop: 3 }}>{pending.length}</div>
+                <div style={{ fontSize: "0.65rem", color: C.textFaint, marginTop: 2 }}>commandes nouvelles</div>
+              </div>
+            </div>
+            {/* Card En livraison */}
+            <div style={{ background: `${C.blue}0d`, border: `1px solid ${C.blue}28`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: `${C.blue}1a`, border: `1px solid ${C.blue}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", flexShrink: 0 }}>
+                🏍️
+              </div>
+              <div>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", color: C.textMuted, textTransform: "uppercase" as const }}>En livraison</div>
+                <div style={{ fontWeight: 800, fontSize: "1.8rem", color: C.blue, lineHeight: 1, marginTop: 3 }}>{inDelivery.length}</div>
+                <div style={{ fontSize: "0.65rem", color: C.textFaint, marginTop: 2 }}>en cours de livraison</div>
+              </div>
+            </div>
+            {/* Card Livreurs */}
+            <div style={{ background: `${C.green}0d`, border: `1px solid ${C.green}28`, borderRadius: 12, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: `${C.green}1a`, border: `1px solid ${C.green}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem", flexShrink: 0 }}>
+                👤
+              </div>
+              <div>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", color: C.textMuted, textTransform: "uppercase" as const }}>Livreurs actifs</div>
+                <div style={{ fontWeight: 800, fontSize: "1.8rem", color: C.green, lineHeight: 1, marginTop: 3 }}>
+                  {activeDrivers.length}<span style={{ fontSize: "0.9rem", fontWeight: 500, color: C.textFaint }}>/{drivers.length}</span>
+                </div>
+                <div style={{ fontSize: "0.65rem", color: C.textFaint, marginTop: 2 }}>disponibles</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── FILTERS + SEARCH ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            {/* Tabs */}
+            <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: 4, border: `1px solid ${C.border}`, flexShrink: 0 }}>
+              {([
+                { key: "all", label: `Toutes (${allNewOrders.length})` },
+                { key: "nouveau", label: `Nouvelles (${pending.length})` },
+                { key: "en_cours", label: `En livraison (${inDelivery.length})` },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setFilterStatus(tab.key); setPage(1); }}
+                  style={{
+                    padding: "6px 12px", borderRadius: 7, border: "none",
+                    background: filterStatus === tab.key ? C.accent : "transparent",
+                    color: filterStatus === tab.key ? "#fff" : C.textMuted,
+                    fontSize: "0.73rem", fontWeight: filterStatus === tab.key ? 700 : 400,
+                    cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" as const,
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {/* Search */}
+            <div style={{ flex: 1, position: "relative" }}>
+              <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.textFaint, fontSize: "0.85rem", pointerEvents: "none" }}>
+                🔍
+              </span>
+              <input
+                type="text"
+                placeholder="Rechercher par nom ou téléphone…"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                style={{
+                  width: "100%", padding: "8px 12px 8px 34px", borderRadius: 9,
+                  border: `1px solid ${C.border}`, background: "rgba(255,255,255,0.04)",
+                  color: C.text, fontSize: "0.8rem", outline: "none",
+                  boxSizing: "border-box" as const,
+                }}
+              />
+            </div>
           </div>
 
           {/* ── ORDERS TABLE ── */}
-          <div
-            style={{
-              background: C.tableBg,
-              backdropFilter: C.glass,
-              WebkitBackdropFilter: C.glass,
-              borderRadius: 12,
-              border: `1px solid ${C.cardBorder}`,
-              overflow: "hidden",
-            }}
-          >
+          <div style={{ background: C.tableBg, backdropFilter: C.glass, WebkitBackdropFilter: C.glass, borderRadius: 12, border: `1px solid ${C.cardBorder}`, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${C.border}`, background: C.tableHead }}>
-                  {["N°", "CLIENT", "MONTANT", "PAIEMENT", "ACTIONS"].map((h) => (
+                  {["Commande", "Client", "Heure", "Montant", "Statut", "Actions"].map((h) => (
                     <th
                       key={h}
                       style={{
-                        padding: "10px 16px",
+                        padding: "11px 14px",
                         textAlign: "left" as const,
-                        fontSize: "0.68rem",
+                        fontSize: "0.65rem",
                         fontWeight: 700,
                         letterSpacing: "0.12em",
                         color: C.textMuted,
@@ -454,111 +548,121 @@ export default function AdminDashboard() {
               <tbody>
                 {pagedOrders.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: "32px", textAlign: "center" as const, color: C.textFaint, fontSize: "0.85rem" }}>
-                      Aucune nouvelle commande
+                    <td colSpan={6} style={{ padding: "48px", textAlign: "center" as const, color: C.textFaint, fontSize: "0.85rem" }}>
+                      <div style={{ fontSize: "2rem", marginBottom: 10 }}>📭</div>
+                      Aucune commande trouvée
                     </td>
                   </tr>
                 )}
-                {pagedOrders.map((order, i) => (
-                  <tr
-                    key={order.id}
-                    style={{
-                      borderBottom: `1px solid ${C.border}`,
-                      background: i % 2 === 0 ? "transparent" : C.tableRow,
-                      transition: "background 0.1s",
-                    }}
-                  >
-                    <td style={{ padding: "11px 16px" }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>
-                        #{order.orderNumber ?? order.id.slice(-4).toUpperCase()}
-                      </div>
-                      {order.items && (
-                        <div style={{ fontSize: "0.68rem", color: C.textMuted, marginTop: 2, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {order.items}
+                {pagedOrders.map((order) => {
+                  const statusInfo = STATUS_BADGE[order.status] ?? { label: order.status, color: C.textMuted, bg: C.card };
+                  return (
+                    <tr
+                      key={order.id}
+                      style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.15s", cursor: "default" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.035)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {/* N° + Articles */}
+                      <td style={{ padding: "13px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+                          <div style={{ width: 3, minHeight: 36, borderRadius: 2, background: statusInfo.color, flexShrink: 0, alignSelf: "stretch" }} />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#fff" }}>
+                              #{order.orderNumber ?? order.id.slice(-4).toUpperCase()}
+                            </div>
+                            {order.items && (
+                              <div style={{ fontSize: "0.67rem", color: C.textMuted, marginTop: 2, maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                                {order.items}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </td>
-                    <td style={{ padding: "11px 16px" }}>
-                      <div style={{ fontSize: "0.84rem", fontWeight: 500, color: C.text }}>
-                        {order.name || order.phone || "—"}
-                      </div>
-                      <div style={{ fontSize: "0.7rem", color: C.textMuted, marginTop: 2 }}>
-                        {order.address?.split(",")[0] ?? "—"}
-                      </div>
-                    </td>
-                    <td style={{ padding: "11px 16px", fontWeight: 700, fontSize: "0.9rem", color: "#fff" }}>
-                      {Number(order.total).toFixed(0)}€
-                    </td>
-                    <td style={{ padding: "11px 16px" }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "3px 9px",
-                          borderRadius: 99,
-                          fontSize: "0.67rem",
-                          fontWeight: 700,
-                          letterSpacing: "0.06em",
+                      </td>
+                      {/* Client */}
+                      <td style={{ padding: "13px 14px" }}>
+                        <div style={{ fontSize: "0.84rem", fontWeight: 600, color: C.text }}>
+                          {order.name || "—"}
+                        </div>
+                        <div style={{ fontSize: "0.69rem", color: C.textMuted, marginTop: 2 }}>
+                          {[order.phone, order.address?.split(",")[0]].filter(Boolean).join(" · ")}
+                        </div>
+                      </td>
+                      {/* Heure */}
+                      <td style={{ padding: "13px 14px" }}>
+                        <div style={{ fontSize: "0.78rem", color: C.textMuted, whiteSpace: "nowrap" as const }}>
+                          {timeAgo(order.createdAt)}
+                        </div>
+                      </td>
+                      {/* Montant + Mode */}
+                      <td style={{ padding: "13px 14px" }}>
+                        <div style={{ fontWeight: 800, fontSize: "0.92rem", color: "#fff" }}>
+                          {Number(order.total).toFixed(0)}€
+                        </div>
+                        <span style={{
+                          display: "inline-block", marginTop: 4, padding: "2px 7px", borderRadius: 99,
+                          fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.06em",
                           background: order.paidOnline ? "rgba(34,197,94,0.15)" : "rgba(249,115,22,0.15)",
                           color: order.paidOnline ? C.green : C.accent,
                           border: `1px solid ${order.paidOnline ? "rgba(34,197,94,0.3)" : "rgba(249,115,22,0.3)"}`,
-                        }}
-                      >
-                        {order.paidOnline ? "PAYÉ" : "CASH"}
-                      </span>
-                    </td>
-                    <td style={{ padding: "11px 16px" }}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        {order.status === "nouveau" && (
-                          <ActionBtn label="Assigner" color={C.blue} onClick={() => updateStatus(order.id, "en_cours")} />
-                        )}
-                        {order.status === "en_cours" && (
-                          <ActionBtn label="Appeler" color={C.green} onClick={() => { if (order.phone) window.open(`tel:${order.phone}`); }} />
-                        )}
-                        <ActionBtn
-                          label="Annuler"
-                          color={C.red}
-                          onClick={() => { if (confirm("Annuler cette commande ?")) updateStatus(order.id, "annule"); }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        }}>
+                          {order.paidOnline ? "EN LIGNE" : "CASH"}
+                        </span>
+                      </td>
+                      {/* Statut */}
+                      <td style={{ padding: "13px 14px" }}>
+                        <span style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "4px 10px", borderRadius: 99,
+                          fontSize: "0.67rem", fontWeight: 700, letterSpacing: "0.05em",
+                          background: statusInfo.bg, color: statusInfo.color,
+                          border: `1px solid ${statusInfo.color}30`,
+                          whiteSpace: "nowrap" as const,
+                        }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: statusInfo.color, display: "inline-block", flexShrink: 0 }} />
+                          {statusInfo.label}
+                        </span>
+                      </td>
+                      {/* Actions */}
+                      <td style={{ padding: "13px 14px" }}>
+                        <div style={{ display: "flex", gap: 5 }}>
+                          {order.status === "nouveau" && (
+                            <ActionBtn label="Assigner" color={C.blue} onClick={() => updateStatus(order.id, "en_cours")} />
+                          )}
+                          {order.status === "en_cours" && (
+                            <ActionBtn label="Appeler" color={C.green} onClick={() => { if (order.phone) window.open(`tel:${order.phone}`); }} />
+                          )}
+                          <ActionBtn
+                            label="✕"
+                            color={C.red}
+                            onClick={() => { if (confirm("Annuler cette commande ?")) updateStatus(order.id, "annule"); }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
             {/* ── FOOTER ── */}
-            <div
-              style={{
-                padding: "11px 16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderTop: `1px solid ${C.border}`,
-                background: C.tableHead,
-              }}
-            >
+            <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${C.border}`, background: C.tableHead }}>
               <div style={{ fontSize: "0.8rem", color: C.text }}>
                 <span style={{ fontWeight: 600 }}>Total CASH en attente</span>
                 <span style={{ marginLeft: 10, fontWeight: 800, fontSize: "1rem", color: C.accent }}>
                   {cashPendingOrders.toFixed(0)}€
                 </span>
               </div>
-
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <PagBtn label="‹" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} />
                   {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                     const n = i + 1;
-                    return (
-                      <PagBtn key={n} label={String(n)} onClick={() => setPage(n)} active={page === n} />
-                    );
+                    return <PagBtn key={n} label={String(n)} onClick={() => setPage(n)} active={page === n} />;
                   })}
                   <PagBtn label="›" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} />
                 </div>
-                <a
-                  href="/admin"
-                  style={{ fontSize: "0.77rem", color: C.blue, textDecoration: "none", fontWeight: 500 }}
-                >
+                <a href="/admin" style={{ fontSize: "0.77rem", color: C.blue, textDecoration: "none", fontWeight: 500 }}>
                   Voir toutes →
                 </a>
               </div>
