@@ -474,9 +474,9 @@ export default function LivreurPage() {
     return d.toISOString().slice(0, 10);
   })();
 
-  // Gains du jour — uniquement les livraisons ONLINE (les CASH vont dans cashAReverser)
+  // Gains du jour — toutes les livraisons (ONLINE et CASH), le 2.50€ est dû au livreur dans les deux cas
   const gainsJour = walletTxns
-    .filter(t => t.type !== "payment" && t.paymentType === "ONLINE" && (t.createdAt || "").slice(0, 10) === todayStr)
+    .filter(t => t.type !== "payment" && (t.createdAt || "").slice(0, 10) === todayStr)
     .reduce((s, t) => s + (t.amount || 0), 0);
 
   // Portefeuille cette semaine (depuis dernier vendredi, hors virements)
