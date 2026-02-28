@@ -2748,83 +2748,70 @@ export default function Home() {
                   width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
 
-            {/* Tabs — Google + Email (clients uniquement) */}
-            <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-              {(["google","email"] as const).map(t => (
-                <button key={t} onClick={() => { setAuthTab(t); setAuthError(""); }}
-                  style={{flex:1,padding:"12px 4px",background:"transparent",border:"none",
-                    borderBottom: authTab === t ? "2px solid #ff2d78" : "2px solid transparent",
-                    color: authTab === t ? "#ff2d78" : "#5a5470",
-                    fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",letterSpacing:".08em",
-                    textTransform:"uppercase",cursor:"pointer",transition:"color .2s"}}>
-                  {t === "google" ? "🔍 Google" : "✉️ Email"}
-                </button>
-              ))}
-            </div>
-
-            {/* Client login content */}
+            {/* ── Contenu : tout sur une seule page, pas de tabs ── */}
             <div style={{padding:"22px 24px 0",display:"flex",flexDirection:"column",gap:14}}>
 
-              {/* ── Tab Google ── */}
-              {authTab === "google" && (
-                <button onClick={handleGoogleLogin} disabled={authLoading}
-                  style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
-                    background:"#fff",color:"#111",border:"none",borderRadius:10,padding:"14px",
-                    fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
-                    cursor: authLoading ? "not-allowed" : "pointer",letterSpacing:".04em"}}>
-                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-                  {authLoading ? "..." : "Continuer avec Google"}
-                </button>
-              )}
+              {/* 1. Google */}
+              <button onClick={handleGoogleLogin} disabled={authLoading}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                  background:"#fff",color:"#111",border:"none",borderRadius:10,padding:"14px",
+                  fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                  cursor: authLoading ? "not-allowed" : "pointer",letterSpacing:".04em"}}>
+                <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                {authLoading ? "..." : "Continuer avec Google"}
+              </button>
 
-              {/* ── Tab Email ── */}
-              {authTab === "email" && (
-                <>
-                  {authMode === "signup" && (
-                    <input placeholder="Ton prénom" value={authName} onChange={e => setAuthName(e.target.value)}
-                      style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                        padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                        fontSize:"1rem",outline:"none",width:"100%"}} />
-                  )}
-                  <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
-                    style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                      padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                      fontSize:"1rem",outline:"none",width:"100%"}} />
-                  <input type="password" placeholder="Mot de passe" value={authPassword}
-                    onChange={e => setAuthPassword(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleSignup())}
-                    style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                      padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
-                      fontSize:"1rem",outline:"none",width:"100%"}} />
-                  {authError && (
-                    <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
-                      borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
-                      fontSize:".75rem",color:"#ff2d78"}}>{authError}</div>
-                  )}
-                  <button onClick={authMode === "login" ? handleLogin : handleSignup} disabled={authLoading}
-                    style={{background: authLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
-                      borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                      fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
-                      cursor: authLoading ? "not-allowed" : "pointer"}}>
-                    {authLoading ? "..." : authMode === "login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
-                  </button>
-                  <button onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}
-                    style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
-                      fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
-                      textDecoration:"underline",padding:4}}>
-                    {authMode === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
-                  </button>
-                </>
+              {/* Séparateur */}
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{flex:1,height:1,background:"rgba(255,255,255,.06)"}} />
+                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#3a3454",letterSpacing:".1em"}}>OU</span>
+                <div style={{flex:1,height:1,background:"rgba(255,255,255,.06)"}} />
+              </div>
+
+              {/* 2. Email */}
+              {authMode === "signup" && (
+                <input placeholder="Ton prénom" value={authName} onChange={e => setAuthName(e.target.value)}
+                  style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                    padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                    fontSize:"1rem",outline:"none",width:"100%"}} />
               )}
+              <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
+                style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                  padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                  fontSize:"1rem",outline:"none",width:"100%"}} />
+              <input type="password" placeholder="Mot de passe" value={authPassword}
+                onChange={e => setAuthPassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && (authMode === "login" ? handleLogin() : handleSignup())}
+                style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
+                  padding:"12px 14px",color:"#f0eeff",fontFamily:"'Rajdhani',sans-serif",
+                  fontSize:"1rem",outline:"none",width:"100%"}} />
+              {authError && (
+                <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
+                  borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
+                  fontSize:".75rem",color:"#ff2d78"}}>{authError}</div>
+              )}
+              <button onClick={authMode === "login" ? handleLogin : handleSignup} disabled={authLoading}
+                style={{background: authLoading ? "#5a5470" : "#ff2d78",color:"#000",border:"none",
+                  borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
+                  cursor: authLoading ? "not-allowed" : "pointer"}}>
+                {authLoading ? "..." : authMode === "login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
+              </button>
+              <button onClick={() => { setAuthMode(authMode === "login" ? "signup" : "login"); setAuthError(""); }}
+                style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
+                  fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
+                  textDecoration:"underline",padding:4}}>
+                {authMode === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
+              </button>
             </div>
 
-            {/* ── ESPACE LIVREUR — séparé visuellement ── */}
-            <div style={{margin:"20px 24px 28px",
+            {/* 3. ESPACE LIVREUR — bien séparé, bloc bleu en bas */}
+            <div style={{margin:"22px 24px 28px",
               background:"rgba(0,180,255,.04)",
               border:"1px solid rgba(0,180,255,.2)",
               borderRadius:12,padding:"16px 18px"}}>
               <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
-                color:"rgba(0,180,255,.6)",letterSpacing:".14em",marginBottom:10,textAlign:"center"}}>
+                color:"rgba(0,180,255,.5)",letterSpacing:".14em",marginBottom:10,textAlign:"center"}}>
                 — ESPACE PROFESSIONNEL —
               </div>
               <a href="/livreur"
@@ -2833,7 +2820,7 @@ export default function Home() {
                   border:"1px solid rgba(0,180,255,.35)",
                   borderRadius:10,padding:"14px",textDecoration:"none",
                   color:"#00b4ff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                  fontSize:"1rem",letterSpacing:".06em",transition:"all .2s"}}>
+                  fontSize:"1rem",letterSpacing:".06em"}}>
                 <span style={{fontSize:"1.3rem"}}>🏍️</span>
                 ESPACE LIVREUR
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
