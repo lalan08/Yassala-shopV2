@@ -247,7 +247,7 @@ export default function Home() {
   const [authError, setAuthError]         = useState("");
   const [authLoading, setAuthLoading]     = useState(false);
   // ── PHONE AUTH TAB ──
-  const [authTab, setAuthTab]             = useState<'google'|'phone'|'email'>('google');
+  const [authTab, setAuthTab]             = useState<'google'|'email'>('google');
   const [phoneAuthStep, setPhoneAuthStep] = useState<'input'|'verify'>('input');
   const [phoneInput, setPhoneInput]       = useState('');
   const [phoneAuthCode, setPhoneAuthCode] = useState('');
@@ -2253,8 +2253,9 @@ export default function Home() {
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Inter',sans-serif"}} />
-                  <input placeholder="Téléphone" value={orderForm.phone}
+                  <input placeholder="Téléphone (+594 694… ou +33 6…)" value={orderForm.phone}
                     onChange={e => setOrderForm(f => ({...f, phone: e.target.value}))}
+                    type="tel"
                     style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
                       borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:".9rem",
                       fontFamily:"'Inter',sans-serif"}} />
@@ -2747,21 +2748,22 @@ export default function Home() {
                   width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
 
-            {/* Tabs */}
+            {/* Tabs — Google + Email (clients uniquement) */}
             <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
-              {(["google","phone","email"] as const).map(tab => (
-                <button key={tab} onClick={() => { setAuthTab(tab); setAuthError(""); setPhoneAuthError(""); }}
+              {(["google","email"] as const).map(t => (
+                <button key={t} onClick={() => { setAuthTab(t); setAuthError(""); }}
                   style={{flex:1,padding:"12px 4px",background:"transparent",border:"none",
-                    borderBottom: authTab === tab ? "2px solid #ff2d78" : "2px solid transparent",
-                    color: authTab === tab ? "#ff2d78" : "#5a5470",
-                    fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",letterSpacing:".08em",
+                    borderBottom: authTab === t ? "2px solid #ff2d78" : "2px solid transparent",
+                    color: authTab === t ? "#ff2d78" : "#5a5470",
+                    fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",letterSpacing:".08em",
                     textTransform:"uppercase",cursor:"pointer",transition:"color .2s"}}>
-                  {tab === "google" ? "🔍 Google" : tab === "phone" ? "📱 SMS" : "✉️ Email"}
+                  {t === "google" ? "🔍 Google" : "✉️ Email"}
                 </button>
               ))}
             </div>
 
-            <div style={{padding:"22px 24px 28px",display:"flex",flexDirection:"column",gap:14}}>
+            {/* Client login content */}
+            <div style={{padding:"22px 24px 0",display:"flex",flexDirection:"column",gap:14}}>
 
               {/* ── Tab Google ── */}
               {authTab === "google" && (
@@ -2773,71 +2775,6 @@ export default function Home() {
                   <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
                   {authLoading ? "..." : "Continuer avec Google"}
                 </button>
-              )}
-
-              {/* ── Tab Téléphone ── */}
-              {authTab === "phone" && (
-                <>
-                  {phoneAuthStep === "input" ? (
-                    <>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
-                        color:"#7a7490",letterSpacing:".06em",lineHeight:1.5}}>
-                        Saisis ton numéro de téléphone. Un code SMS te sera envoyé.
-                      </div>
-                      <div style={{position:"relative"}}>
-                        <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",
-                          color:"#7a7490",fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
-                          pointerEvents:"none"}}>+594</span>
-                        <input type="tel" placeholder="0694 XX XX XX"
-                          value={phoneInput} onChange={e => setPhoneInput(e.target.value)}
-                          onKeyDown={e => e.key === "Enter" && handlePhoneSend()}
-                          style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                            padding:"12px 14px 12px 54px",color:"#f0eeff",
-                            fontFamily:"'Rajdhani',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
-                      </div>
-                      <div id="recaptcha-phone-auth" />
-                      <button onClick={handlePhoneSend} disabled={phoneAuthLoading}
-                        style={{background: phoneAuthLoading ? "#5a5470" : "#ff2d78",color:"#000",
-                          border:"none",borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",
-                          fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
-                          cursor: phoneAuthLoading ? "not-allowed" : "pointer"}}>
-                        {phoneAuthLoading ? "ENVOI EN COURS..." : "ENVOYER LE CODE SMS"}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
-                        color:"#7a7490",letterSpacing:".06em",lineHeight:1.5}}>
-                        Code envoyé au {phoneInput.startsWith("+") ? phoneInput : `+594 ${phoneInput}`}.
-                        Saisis les 6 chiffres.
-                      </div>
-                      <input type="number" placeholder="_ _ _ _ _ _" maxLength={6}
-                        value={phoneAuthCode} onChange={e => setPhoneAuthCode(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && handlePhoneVerify()}
-                        style={{background:"#080514",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,
-                          padding:"14px",color:"#f0eeff",fontFamily:"'Share Tech Mono',monospace",
-                          fontSize:"1.4rem",letterSpacing:".5em",textAlign:"center",
-                          outline:"none",width:"100%"}} />
-                      <button onClick={handlePhoneVerify} disabled={phoneAuthLoading}
-                        style={{background: phoneAuthLoading ? "#5a5470" : "#ff2d78",color:"#000",
-                          border:"none",borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",
-                          fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",
-                          cursor: phoneAuthLoading ? "not-allowed" : "pointer"}}>
-                        {phoneAuthLoading ? "VÉRIFICATION..." : "VALIDER LE CODE"}
-                      </button>
-                      <button onClick={() => { setPhoneAuthStep("input"); setPhoneAuthCode(""); setPhoneAuthError(""); }}
-                        style={{background:"transparent",border:"none",color:"#5a5470",cursor:"pointer",
-                          fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",textDecoration:"underline"}}>
-                        Renvoyer un code
-                      </button>
-                    </>
-                  )}
-                  {phoneAuthError && (
-                    <div style={{background:"rgba(255,45,120,.1)",border:"1px solid rgba(255,45,120,.2)",
-                      borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",
-                      fontSize:".75rem",color:"#ff2d78"}}>{phoneAuthError}</div>
-                  )}
-                </>
               )}
 
               {/* ── Tab Email ── */}
@@ -2879,17 +2816,29 @@ export default function Home() {
                   </button>
                 </>
               )}
+            </div>
 
-              <div style={{borderTop:"1px solid rgba(255,255,255,.06)",marginTop:10,paddingTop:14}}>
-                <a href="/livreur"
-                  style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
-                    background:"rgba(0,245,255,.06)",border:"1px solid rgba(0,245,255,.18)",
-                    borderRadius:10,padding:"12px",textDecoration:"none",
-                    color:"#00f5ff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
-                    fontSize:".9rem",letterSpacing:".06em",transition:"all .2s"}}>
-                  <span>🏍️</span> ESPACE LIVREUR
-                </a>
+            {/* ── ESPACE LIVREUR — séparé visuellement ── */}
+            <div style={{margin:"20px 24px 28px",
+              background:"rgba(0,180,255,.04)",
+              border:"1px solid rgba(0,180,255,.2)",
+              borderRadius:12,padding:"16px 18px"}}>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                color:"rgba(0,180,255,.6)",letterSpacing:".14em",marginBottom:10,textAlign:"center"}}>
+                — ESPACE PROFESSIONNEL —
               </div>
+              <a href="/livreur"
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                  background:"linear-gradient(135deg,rgba(0,180,255,.18) 0%,rgba(0,80,200,.12) 100%)",
+                  border:"1px solid rgba(0,180,255,.35)",
+                  borderRadius:10,padding:"14px",textDecoration:"none",
+                  color:"#00b4ff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  fontSize:"1rem",letterSpacing:".06em",transition:"all .2s"}}>
+                <span style={{fontSize:"1.3rem"}}>🏍️</span>
+                ESPACE LIVREUR
+                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                  color:"rgba(0,180,255,.5)",marginLeft:4}}>→</span>
+              </a>
             </div>
           </div>
         </div>

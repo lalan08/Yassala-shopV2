@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAdminAlerts, type AdminAlert } from "@/hooks/useAdminAlerts";
+import { DEFAULT_DELIVERY_CONFIG, type DeliveryConfig } from "@/types/delivery";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, writeBatch } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -83,6 +84,8 @@ export default function AdminPage() {
   const [packs, setPacks]         = useState<Pack[]>([]);
   const [orders, setOrders]       = useState<Order[]>([]);
   const [settings, setSettings]   = useState<Settings>(defaultSettings);
+  const [deliveryConfig, setDeliveryConfig] = useState<DeliveryConfig>(DEFAULT_DELIVERY_CONFIG);
+  const [deliverySaving, setDeliverySaving] = useState(false);
   const [toast, setToast]         = useState({ msg: "", show: false, type: "ok" });
   const [editProd, setEditProd]   = useState<Product | null>(null);
   const [editPack, setEditPack]   = useState<Pack | null>(null);
@@ -338,6 +341,9 @@ export default function AdminPage() {
     const unsubSettings = onSnapshot(doc(db, "settings", "main"), snap => {
       if (snap.exists()) setSettings(snap.data() as Settings);
     });
+    const unsubDelivery = onSnapshot(doc(db, "settings", "delivery"), snap => {
+      if (snap.exists()) setDeliveryConfig({ ...DEFAULT_DELIVERY_CONFIG, ...snap.data() } as DeliveryConfig);
+    });
     const unsubBanners = onSnapshot(collection(db, "banners"), snap => {
       setBanners(snap.docs.map(d => ({ id: d.id, ...d.data() } as Banner))
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
@@ -388,7 +394,7 @@ export default function AdminPage() {
       setPickupLocations(snap.docs.map(d => ({ id: d.id, ...d.data() } as PickupLocation))
         .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); };
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -461,16 +467,24 @@ export default function AdminPage() {
 
   const saveBanner = async (b: Banner) => {
     try {
-      if (b.id) { await updateDoc(doc(db, "banners", b.id), { ...b }); showToast("Bannière mise à jour ✓"); }
-      else { await addDoc(collection(db, "banners"), b); showToast("Bannière ajoutée ✓"); }
+      const res = await fetch("/api/banners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(b),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Erreur serveur");
+      showToast(b.id ? "Bannière mise à jour ✓" : "Bannière ajoutée ✓");
       setShowBannerForm(false); setEditBanner(null);
-    } catch { showToast("Erreur lors de la sauvegarde", "err"); }
+    } catch (e: any) { showToast(e.message || "Erreur lors de la sauvegarde", "err"); }
   };
 
   const deleteBanner = async (id: string) => {
     if (!confirm("Supprimer cette bannière ?")) return;
-    await deleteDoc(doc(db, "banners", id));
-    showToast("Bannière supprimée");
+    try {
+      await fetch(`/api/banners?id=${id}`, { method: "DELETE" });
+      showToast("Bannière supprimée");
+    } catch { showToast("Erreur suppression", "err"); }
   };
 
   const toggleBannerActive = async (b: Banner) => {
@@ -1814,6 +1828,7 @@ export default function AdminPage() {
                   onSave={saveProd}
                   onClose={() => { setShowProdForm(false); setEditProd(null); }}
                   showToast={showToast}
+                  settings={settings}
                 />
               )}
             </div>
@@ -2831,6 +2846,7 @@ export default function AdminPage() {
                   onSave={saveBanner}
                   onClose={() => { setShowBannerForm(false); setEditBanner(null); }}
                   showToast={showToast}
+                  settings={settings}
                 />
               )}
             </div>
@@ -3555,23 +3571,116 @@ export default function AdminPage() {
                 <Field label="ZONE DE LIVRAISON" value={settings.zone}
                   onChange={v => setSettings(s => ({...s, zone: v}))} />
 
-                {/* Lien vers la config livraison dédiée */}
-                <a href="/admin/settings/delivery"
-                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                    background:"rgba(0,245,255,.04)",border:"1px solid rgba(0,245,255,.2)",
-                    borderRadius:8,padding:"14px 18px",textDecoration:"none",transition:"all .2s"}}>
-                  <div>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
-                      color:"#00f5ff",letterSpacing:".12em",marginBottom:3}}>
-                      🚗 CONFIG FRAIS DE LIVRAISON
-                    </div>
-                    <div style={{fontFamily:"'Inter',sans-serif",fontSize:".8rem",color:"#5a5470"}}>
-                      Base · Nuit · Pluie · Rush · Distance · Livreur
-                    </div>
+                {/* ── FRAIS DE LIVRAISON ── */}
+                <div style={{background:"rgba(0,245,255,.03)",border:"1px solid rgba(0,245,255,.15)",
+                  borderRadius:10,padding:18}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                      color:"#00f5ff",letterSpacing:".12em"}}>🚗 FRAIS DE LIVRAISON</div>
+                    <a href="/admin/settings/delivery"
+                      style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                        color:"#5a5470",letterSpacing:".06em",textDecoration:"underline",cursor:"pointer"}}>
+                      config avancée →
+                    </a>
                   </div>
-                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem",
-                    color:"#00f5ff",letterSpacing:".06em"}}>OUVRIR →</span>
-                </a>
+                  <div style={{display:"grid",gap:12}}>
+                    {/* Base + Distance */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                      <div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>FRAIS DE BASE (€)</div>
+                        <input type="number" min={0} step={0.5} value={deliveryConfig.delivery_base_fee}
+                          onChange={e => setDeliveryConfig(c => ({...c, delivery_base_fee: parseFloat(e.target.value)||0}))}
+                          style={{width:"100%",background:"#080514",border:"1px solid rgba(0,245,255,.2)",borderRadius:6,
+                            padding:"10px 12px",color:"#00f5ff",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
+                      </div>
+                      <div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>RAYON INCLUS (km)</div>
+                        <input type="number" min={0} step={0.5} value={deliveryConfig.base_radius_km}
+                          onChange={e => setDeliveryConfig(c => ({...c, base_radius_km: parseFloat(e.target.value)||0}))}
+                          style={{width:"100%",background:"#080514",border:"1px solid rgba(0,245,255,.2)",borderRadius:6,
+                            padding:"10px 12px",color:"#00f5ff",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                      <div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>PAR KM SUPPL. (€)</div>
+                        <input type="number" min={0} step={0.25} value={deliveryConfig.extra_fee_per_km}
+                          onChange={e => setDeliveryConfig(c => ({...c, extra_fee_per_km: parseFloat(e.target.value)||0}))}
+                          style={{width:"100%",background:"#080514",border:"1px solid rgba(0,245,255,.2)",borderRadius:6,
+                            padding:"10px 12px",color:"#00f5ff",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
+                      </div>
+                      <div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>LIVRAISON OFFERTE (€)</div>
+                        <input type="number" min={0} step={1} value={deliveryConfig.free_delivery_threshold}
+                          onChange={e => setDeliveryConfig(c => ({...c, free_delivery_threshold: parseFloat(e.target.value)||0}))}
+                          style={{width:"100%",background:"#080514",border:"1px solid rgba(184,255,0,.2)",borderRadius:6,
+                            padding:"10px 12px",color:"#b8ff00",fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem"}} />
+                      </div>
+                    </div>
+                    {/* Toggles Rush + Pluie */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                      {([
+                        {key:"rush_mode_enabled" as const, feeKey:"rush_fee" as const, label:"🚀 MODE RUSH", color:"#ff9500"},
+                        {key:"rain_mode_enabled" as const, feeKey:"rain_fee" as const, label:"🌧️ MODE PLUIE", color:"#00b4ff"},
+                      ]).map(mode => (
+                        <div key={mode.key} style={{background:"#080514",border:`1px solid ${deliveryConfig[mode.key] ? mode.color+"44":"rgba(255,255,255,.06)"}`,
+                          borderRadius:6,padding:"10px 12px"}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                              color:deliveryConfig[mode.key] ? mode.color:"#5a5470",letterSpacing:".06em"}}>{mode.label}</span>
+                            <div onClick={() => setDeliveryConfig(c => ({...c,[mode.key]:!c[mode.key]}))}
+                              style={{width:36,height:20,borderRadius:10,position:"relative",cursor:"pointer",flexShrink:0,
+                                background:deliveryConfig[mode.key] ? mode.color:"rgba(255,255,255,.1)",transition:"background .2s"}}>
+                              <div style={{position:"absolute",top:2,left:deliveryConfig[mode.key]?18:2,
+                                width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s"}} />
+                            </div>
+                          </div>
+                          <input type="number" min={0} step={0.25} value={deliveryConfig[mode.feeKey]}
+                            disabled={!deliveryConfig[mode.key]}
+                            onChange={e => setDeliveryConfig(c => ({...c,[mode.feeKey]:parseFloat(e.target.value)||0}))}
+                            style={{width:"100%",background:"rgba(0,0,0,.3)",border:`1px solid ${deliveryConfig[mode.key] ? mode.color+"44":"rgba(255,255,255,.05)"}`,
+                              borderRadius:4,padding:"6px 10px",color:deliveryConfig[mode.key] ? mode.color:"#5a5470",
+                              fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
+                              opacity:deliveryConfig[mode.key]?1:0.4}} />
+                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#5a5470",marginTop:4}}>supplément (€)</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Tarif actuel estimé */}
+                    <div style={{background:"rgba(0,0,0,.3)",borderRadius:6,padding:"10px 14px",
+                      display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"#5a5470",letterSpacing:".08em"}}>
+                        TARIF ACTUEL ESTIMÉ
+                      </span>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1.1rem",color:"#00f5ff",fontWeight:700}}>
+                        {(deliveryConfig.delivery_base_fee
+                          + (deliveryConfig.rush_mode_enabled ? deliveryConfig.rush_fee : 0)
+                          + (deliveryConfig.rain_mode_enabled ? deliveryConfig.rain_fee : 0)
+                        ).toFixed(2)} €
+                      </span>
+                    </div>
+                    {/* Bouton save */}
+                    <button
+                      onClick={async () => {
+                        setDeliverySaving(true);
+                        try {
+                          const res = await fetch("/api/delivery-config", {
+                            method:"POST", headers:{"Content-Type":"application/json"},
+                            body: JSON.stringify(deliveryConfig),
+                          });
+                          if (!res.ok) throw new Error();
+                          showToast("✓ Frais de livraison sauvegardés !");
+                        } catch { showToast("Erreur sauvegarde frais", "err"); }
+                        setDeliverySaving(false);
+                      }}
+                      disabled={deliverySaving}
+                      style={{background: deliverySaving ? "#3a3450" : "#00f5ff",color:"#000",border:"none",
+                        borderRadius:6,padding:"12px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                        fontSize:".9rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                      {deliverySaving ? "SAUVEGARDE..." : "💾 SAUVEGARDER LES FRAIS"}
+                    </button>
+                  </div>
+                </div>
 
                 {/* ── Modes de réception ── */}
                 <div>
@@ -3963,7 +4072,7 @@ function Field({ label, value, onChange, type="text" }: { label:string; value:st
   );
 }
 
-function ProductForm({ prod, cats, onSave, onClose, showToast }: { prod:Product; cats:Category[]; onSave:(p:Product)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void }) {
+function ProductForm({ prod, cats, onSave, onClose, showToast, settings }: { prod:Product; cats:Category[]; onSave:(p:Product)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void; settings:Settings }) {
   const [p, setP] = useState(prod);
   const [uploading, setUploading] = useState(false);
   const [imgSrc, setImgSrc]       = useState("");          // raw file → cropper
@@ -4179,7 +4288,7 @@ const GRADIENT_PRESETS = [
   { label:"NUIT",   color:"#140a3c", value:"linear-gradient(135deg,rgba(20,10,60,.96) 0%,rgba(4,2,10,.98) 100%)" },
 ];
 
-function BannerForm({ banner, onSave, onClose, showToast }: { banner:Banner; onSave:(b:Banner)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void }) {
+function BannerForm({ banner, onSave, onClose, showToast, settings }: { banner:Banner; onSave:(b:Banner)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void; settings:Settings }) {
   const [b, setB] = useState<Banner>({ ...banner, brightness: banner.brightness ?? 0.28 });
   const [uploading, setUploading] = useState(false);
   const [imgSrc, setImgSrc]       = useState("");
