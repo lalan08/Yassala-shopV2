@@ -837,6 +837,8 @@ export default function Home() {
             fulfillmentType,
             pickupSnapshot,
             pickupTime: resolvedPickupTime,
+            otpCode: cashOtpCode,
+            orderId: orderRef.id,
           }),
         }).catch(() => {});
 

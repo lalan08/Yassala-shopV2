@@ -27,5 +27,33 @@ export async function POST(req: NextRequest) {
 
   await orderRef.update({ otpCode: newOtp, otpExpiry: newExpiry });
 
+  // Notifier l'admin via Telegram avec le nouveau code
+  const token  = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (token && chatId) {
+    const name  = order.name  || '';
+    const phone = order.phone || '';
+    const orderNumber = order.orderNumber || orderId.slice(-6).toUpperCase();
+    const waLink = `wa.me/${String(phone).replace(/\D/g, '')}?text=${encodeURIComponent(
+      `🔐 *Yassala Night Shop*\n\nBonjour ${name} !\n\nVoici votre nouveau code de confirmation pour la commande #${orderNumber} :\n\n*${newOtp}*\n\nSaisissez ce code sur la page de confirmation pour valider votre commande.\n\nMerci 🙏`
+    )}`;
+    const text = [
+      `🔄 *NOUVEAU CODE OTP — COMMANDE #${orderNumber}*`,
+      '',
+      `👤 ${name}`,
+      `📞 ${phone}`,
+      '',
+      `🔐 *Nouveau code : ${newOtp}*`,
+      `📲 Envoie ce code via WhatsApp :`,
+      waLink,
+    ].join('\n');
+
+    fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ ok: true });
 }

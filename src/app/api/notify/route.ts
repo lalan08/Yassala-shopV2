@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const { orderNumber, name, phone, address, items, subtotal, deliveryFee, total, method, paid, fulfillmentType, pickupSnapshot, pickupTime } = await req.json();
+  const { orderNumber, name, phone, address, items, subtotal, deliveryFee, total, method, paid, fulfillmentType, pickupSnapshot, pickupTime, otpCode, orderId } = await req.json();
 
   const isPickup = fulfillmentType === 'pickup';
 
@@ -45,6 +45,14 @@ export async function POST(req: NextRequest) {
     '',
     payLine,
     `🕐 ${now}`,
+    ...(otpCode ? [
+      '',
+      '─────────────────────',
+      `🔐 *CODE OTP CASH : ${otpCode}*`,
+      `📲 Envoie ce code au client via WhatsApp :`,
+      `wa.me/${String(phone).replace(/\D/g, '')}?text=${encodeURIComponent(`🔐 *Yassala Night Shop*\n\nBonjour ${name} !\n\nVoici votre code de confirmation pour la commande #${orderNumber} :\n\n*${otpCode}*\n\nSaisissez ce code sur la page de confirmation pour valider votre commande.\n\nMerci 🙏`)}`,
+      '─────────────────────',
+    ] : []),
   ].join('\n');
 
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
