@@ -2312,7 +2312,6 @@ export default function AdminPage() {
                             <option value="pending_confirmation">⏳ EN ATTENTE</option>
                             <option value="nouveau">🔴 NOUVEAU</option>
                             <option value="en_cours">🟠 EN COURS</option>
-                            <option value="confirmed">✅ CONFIRMÉ</option>
                             <option value="livre">🟢 {(o as any).fulfillmentType === 'pickup' ? 'RETIRÉ' : 'LIVRÉ'}</option>
                             <option value="annule">⚫ ANNULÉ</option>
                           </select>
