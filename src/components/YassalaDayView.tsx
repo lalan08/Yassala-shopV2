@@ -56,6 +56,30 @@ type DayOffer = {
   cat?: string;
 };
 
+type DayProduct = {
+  id: string;
+  name: string;
+  desc: string;
+  price: number;
+  image: string;
+  cat: string;
+  badge: string;
+  stock: number;
+  order?: number;
+  isActive?: boolean;
+};
+
+type DayPack = {
+  id: string;
+  name: string;
+  tag: string;
+  emoji: string;
+  items: string;
+  price: number;
+  real: number;
+  star: boolean;
+};
+
 // ── Countdown vers 21h ───────────────────────────────────────────────────────
 function useCountdownToNight() {
   const getSecondsLeft = () => {
@@ -206,6 +230,9 @@ export default function YassalaDayView() {
   const [dayCategories, setDayCategories] = useState<DayCategory[]>([]);
   const [dayOffers, setDayOffers] = useState<DayOffer[]>([]);
   const [activeCat, setActiveCat] = useState<string>("all");
+  const [dayProducts, setDayProducts] = useState<DayProduct[]>([]);
+  const [dayPacks, setDayPacks] = useState<DayPack[]>([]);
+  const [activeProductCat, setActiveProductCat] = useState<string>("all");
 
   // Horloge en temps réel
   useEffect(() => {
@@ -274,9 +301,34 @@ export default function YassalaDayView() {
     return () => unsub();
   }, []);
 
+  // Chargement produits jour en temps réel
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "day_products"), snap => {
+      setDayProducts(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() } as DayProduct))
+          .filter(p => p.isActive !== false && p.stock > 0)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      );
+    });
+    return () => unsub();
+  }, []);
+
+  // Chargement packs jour en temps réel
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "day_packs"), snap => {
+      setDayPacks(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayPack)));
+    });
+    return () => unsub();
+  }, []);
+
   const filteredOffers = activeCat === "all"
     ? dayOffers
     : dayOffers.filter(o => o.cat === activeCat);
+
+  const filteredProducts = activeProductCat === "all"
+    ? dayProducts
+    : dayProducts.filter(p => p.cat === activeProductCat);
 
   return (
     <>
@@ -657,6 +709,233 @@ export default function YassalaDayView() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── PRODUITS DU JOUR ── */}
+      {dayProducts.length > 0 && (
+        <div id="produits" style={{ maxWidth: 720, margin: "0 auto", padding: "32px 16px 0", position: "relative", zIndex: 1 }}>
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{
+              fontFamily: "'Share Tech Mono',monospace", fontSize: ".68rem",
+              color: "#0099bb", letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 8,
+            }}>
+              // CATALOGUE
+            </div>
+            <h2 style={{
+              fontFamily: "'Black Ops One',cursive",
+              fontSize: "1.6rem", color: "#1a0022",
+              letterSpacing: ".04em", margin: 0,
+            }}>
+              NOS PRODUITS
+            </h2>
+          </div>
+
+          {/* Filtre catégories produits */}
+          {dayCategories.length > 0 && (
+            <div style={{
+              display: "flex", gap: 8, marginBottom: 20,
+              flexWrap: "nowrap", overflowX: "auto",
+              paddingBottom: 4,
+            }}>
+              <button
+                onClick={() => setActiveProductCat("all")}
+                style={{
+                  padding: "8px 16px", borderRadius: 3, cursor: "pointer", flexShrink: 0,
+                  fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, fontSize: ".82rem",
+                  letterSpacing: ".08em", textTransform: "uppercase" as const,
+                  border: activeProductCat === "all" ? "none" : "1px solid rgba(255,45,120,.25)",
+                  background: activeProductCat === "all" ? "#ff2d78" : "transparent",
+                  color: activeProductCat === "all" ? "#fff" : "#ff2d78",
+                }}
+              >
+                TOUT
+              </button>
+              {dayCategories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveProductCat(cat.key)}
+                  style={{
+                    padding: "8px 16px", borderRadius: 3, cursor: "pointer", flexShrink: 0,
+                    fontFamily: "'Rajdhani',sans-serif", fontWeight: 700, fontSize: ".82rem",
+                    letterSpacing: ".08em", textTransform: "uppercase" as const,
+                    border: activeProductCat === cat.key ? "none" : "1px solid rgba(255,45,120,.25)",
+                    background: activeProductCat === cat.key ? "#ff2d78" : "transparent",
+                    color: activeProductCat === cat.key ? "#fff" : "#ff2d78",
+                  }}
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Grille produits */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 32 }}>
+            {filteredProducts.map((prod, idx) => (
+              <div key={prod.id} style={{
+                background: "#fff",
+                borderRadius: 4,
+                border: "1px solid rgba(255,45,120,.2)",
+                overflow: "hidden",
+                boxShadow: "0 2px 16px rgba(255,45,120,.06)",
+                animation: `slideCard .4s ${idx * 0.05}s both`,
+                display: "flex", flexDirection: "column",
+              }}>
+                <div style={{ height: 3, background: "linear-gradient(90deg,#fbbf24,#ff2d78)" }} />
+                {prod.image ? (
+                  <div style={{ position: "relative" }}>
+                    <img src={prod.image} alt={prod.name}
+                      style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
+                    {prod.badge && (
+                      <div style={{
+                        position: "absolute", top: 8, left: 8,
+                        fontFamily: "'Share Tech Mono',monospace", fontSize: ".68rem",
+                        background: prod.badge === "HOT" ? "#ff2d78" : prod.badge === "NEW" ? "#0099bb" : prod.badge === "PROMO" ? "#fbbf24" : "#ff2d78",
+                        color: prod.badge === "PROMO" ? "#000" : "#fff",
+                        padding: "3px 8px", borderRadius: 2, letterSpacing: ".08em",
+                      }}>
+                        {prod.badge === "HOT" ? "🔥" : prod.badge === "NEW" ? "✨" : prod.badge === "PROMO" ? "💛" : "⭐"} {prod.badge}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{
+                    height: 160, background: "rgba(255,45,120,.04)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "3rem",
+                  }}>
+                    🌅
+                  </div>
+                )}
+                <div style={{ padding: "14px", flex: 1, display: "flex", flexDirection: "column" }}>
+                  <div style={{
+                    fontFamily: "'Black Ops One',cursive",
+                    fontSize: ".95rem", color: "#1a0022",
+                    letterSpacing: ".03em", marginBottom: 4,
+                  }}>
+                    {prod.name}
+                  </div>
+                  {prod.desc && (
+                    <div style={{
+                      fontFamily: "'Rajdhani',sans-serif",
+                      fontSize: ".82rem", color: "#7a6a9a",
+                      lineHeight: 1.4, marginBottom: 10, flex: 1,
+                    }}>
+                      {prod.desc}
+                    </div>
+                  )}
+                  <div style={{
+                    fontFamily: "'Share Tech Mono',monospace",
+                    fontSize: "1.1rem", color: "#ff2d78",
+                    fontWeight: 700, letterSpacing: ".05em",
+                    marginTop: "auto",
+                  }}>
+                    {Number(prod.price).toFixed(2)} €
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── PACKS DU JOUR ── */}
+      {dayPacks.length > 0 && (
+        <div id="packs-jour" style={{ maxWidth: 720, margin: "0 auto", padding: "0 16px 0", position: "relative", zIndex: 1 }}>
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={{
+              fontFamily: "'Share Tech Mono',monospace", fontSize: ".68rem",
+              color: "#0099bb", letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 8,
+            }}>
+              // OFFRES GROUPÉES
+            </div>
+            <h2 style={{
+              fontFamily: "'Black Ops One',cursive",
+              fontSize: "1.6rem", color: "#1a0022",
+              letterSpacing: ".04em", margin: 0,
+            }}>
+              NOS PACKS
+            </h2>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14, marginBottom: 32 }}>
+            {dayPacks.map((pk, idx) => (
+              <div key={pk.id} style={{
+                background: "#fff",
+                borderRadius: 4,
+                border: `1px solid ${pk.star ? "rgba(251,191,36,.5)" : "rgba(255,45,120,.2)"}`,
+                overflow: "hidden",
+                boxShadow: pk.star ? "0 4px 20px rgba(251,191,36,.15)" : "0 2px 16px rgba(255,45,120,.06)",
+                animation: `slideCard .4s ${idx * 0.06}s both`,
+              }}>
+                <div style={{ height: 3, background: pk.star ? "linear-gradient(90deg,#fbbf24,#f59e0b)" : "linear-gradient(90deg,#fbbf24,#ff2d78)" }} />
+                <div style={{ padding: "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                    <span style={{ fontSize: "2rem" }}>{pk.emoji}</span>
+                    {pk.star && (
+                      <span style={{
+                        fontFamily: "'Share Tech Mono',monospace", fontSize: ".68rem",
+                        background: "#fbbf24", color: "#000",
+                        padding: "2px 8px", borderRadius: 2, letterSpacing: ".08em",
+                      }}>
+                        ★ POPULAIRE
+                      </span>
+                    )}
+                  </div>
+                  <div style={{
+                    fontFamily: "'Black Ops One',cursive",
+                    fontSize: "1rem", color: "#1a0022",
+                    letterSpacing: ".03em", marginBottom: 4,
+                  }}>
+                    {pk.name}
+                  </div>
+                  {pk.tag && (
+                    <div style={{
+                      fontFamily: "'Share Tech Mono',monospace",
+                      fontSize: ".72rem", color: "#7a6a9a",
+                      letterSpacing: ".05em", marginBottom: 12,
+                    }}>
+                      {pk.tag}
+                    </div>
+                  )}
+                  {pk.items && (
+                    <div style={{ marginBottom: 12 }}>
+                      {pk.items.split("\n").filter(Boolean).map((item, i) => (
+                        <div key={i} style={{
+                          fontFamily: "'Rajdhani',sans-serif",
+                          fontSize: ".85rem", color: "#7a6a9a",
+                          display: "flex", alignItems: "center", gap: 6, lineHeight: 1.6,
+                        }}>
+                          <span style={{ color: "#ff2d78", fontSize: ".7rem" }}>▸</span> {item}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <span style={{
+                      fontFamily: "'Share Tech Mono',monospace",
+                      fontSize: "1.3rem", color: "#ff2d78",
+                      fontWeight: 700, letterSpacing: ".05em",
+                    }}>
+                      {Number(pk.price).toFixed(2)} €
+                    </span>
+                    {pk.real > pk.price && (
+                      <span style={{
+                        fontFamily: "'Share Tech Mono',monospace",
+                        fontSize: ".82rem", color: "#7a6a9a",
+                        textDecoration: "line-through",
+                      }}>
+                        {Number(pk.real).toFixed(2)} €
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

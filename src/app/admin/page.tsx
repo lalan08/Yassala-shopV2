@@ -34,6 +34,8 @@ type Category = { id?: string; key: string; label: string; emoji: string; order:
 type OnlineDriver = { uid: string; name: string; status: "online"|"offline"|"busy"; isOnline: boolean; lastSeen: any; performanceScore?: number; };
 type YassalaDayConfig = { active: boolean; startHour: number; endHour: number; welcomeMessage: string; phone: string; };
 type DayOffer = { id?: string; title: string; desc: string; emoji: string; discount: string; active: boolean; order: number; };
+type DayProduct = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; isActive?: boolean; };
+type DayPack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 
 const ADMIN_PASSWORD = "yassala2025";
 
@@ -76,7 +78,7 @@ export default function AdminPage() {
   });
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres"|"yassala_day_cats">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres"|"yassala_day_cats"|"yassala_day_products"|"yassala_day_packs">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dispatchFilter, setDispatchFilter] = useState<"available"|"mine"|"delivered">("available");
   const [driverLocations, setDriverLocations] = useState<any[]>([]);
@@ -119,6 +121,12 @@ export default function AdminPage() {
   const [dayCats, setDayCats]                     = useState<Category[]>([]);
   const [editDayCat, setEditDayCat]               = useState<Category | null>(null);
   const [dayCatForm, setDayCatForm]               = useState<Category>({key:"",label:"",emoji:"",order:0});
+  const [dayProducts, setDayProducts]             = useState<DayProduct[]>([]);
+  const [editDayProd, setEditDayProd]             = useState<DayProduct | null>(null);
+  const [showDayProdForm, setShowDayProdForm]     = useState(false);
+  const [dayPacks, setDayPacks]                   = useState<DayPack[]>([]);
+  const [editDayPack, setEditDayPack]             = useState<DayPack | null>(null);
+  const [showDayPackForm, setShowDayPackForm]     = useState(false);
   const [adminHash, setAdminHash] = useState<string|null>(null);
   const [usersCount, setUsersCount]           = useState(0);
   const [usersWithOrders, setUsersWithOrders] = useState(0);
@@ -425,7 +433,14 @@ export default function AdminPage() {
       setDayCats(snap.docs.map(d => ({ id: d.id, ...d.data() } as Category))
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); unsubDayCats(); };
+    const unsubDayProducts = onSnapshot(collection(db, "day_products"), snap => {
+      setDayProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayProduct))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+    });
+    const unsubDayPacks = onSnapshot(collection(db, "day_packs"), snap => {
+      setDayPacks(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayPack)));
+    });
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); unsubDayCats(); unsubDayProducts(); unsubDayPacks(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -730,6 +745,43 @@ export default function AdminPage() {
     const batch = writeBatch(db);
     reordered.forEach((c, i) => { batch.update(doc(db, "day_categories", c.id!), { order: i }); });
     await batch.commit();
+  };
+
+  const saveDayProd = async (p: DayProduct) => {
+    try {
+      if (p.id) { await updateDoc(doc(db, "day_products", p.id), { ...p }); showToast("Produit jour mis à jour ✓"); }
+      else { await addDoc(collection(db, "day_products"), p); showToast("Produit jour ajouté ✓"); }
+      setShowDayProdForm(false); setEditDayProd(null);
+    } catch { showToast("Erreur lors de la sauvegarde", "err"); }
+  };
+
+  const deleteDayProd = async (id: string) => {
+    if (!confirm("Supprimer ce produit jour ?")) return;
+    await deleteDoc(doc(db, "day_products", id));
+    showToast("Produit jour supprimé");
+  };
+
+  const reorderDayProducts = async (from: number, to: number) => {
+    if (from === to) return;
+    const list = [...dayProducts];
+    const [item] = list.splice(from, 1);
+    list.splice(to, 0, item);
+    setDayProducts(list);
+    await Promise.all(list.map((p, i) => updateDoc(doc(db, "day_products", p.id!), { order: i })));
+  };
+
+  const saveDayPack = async (p: DayPack) => {
+    try {
+      if (p.id) { await updateDoc(doc(db, "day_packs", p.id), { ...p }); showToast("Pack jour mis à jour ✓"); }
+      else { await addDoc(collection(db, "day_packs"), p); showToast("Pack jour ajouté ✓"); }
+      setShowDayPackForm(false); setEditDayPack(null);
+    } catch { showToast("Erreur lors de la sauvegarde", "err"); }
+  };
+
+  const deleteDayPack = async (id: string) => {
+    if (!confirm("Supprimer ce pack jour ?")) return;
+    await deleteDoc(doc(db, "day_packs", id));
+    showToast("Pack jour supprimé");
   };
 
   const printOrder = (o: Order) => {
@@ -1154,9 +1206,11 @@ export default function AdminPage() {
               { key:"pickup_locations",  label:"POINTS RELAIS",   icon:"🏪" },
             ]},
             { section:"YASSALA DAY", items:[
-              { key:"yassala_day_config",   label:"CONFIG JOUR",     icon:"☀️" },
-              { key:"yassala_day_offres",   label:"OFFRES DU JOUR",  icon:"🎁" },
-              { key:"yassala_day_cats",     label:"CATÉGORIES JOUR", icon:"🗂️" },
+              { key:"yassala_day_config",    label:"CONFIG JOUR",     icon:"☀️" },
+              { key:"yassala_day_products",  label:"PRODUITS JOUR",   icon:"🛍️" },
+              { key:"yassala_day_cats",      label:"CATÉGORIES JOUR", icon:"🗂️" },
+              { key:"yassala_day_packs",     label:"PACKS JOUR",      icon:"📦" },
+              { key:"yassala_day_offres",    label:"OFFRES DU JOUR",  icon:"🎁" },
             ]},
           ] as const).map((group, gi) => (
             <div key={group.section}>
@@ -4542,6 +4596,161 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* ── YASSALA DAY PRODUITS ── */}
+          {tab === "yassala_day_products" && (
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
+                  🛍️ <span style={{color:"#fbbf24"}}>PRODUITS JOUR</span>
+                </div>
+                <button onClick={() => { setEditDayProd({name:"",desc:"",price:0,image:"",cat:dayCats[0]?.key||"",badge:"",stock:10,isActive:true}); setShowDayProdForm(true); }}
+                  style={{background:"linear-gradient(135deg,#fbbf24,#f59e0b)",color:"#000",border:"none",borderRadius:8,
+                    padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
+                    fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                  + AJOUTER
+                </button>
+              </div>
+
+              {dayProducts.length === 0 ? (
+                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                  padding:"40px",fontSize:".8rem",border:"1px dashed rgba(251,191,36,.2)",borderRadius:8}}>
+                  // aucun produit jour — ajoutes-en un !
+                </div>
+              ) : (
+                <div style={{display:"grid",gap:10}}>
+                  {dayProducts.map((p, idx) => (
+                    <div key={p.id} className="admin-product-row row" style={{background:"rgba(255,255,255,.02)",
+                      border:`1px solid ${p.isActive === false ? "rgba(255,255,255,.04)" : "rgba(251,191,36,.15)"}`,
+                      borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,
+                      opacity: p.isActive === false ? 0.5 : 1,transition:"all .15s ease"}}>
+                      {p.image ? (
+                        <img src={p.image} alt={p.name}
+                          style={{width:56,height:56,objectFit:"cover",borderRadius:8,flexShrink:0}} />
+                      ) : (
+                        <div style={{width:56,height:56,borderRadius:8,background:"rgba(251,191,36,.1)",
+                          border:"1px solid rgba(251,191,36,.2)",display:"flex",alignItems:"center",
+                          justifyContent:"center",fontSize:"1.6rem",flexShrink:0}}>🌅</div>
+                      )}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:"1rem",letterSpacing:".04em",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                          {p.name}
+                          {p.badge && <span style={{background:"#fbbf24",color:"#000",fontSize:".7rem",
+                            padding:"2px 8px",borderRadius:2,fontFamily:"'Share Tech Mono',monospace"}}>{p.badge}</span>}
+                        </div>
+                        <div style={{fontSize:".82rem",color:"#5a5470",marginTop:2,fontFamily:"'Share Tech Mono',monospace"}}>
+                          {dayCats.find(c => c.key === p.cat)?.emoji} {dayCats.find(c => c.key === p.cat)?.label || p.cat} · {Number(p.price).toFixed(2)}€ · stock:{p.stock}
+                        </div>
+                      </div>
+                      <div className="admin-prod-actions" style={{display:"flex",gap:8,flexShrink:0,flexWrap:"wrap",alignItems:"center"}}>
+                        <button onClick={async () => {
+                          const newActive = p.isActive === false ? true : false;
+                          await updateDoc(doc(db, "day_products", p.id!), { isActive: newActive });
+                          showToast(newActive ? "Produit activé ✓" : "Produit désactivé ✓");
+                        }} style={{background:"transparent",
+                          border: p.isActive === false ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
+                          color: p.isActive === false ? "#b8ff00" : "#5a5470",
+                          padding:"8px 12px",borderRadius:6,fontFamily:"'Share Tech Mono',monospace",
+                          fontSize:".78rem",letterSpacing:".06em",cursor:"pointer"}}>
+                          {p.isActive === false ? "✓ ACTIVER" : "⏸ DÉSACTIVER"}
+                        </button>
+                        <button onClick={() => { setEditDayProd(p); setShowDayProdForm(true); }}
+                          style={{background:"transparent",border:"1px solid rgba(251,191,36,.35)",color:"#fbbf24",
+                            padding:"8px 18px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
+                            fontSize:".88rem",letterSpacing:".06em",cursor:"pointer"}}>
+                          ✏️ ÉDITER
+                        </button>
+                        <button onClick={() => deleteDayProd(p.id!)}
+                          style={{background:"transparent",border:"1px solid rgba(255,45,120,.3)",color:"#ff2d78",
+                            padding:"8px 14px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
+                            fontSize:".88rem",cursor:"pointer"}}>
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showDayProdForm && editDayProd && (
+                <DayProductForm
+                  prod={editDayProd}
+                  cats={dayCats}
+                  onSave={saveDayProd}
+                  onClose={() => { setShowDayProdForm(false); setEditDayProd(null); }}
+                  showToast={showToast}
+                />
+              )}
+            </div>
+          )}
+
+          {/* ── YASSALA DAY PACKS ── */}
+          {tab === "yassala_day_packs" && (
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
+                  📦 PACKS <span style={{color:"#fbbf24"}}>DU JOUR</span>
+                </div>
+                <button onClick={() => { setEditDayPack({name:"",tag:"",emoji:"☀️",items:"",price:0,real:0,star:false}); setShowDayPackForm(true); }}
+                  style={{background:"linear-gradient(135deg,#fbbf24,#f59e0b)",color:"#000",border:"none",borderRadius:8,
+                    padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
+                    fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                  + AJOUTER
+                </button>
+              </div>
+
+              {dayPacks.length === 0 ? (
+                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                  padding:"40px",fontSize:".8rem",border:"1px dashed rgba(251,191,36,.2)",borderRadius:8}}>
+                  // aucun pack jour — ajoutes-en un !
+                </div>
+              ) : (
+                <div style={{display:"grid",gap:10}}>
+                  {dayPacks.map(p => (
+                    <div key={p.id} className="row" style={{background:"rgba(255,255,255,.02)",
+                      border:`1px solid ${p.star ? "rgba(251,191,36,.35)" : "rgba(255,255,255,.06)"}`,
+                      borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",gap:14,transition:"all .15s ease"}}>
+                      <span style={{fontSize:"1.8rem"}}>{p.emoji}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:"1rem",letterSpacing:".04em",display:"flex",alignItems:"center",gap:8}}>
+                          {p.name}
+                          {p.star && <span style={{background:"#fbbf24",color:"#000",fontSize:".78rem",
+                            padding:"2px 8px",borderRadius:2,fontFamily:"'Share Tech Mono',monospace"}}>★ POP</span>}
+                        </div>
+                        <div style={{fontSize:".78rem",color:"#5a5470",marginTop:2,fontFamily:"'Share Tech Mono',monospace"}}>{p.tag}</div>
+                      </div>
+                      <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",
+                        color:"#fbbf24",textShadow:"0 0 10px rgba(251,191,36,.4)"}}>
+                        {Number(p.price).toFixed(2)}€
+                      </div>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={() => { setEditDayPack(p); setShowDayPackForm(true); }}
+                          style={{background:"transparent",border:"1px solid rgba(251,191,36,.3)",color:"#fbbf24",
+                            padding:"6px 14px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",
+                            fontSize:".88rem",letterSpacing:".08em",cursor:"pointer"}}>
+                          ÉDITER
+                        </button>
+                        <button onClick={() => deleteDayPack(p.id!)}
+                          style={{background:"transparent",border:"1px solid rgba(255,45,120,.3)",color:"#ff2d78",
+                            padding:"6px 14px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",
+                            fontSize:".88rem",letterSpacing:".08em",cursor:"pointer"}}>
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showDayPackForm && editDayPack && (
+                <DayPackForm
+                  pack={editDayPack}
+                  onSave={saveDayPack}
+                  onClose={() => { setShowDayPackForm(false); setEditDayPack(null); }}
+                />
+              )}
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -5209,6 +5418,274 @@ function BannerAIGenerator({ onApply, showToast }: { onApply:(v:{title?:string;s
           borderRadius:4,padding:"8px 12px",color:"#f0eeff",fontSize:".85rem",
           fontFamily:"'Rajdhani',sans-serif",boxSizing:"border-box"}}
       />
+    </div>
+  );
+}
+
+// ── FORMULAIRE PRODUIT JOUR ──────────────────────────────────────────────────
+function DayProductForm({ prod, cats, onSave, onClose, showToast }: { prod:DayProduct; cats:Category[]; onSave:(p:DayProduct)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void }) {
+  const [p, setP] = useState(prod);
+  const [uploading, setUploading] = useState(false);
+  const [imgSrc, setImgSrc]       = useState("");
+  const [crop, setCrop]           = useState({ x: 0, y: 0 });
+  const [zoom, setZoom]           = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showToast("Fichier invalide — choisis une image", "err"); return; }
+    const reader = new FileReader();
+    reader.onload = () => { setImgSrc(reader.result as string); setCrop({ x:0,y:0 }); setZoom(1); };
+    reader.readAsDataURL(file);
+  };
+
+  const confirmCrop = async () => {
+    if (!croppedAreaPixels) return;
+    setUploading(true);
+    try {
+      const blob = await getCroppedImg(imgSrc, croppedAreaPixels);
+      const storageRef = ref(storage, `day_products/${Date.now()}.jpg`);
+      await uploadBytes(storageRef, blob);
+      const url = await getDownloadURL(storageRef);
+      setP(s => ({ ...s, image: url }));
+      setImgSrc("");
+      showToast("Image uploadée ✓");
+    } catch { showToast("Erreur upload image", "err"); }
+    setUploading(false);
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(4,2,10,.9)",zIndex:500,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflowY:"auto"}}>
+
+      {imgSrc && (
+        <div style={{position:"fixed",inset:0,background:"#04020a",zIndex:600,
+          display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:0}}>
+          <div style={{position:"relative",width:"100%",maxWidth:500,height:400,background:"#000"}}>
+            <Cropper
+              image={imgSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={(_, px) => setCroppedAreaPixels(px)}
+            />
+          </div>
+          <div style={{background:"#0c0918",width:"100%",maxWidth:500,padding:"18px 24px",
+            borderTop:"1px solid rgba(251,191,36,.2)"}}>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",
+              letterSpacing:".15em",marginBottom:8}}>ZOOM</div>
+            <input type="range" min={1} max={3} step={0.05} value={zoom}
+              onChange={e => setZoom(Number(e.target.value))}
+              style={{width:"100%",accentColor:"#fbbf24",marginBottom:16}} />
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={() => setImgSrc("")} type="button"
+                style={{flex:1,background:"transparent",border:"1px solid rgba(255,255,255,.1)",
+                  color:"#5a5470",borderRadius:4,padding:"11px",fontFamily:"'Rajdhani',sans-serif",
+                  fontWeight:700,fontSize:".9rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                ANNULER
+              </button>
+              <button onClick={confirmCrop} type="button" disabled={uploading}
+                style={{flex:2,background:"#fbbf24",color:"#000",border:"none",borderRadius:4,
+                  padding:"11px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",
+                  letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                {uploading ? "UPLOAD..." : "✓ ROGNER & UPLOADER"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{background:"#0c0918",border:"1px solid rgba(251,191,36,.3)",borderRadius:10,
+        padding:28,width:"100%",maxWidth:460,animation:"fadeUp .3s both",margin:"20px 0"}}>
+        <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:"#fbbf24",
+          marginBottom:22,letterSpacing:".04em"}}>
+          {p.id ? "MODIFIER LE PRODUIT JOUR" : "NOUVEAU PRODUIT JOUR"}
+        </div>
+        <div style={{display:"grid",gap:14}}>
+
+          {/* IMAGE */}
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",
+              letterSpacing:".15em",marginBottom:8}}>IMAGE DU PRODUIT</div>
+            {p.image ? (
+              <div style={{position:"relative"}}>
+                <img src={p.image} alt="Preview" style={{width:"100%",height:180,objectFit:"cover",borderRadius:6}} />
+                <button onClick={() => setP(s => ({...s, image: ""}))} type="button"
+                  style={{position:"absolute",top:8,right:8,background:"rgba(251,191,36,.9)",
+                    color:"#000",border:"none",borderRadius:3,padding:"6px 12px",
+                    fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",cursor:"pointer"}}>
+                  CHANGER
+                </button>
+              </div>
+            ) : (
+              <label style={{display:"flex",flexDirection:"column",alignItems:"center",
+                justifyContent:"center",gap:8,width:"100%",height:180,
+                border:"2px dashed rgba(251,191,36,.3)",borderRadius:6,
+                cursor:"pointer",background:"#080514"}}>
+                <div style={{fontSize:"2.5rem"}}>📷</div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#5a5470",textAlign:"center"}}>
+                  CLIQUE POUR CHOISIR<br/>
+                  <span style={{fontSize:".8rem",opacity:.6}}>tu pourras rogner avant l&apos;upload</span>
+                </div>
+                <input type="file" accept="image/*" onChange={onFileChange} style={{display:"none"}} />
+              </label>
+            )}
+          </div>
+
+          {/* NOM */}
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>NOM</div>
+            <input type="text" value={p.name} onChange={e => setP(s=>({...s,name:e.target.value}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Rajdhani',sans-serif"}} />
+          </div>
+
+          {/* DESCRIPTION */}
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>DESCRIPTION</div>
+            <input type="text" value={p.desc} onChange={e => setP(s=>({...s,desc:e.target.value}))}
+              placeholder="Description courte du produit"
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Rajdhani',sans-serif"}} />
+          </div>
+
+          {/* PRIX */}
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>PRIX (€)</div>
+            <input type="number" value={p.price} onChange={e => setP(s=>({...s,price:Number(e.target.value)}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Share Tech Mono',monospace"}} />
+          </div>
+
+          {/* STOCK */}
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>STOCK</div>
+            <input type="number" value={p.stock} onChange={e => setP(s=>({...s,stock:Number(e.target.value)}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Share Tech Mono',monospace"}} />
+          </div>
+
+          {/* CATÉGORIE */}
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>CATÉGORIE</div>
+            <select value={p.cat} onChange={e => setP(s=>({...s,cat:e.target.value}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem"}}>
+              {cats.length > 0
+                ? cats.map(c => <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>)
+                : <option value="">-- Ajouter des catégories jour d&apos;abord --</option>
+              }
+            </select>
+          </div>
+
+          {/* BADGE */}
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>BADGE</div>
+            <select value={p.badge} onChange={e => setP(s=>({...s,badge:e.target.value}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem"}}>
+              <option value="">Aucun</option>
+              <option value="HOT">🔥 HOT</option>
+              <option value="NEW">✨ NEW</option>
+              <option value="BEST">⭐ BEST</option>
+              <option value="PROMO">💛 PROMO</option>
+            </select>
+          </div>
+
+        </div>
+        <div style={{display:"flex",gap:10,marginTop:22}}>
+          <button onClick={onClose} type="button" style={{flex:1,background:"transparent",
+            border:"1px solid rgba(255,255,255,.1)",color:"#5a5470",borderRadius:4,
+            padding:"11px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",
+            letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+            ANNULER
+          </button>
+          <button onClick={() => onSave(p)} type="button" style={{flex:2,background:"#fbbf24",color:"#000",
+            border:"none",borderRadius:4,padding:"11px",fontFamily:"'Rajdhani',sans-serif",
+            fontWeight:700,fontSize:".9rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+            SAUVEGARDER
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FORMULAIRE PACK JOUR ─────────────────────────────────────────────────────
+function DayPackForm({ pack, onSave, onClose }: { pack:DayPack; onSave:(p:DayPack)=>void; onClose:()=>void }) {
+  const [p, setP] = useState(pack);
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(4,2,10,.9)",zIndex:500,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:"#0c0918",border:"1px solid rgba(251,191,36,.3)",borderRadius:10,
+        padding:28,width:"100%",maxWidth:460,animation:"fadeUp .3s both"}}>
+        <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:"#fbbf24",
+          marginBottom:22,letterSpacing:".04em"}}>
+          {p.id ? "MODIFIER LE PACK JOUR" : "NOUVEAU PACK JOUR"}
+        </div>
+        <div style={{display:"grid",gap:14}}>
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",letterSpacing:".15em",marginBottom:8}}>NOM</div>
+            <input type="text" value={p.name} onChange={e => setP(s=>({...s,name:e.target.value}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:4,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Rajdhani',sans-serif"}} />
+          </div>
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",letterSpacing:".15em",marginBottom:8}}>TAGLINE</div>
+            <input type="text" value={p.tag} onChange={e => setP(s=>({...s,tag:e.target.value}))}
+              placeholder="ex: // Le pack idéal pour la journée"
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:4,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Rajdhani',sans-serif"}} />
+          </div>
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",letterSpacing:".15em",marginBottom:8}}>EMOJI</div>
+            <input type="text" value={p.emoji} onChange={e => setP(s=>({...s,emoji:e.target.value}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:4,padding:"12px",color:"#f0eeff",fontSize:"1.5rem",textAlign:"center",fontFamily:"monospace"}} />
+          </div>
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",letterSpacing:".15em",marginBottom:8}}>PRIX (€)</div>
+            <input type="number" value={p.price} onChange={e => setP(s=>({...s,price:Number(e.target.value)}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:4,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Share Tech Mono',monospace"}} />
+          </div>
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",letterSpacing:".15em",marginBottom:8}}>VALEUR RÉELLE (€)</div>
+            <input type="number" value={p.real} onChange={e => setP(s=>({...s,real:Number(e.target.value)}))}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
+                borderRadius:4,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Share Tech Mono',monospace"}} />
+          </div>
+          <div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#5a5470",letterSpacing:".15em",marginBottom:8}}>CONTENU (1 article par ligne)</div>
+            <textarea value={p.items} onChange={e => setP(s=>({...s,items:e.target.value}))} rows={4}
+              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                borderRadius:4,padding:"10px 14px",color:"#f0eeff",fontSize:".85rem",
+                fontFamily:"'Share Tech Mono',monospace",resize:"vertical"}} />
+          </div>
+          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+            <input type="checkbox" checked={p.star} onChange={e => setP(s=>({...s,star:e.target.checked}))}
+              style={{width:16,height:16,accentColor:"#fbbf24"}} />
+            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".9rem",
+              color:"#f0eeff",letterSpacing:".1em"}}>⭐ MARQUER COMME POPULAIRE</span>
+          </label>
+        </div>
+        <div style={{display:"flex",gap:10,marginTop:22}}>
+          <button onClick={onClose} style={{flex:1,background:"transparent",
+            border:"1px solid rgba(255,255,255,.1)",color:"#5a5470",borderRadius:4,
+            padding:"11px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",
+            letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+            ANNULER
+          </button>
+          <button onClick={() => onSave(p)} style={{flex:2,background:"#fbbf24",color:"#000",
+            border:"none",borderRadius:4,padding:"11px",fontFamily:"'Rajdhani',sans-serif",
+            fontWeight:700,fontSize:".9rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+            SAUVEGARDER
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
