@@ -323,8 +323,19 @@ export default function YassalaDayView() {
       const all = snap.docs.map(d => ({ id:d.id, ...d.data() } as Banner))
         .filter(b => b.active !== false)
         .sort((a,b) => (a.order??0)-(b.order??0));
-      setBanners(all);
-      setBannerIdx(0);
+      if (all.length > 0) {
+        setBanners(all);
+        setBannerIdx(0);
+      } else {
+        // Fallback : utilise les bannières principales si day_banners est vide
+        onSnapshot(collection(db, "banners"), mainSnap => {
+          const mainAll = mainSnap.docs.map(d => ({ id:d.id, ...d.data() } as Banner))
+            .filter(b => b.active !== false)
+            .sort((a,b) => (a.order??0)-(b.order??0));
+          setBanners(mainAll);
+          setBannerIdx(0);
+        });
+      }
     });
     const unsubCats = onSnapshot(collection(db, "day_categories"), snap => {
       const loaded = snap.docs.map(d => ({ id:d.id, ...d.data() } as Category))
