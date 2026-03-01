@@ -27,7 +27,7 @@ type Product = { id?: string; name: string; desc: string; price: number; image: 
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; isRush?: boolean; rushFee?: number; };
 type PickupLocation = { id?: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; themeOverride: "auto" | "day" | "night"; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
@@ -64,6 +64,7 @@ const defaultSettings: Settings = {
   aiDescEnabled: true, aiPredictEnabled: true, aiAnomalyEnabled: true,
   aiBannerEnabled: true, aiStockEnabled: true, aiCoachingEnabled: true,
   aiCouponEnabled: true, aiRouteEnabled: true,
+  themeOverride: "auto",
 };
 
 export default function AdminPage() {
@@ -1024,18 +1025,36 @@ export default function AdminPage() {
             SHOP {settings.shopOpen ? "OUVERT" : "FERMÉ"}
           </span>
         </div>
-        <button onClick={async () => {
-          const newSettings = { ...settings, shopOpen: !settings.shopOpen };
-          setSettings(newSettings);
-          await setDoc(doc(db, "settings", "main"), newSettings);
-          showToast(`Shop ${newSettings.shopOpen ? "ouvert" : "fermé"} ✓`);
-        }} style={{background: settings.shopOpen ? "rgba(255,45,120,.15)" : "rgba(184,255,0,.15)",
-          border:`1px solid ${settings.shopOpen ? "#ff2d78" : "#b8ff00"}`,
-          color: settings.shopOpen ? "#ff2d78" : "#b8ff00",
-          padding:"6px 16px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
-          fontSize:".82rem",letterSpacing:".1em",cursor:"pointer"}}>
-          {settings.shopOpen ? "FERMER LE SHOP" : "OUVRIR LE SHOP"}
-        </button>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={async () => {
+            const cycle: Record<"auto"|"day"|"night","auto"|"day"|"night"> = { auto:"day", day:"night", night:"auto" };
+            const current = (settings.themeOverride ?? "auto") as "auto"|"day"|"night";
+            const next = cycle[current];
+            const newSettings = { ...settings, themeOverride: next };
+            setSettings(newSettings);
+            await setDoc(doc(db, "settings", "main"), newSettings);
+            showToast(next === "day" ? "☀️ Yassala Day activé" : next === "night" ? "🌙 Yassala Night activé" : "🕐 Mode automatique activé");
+          }} style={{
+            background: (settings.themeOverride ?? "auto") === "day" ? "rgba(251,191,36,.15)" : (settings.themeOverride ?? "auto") === "night" ? "rgba(0,245,255,.1)" : "rgba(255,255,255,.05)",
+            border:`1px solid ${(settings.themeOverride ?? "auto") === "day" ? "#fbbf24" : (settings.themeOverride ?? "auto") === "night" ? "#00f5ff" : "rgba(255,255,255,.15)"}`,
+            color: (settings.themeOverride ?? "auto") === "day" ? "#fbbf24" : (settings.themeOverride ?? "auto") === "night" ? "#00f5ff" : "#5a5470",
+            padding:"6px 16px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
+            fontSize:".82rem",letterSpacing:".1em",cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+            {(settings.themeOverride ?? "auto") === "day" ? "☀️ YASSALA DAY" : (settings.themeOverride ?? "auto") === "night" ? "🌙 YASSALA NIGHT" : "🕐 MODE AUTO"}
+          </button>
+          <button onClick={async () => {
+            const newSettings = { ...settings, shopOpen: !settings.shopOpen };
+            setSettings(newSettings);
+            await setDoc(doc(db, "settings", "main"), newSettings);
+            showToast(`Shop ${newSettings.shopOpen ? "ouvert" : "fermé"} ✓`);
+          }} style={{background: settings.shopOpen ? "rgba(255,45,120,.15)" : "rgba(184,255,0,.15)",
+            border:`1px solid ${settings.shopOpen ? "#ff2d78" : "#b8ff00"}`,
+            color: settings.shopOpen ? "#ff2d78" : "#b8ff00",
+            padding:"6px 16px",borderRadius:6,fontFamily:"'Inter',sans-serif",fontWeight:500,
+            fontSize:".82rem",letterSpacing:".1em",cursor:"pointer"}}>
+            {settings.shopOpen ? "FERMER LE SHOP" : "OUVRIR LE SHOP"}
+          </button>
+        </div>
       </div>
 
       {/* ── Drawer overlay (mobile) ── */}

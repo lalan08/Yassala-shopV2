@@ -3411,13 +3411,26 @@ function isDayMode(): boolean {
 
 export default function Home() {
   const [dayMode, setDayMode] = useState<boolean>(() => isDayMode());
+  const [themeOverride, setThemeOverride] = useState<"auto" | "day" | "night">("auto");
+
+  // Écoute le override admin en temps réel depuis Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "main"), (snap) => {
+      if (snap.exists()) {
+        const override = snap.data().themeOverride as "auto" | "day" | "night" | undefined;
+        setThemeOverride(override ?? "auto");
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setDayMode(isDayMode()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  if (dayMode) return <YassalaDayView />;
+  const isDay = themeOverride === "day" ? true : themeOverride === "night" ? false : dayMode;
+  if (isDay) return <YassalaDayView />;
   return <NightHome />;
 }
 
