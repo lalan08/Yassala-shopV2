@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where, onSnapshot, doc } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
@@ -78,6 +78,14 @@ type DayPack = {
   price: number;
   real: number;
   star: boolean;
+};
+
+type YassalaDayConfig = {
+  active: boolean;
+  startHour: number;
+  endHour: number;
+  welcomeMessage: string;
+  phone: string;
 };
 
 // ── Countdown vers 21h ───────────────────────────────────────────────────────
@@ -226,6 +234,7 @@ export default function YassalaDayView() {
   const [loading, setLoading] = useState(true);
   const [clock, setClock] = useState("--:--");
   const countdown = useCountdownToNight();
+  const [dayConfig, setDayConfig] = useState<YassalaDayConfig>({ active: true, startHour: 7, endHour: 21, welcomeMessage: "", phone: "" });
   const [dayBanners, setDayBanners] = useState<DayBanner[]>([]);
   const [dayCategories, setDayCategories] = useState<DayCategory[]>([]);
   const [dayOffers, setDayOffers] = useState<DayOffer[]>([]);
@@ -322,6 +331,14 @@ export default function YassalaDayView() {
     return () => unsub();
   }, []);
 
+  // Chargement config jour en temps réel
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "yassala_day", "config"), snap => {
+      if (snap.exists()) setDayConfig(snap.data() as YassalaDayConfig);
+    });
+    return () => unsub();
+  }, []);
+
   const filteredOffers = activeCat === "all"
     ? dayOffers
     : dayOffers.filter(o => o.cat === activeCat);
@@ -392,11 +409,14 @@ export default function YassalaDayView() {
 
       {/* ── BARRE DE STATUT (style Night) ── */}
       <div style={{
-        background: "#ff2d78", color: "#fff", textAlign: "center", padding: "8px",
+        background: dayConfig.active ? "#ff2d78" : "#5a5470", color: "#000", textAlign: "center", padding: "8px",
         fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem", letterSpacing: ".15em",
         position: "relative", zIndex: 10,
       }}>
-        // POINTS RELAIS ACTIFS · CAYENNE & ALENTOURS · 7H00 → 21H00 //
+        {dayConfig.active
+          ? `// POINTS RELAIS ACTIFS · CAYENNE & ALENTOURS · ${dayConfig.startHour}H00 → ${dayConfig.endHour}H00 //`
+          : "// POINTS RELAIS FERMÉS · REVENEZ PLUS TARD //"
+        }
       </div>
 
       {/* ── NAVIGATION (style Night, fond clair) ── */}
