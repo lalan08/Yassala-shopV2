@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import YassalaDayView from "@/components/YassalaDayView";
 import { haversineKm, SHOP_LAT, SHOP_LNG } from "@/utils/pricing";
 import { DEFAULT_DELIVERY_CONFIG, computeDeliveryFee, type DeliveryConfig, type DeliveryFeeResult } from "@/types/delivery";
 import { computeETA, formatETA } from "@/utils/estimateDelivery";
@@ -202,7 +203,7 @@ const defaultSettings: Settings = {
   aiCouponEnabled: true, aiRouteEnabled: true,
 };
 
-export default function Home() {
+function NightHome() {
   const [clock, setClock]         = useState("--:--");
   const [cart, setCart]           = useState<CartItem[]>([]);
   const [activeCat, setActiveCat] = useState("all");
@@ -3400,5 +3401,23 @@ export default function Home() {
       )}
     </>
   );
+}
+
+// ── Switch automatique Yassala Day / Yassala Night ───────────────────────────
+function isDayMode(): boolean {
+  const h = new Date().getHours();
+  return h >= 7 && h < 21;
+}
+
+export default function Home() {
+  const [dayMode, setDayMode] = useState<boolean>(() => isDayMode());
+
+  useEffect(() => {
+    const id = setInterval(() => setDayMode(isDayMode()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (dayMode) return <YassalaDayView />;
+  return <NightHome />;
 }
 
