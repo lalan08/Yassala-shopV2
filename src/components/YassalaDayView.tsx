@@ -852,20 +852,37 @@ export default function YassalaDayView() {
       <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"#ffffff"}} />
 
       {/* Bande info + countdown vers Night */}
-      <div style={{background:settings.shopOpen ? D.pink : "#9a8aaa",color:"#fff",textAlign:"center",padding:"8px",
-        fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",letterSpacing:".15em",position:"relative",zIndex:10,
-        display:"flex",alignItems:"center",justifyContent:"center",gap:12,flexWrap:"wrap"}}>
-        <span>
-          {settings.shopOpen
-            ? `// LIVRAISON DE JOUR · ${settings.zone.toUpperCase()} · MIN. ${deliveryConfig.minimum_order_amount}€ · ${settings.hours} //`
-            : "// SHOP FERMÉ · REVENEZ PLUS TARD //"}
-        </span>
-        {!countdown.done && (
-          <span style={{background:"rgba(0,0,0,.2)",borderRadius:4,padding:"2px 8px",fontSize:".7rem",letterSpacing:".1em"}}>
-            🌙 Night dans {countdown.label}
-          </span>
-        )}
+      {/* Bande info livraison — uniquement les infos du jour */}
+      <div style={{background:settings.shopOpen ? D.pink : "#9a8aaa",color:"#fff",textAlign:"center",padding:"8px 16px",
+        fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".78rem",letterSpacing:".12em",position:"relative",zIndex:10}}>
+        {settings.shopOpen
+          ? `LIVRAISON DE JOUR · ${settings.zone.toUpperCase()} · MIN. ${deliveryConfig.minimum_order_amount}€ · ${settings.hours}`
+          : "SHOP FERMÉ · REVENEZ PLUS TARD"}
       </div>
+
+      {/* Pastille flottante countdown Night — discrète mais visible */}
+      {!countdown.done && (
+        <div style={{position:"fixed",bottom:24,right:20,zIndex:200,
+          background:"linear-gradient(135deg,#0d0d1a 0%,#1a0a2e 100%)",
+          border:"1px solid rgba(130,80,255,.4)",
+          borderRadius:16,padding:"10px 16px",
+          boxShadow:"0 4px 20px rgba(0,0,0,.35),0 0 18px rgba(100,60,255,.15)",
+          backdropFilter:"blur(10px)",
+          display:"flex",alignItems:"center",gap:10,
+          cursor:"default",userSelect:"none"}}>
+          <span style={{fontSize:"1.2rem",lineHeight:1}}>🌙</span>
+          <div>
+            <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".7rem",
+              color:"rgba(180,140,255,.7)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:1}}>
+              Night dans
+            </div>
+            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem",
+              color:"#c8a8ff",letterSpacing:".06em",lineHeight:1}}>
+              {countdown.label}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NAV */}
       <nav className="nav-main" style={{display:"flex",alignItems:"center",justifyContent:"space-between",
