@@ -76,7 +76,7 @@ export default function AdminPage() {
   });
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres"|"yassala_day_cats">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dispatchFilter, setDispatchFilter] = useState<"available"|"mine"|"delivered">("available");
   const [driverLocations, setDriverLocations] = useState<any[]>([]);
@@ -116,6 +116,9 @@ export default function AdminPage() {
   const [dayOffers, setDayOffers] = useState<DayOffer[]>([]);
   const [editDayOffer, setEditDayOffer] = useState<DayOffer|null>(null);
   const [dayOfferForm, setDayOfferForm] = useState<DayOffer>({title:"",desc:"",emoji:"🌟",discount:"",active:true,order:0});
+  const [dayCats, setDayCats]                     = useState<Category[]>([]);
+  const [editDayCat, setEditDayCat]               = useState<Category | null>(null);
+  const [dayCatForm, setDayCatForm]               = useState<Category>({key:"",label:"",emoji:"",order:0});
   const [adminHash, setAdminHash] = useState<string|null>(null);
   const [usersCount, setUsersCount]           = useState(0);
   const [usersWithOrders, setUsersWithOrders] = useState(0);
@@ -418,7 +421,11 @@ export default function AdminPage() {
       setDayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayOffer))
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); };
+    const unsubDayCats = onSnapshot(collection(db, "day_categories"), snap => {
+      setDayCats(snap.docs.map(d => ({ id: d.id, ...d.data() } as Category))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+    });
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); unsubDayCats(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -693,6 +700,35 @@ export default function AdminPage() {
     reordered.forEach((c, i) => {
       batch.update(doc(db, "categories", c.id!), { order: i });
     });
+    await batch.commit();
+  };
+
+  const saveDayCat = async () => {
+    const form = editDayCat ?? dayCatForm;
+    if (!form.key || !form.label) { showToast("Clé et libellé requis", "err"); return; }
+    if (editDayCat?.id) {
+      await updateDoc(doc(db, "day_categories", editDayCat.id), { ...editDayCat });
+      showToast("Catégorie jour mise à jour ✓");
+    } else {
+      await addDoc(collection(db, "day_categories"), { ...dayCatForm });
+      showToast("Catégorie jour ajoutée ✓");
+    }
+    setEditDayCat(null); setDayCatForm({key:"",label:"",emoji:"",order:0});
+  };
+
+  const deleteDayCat = async (id: string) => {
+    if (!confirm("Supprimer cette catégorie jour ?")) return;
+    await deleteDoc(doc(db, "day_categories", id));
+    showToast("Catégorie jour supprimée");
+  };
+
+  const moveDayCat = async (idx: number, direction: -1 | 1) => {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= dayCats.length) return;
+    const reordered = [...dayCats];
+    [reordered[idx], reordered[targetIdx]] = [reordered[targetIdx], reordered[idx]];
+    const batch = writeBatch(db);
+    reordered.forEach((c, i) => { batch.update(doc(db, "day_categories", c.id!), { order: i }); });
     await batch.commit();
   };
 
@@ -1118,8 +1154,9 @@ export default function AdminPage() {
               { key:"pickup_locations",  label:"POINTS RELAIS",   icon:"🏪" },
             ]},
             { section:"YASSALA DAY", items:[
-              { key:"yassala_day_config", label:"CONFIG JOUR",   icon:"☀️" },
-              { key:"yassala_day_offres", label:"OFFRES DU JOUR", icon:"🎁" },
+              { key:"yassala_day_config",   label:"CONFIG JOUR",     icon:"☀️" },
+              { key:"yassala_day_offres",   label:"OFFRES DU JOUR",  icon:"🎁" },
+              { key:"yassala_day_cats",     label:"CATÉGORIES JOUR", icon:"🗂️" },
             ]},
           ] as const).map((group, gi) => (
             <div key={group.section}>
@@ -4360,6 +4397,141 @@ export default function AdminPage() {
                           style={{background:"transparent",border:"1px solid rgba(255,45,120,.2)",color:"#5a5470",
                             padding:"6px 10px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
                             fontSize:".78rem",cursor:"pointer"}}>
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── YASSALA DAY CATÉGORIES ── */}
+          {tab === "yassala_day_cats" && (
+            <div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em",marginBottom:28}}>
+                🗂️ <span style={{color:"#fbbf24"}}>CATÉGORIES JOUR</span>
+              </div>
+
+              <div style={{background:"#0c0918",border:"1px solid rgba(251,191,36,.2)",borderRadius:10,padding:"24px",marginBottom:28}}>
+                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.1rem",
+                  letterSpacing:".06em",color:"#fbbf24",marginBottom:20}}>
+                  {editDayCat ? "✏️ MODIFIER LA CATÉGORIE" : "➕ NOUVELLE CATÉGORIE JOUR"}
+                </div>
+
+                <div className="admin-cat-form-grid" style={{display:"grid",gridTemplateColumns:"80px 1fr 1fr 80px auto",gap:14,alignItems:"end"}}>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>EMOJI</div>
+                    <input
+                      value={editDayCat ? editDayCat.emoji : dayCatForm.emoji}
+                      onChange={e => editDayCat ? setEditDayCat(s => s && ({...s, emoji: e.target.value})) : setDayCatForm(s => ({...s, emoji: e.target.value}))}
+                      placeholder="🛒"
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(251,191,36,.2)",borderRadius:6,
+                        padding:"12px",color:"#fbbf24",fontSize:"1.5rem",textAlign:"center"}} />
+                  </div>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>CLÉ (ex: alimentation)</div>
+                    <input
+                      value={editDayCat ? editDayCat.key : dayCatForm.key}
+                      onChange={e => editDayCat ? setEditDayCat(s => s && ({...s, key: e.target.value})) : setDayCatForm(s => ({...s, key: e.target.value}))}
+                      placeholder="alimentation"
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,
+                        padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Share Tech Mono',monospace"}} />
+                  </div>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>LIBELLÉ AFFICHÉ</div>
+                    <input
+                      value={editDayCat ? editDayCat.label : dayCatForm.label}
+                      onChange={e => editDayCat ? setEditDayCat(s => s && ({...s, label: e.target.value})) : setDayCatForm(s => ({...s, label: e.target.value}))}
+                      placeholder="🛒 ALIMENTATION"
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,
+                        padding:"12px 14px",color:"#f0eeff",fontSize:"1rem"}} />
+                  </div>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#7a7490",letterSpacing:".1em",marginBottom:8}}>ORDRE</div>
+                    <input
+                      type="number"
+                      value={editDayCat ? editDayCat.order : dayCatForm.order}
+                      onChange={e => editDayCat ? setEditDayCat(s => s && ({...s, order: Number(e.target.value)})) : setDayCatForm(s => ({...s, order: Number(e.target.value)}))}
+                      placeholder="1"
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,
+                        padding:"12px",color:"#f0eeff",fontSize:"1rem",fontFamily:"'Share Tech Mono',monospace",textAlign:"center"}} />
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={saveDayCat}
+                      style={{background:"#fbbf24",color:"#000",border:"none",borderRadius:6,
+                        padding:"12px 22px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                        fontSize:"1rem",letterSpacing:".06em",cursor:"pointer",whiteSpace:"nowrap"}}>
+                      {editDayCat ? "✓ MODIFIER" : "✓ AJOUTER"}
+                    </button>
+                    {editDayCat && (
+                      <button onClick={() => setEditDayCat(null)}
+                        style={{background:"transparent",border:"1px solid rgba(255,255,255,.15)",color:"#7a7490",
+                          borderRadius:6,padding:"12px 16px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                          fontSize:"1rem",cursor:"pointer"}}>
+                        ANNULER
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {!editDayCat && (
+                  <div style={{marginTop:12,fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#5a5470"}}>
+                    💡 La clé est l&apos;identifiant technique (sans accent, en minuscules). Le libellé est ce que voit le client.
+                  </div>
+                )}
+              </div>
+
+              {dayCats.length === 0 ? (
+                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                  padding:"48px",fontSize:".9rem",border:"1px dashed rgba(251,191,36,.15)",borderRadius:10}}>
+                  // aucune catégorie jour — ajoutez-en une ci-dessus
+                </div>
+              ) : (
+                <div style={{display:"grid",gap:8}}>
+                  {dayCats.map((c, idx) => (
+                    <div key={c.id} style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                      borderRadius:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{display:"flex",flexDirection:"column",gap:4,flexShrink:0}}>
+                        <button onClick={() => moveDayCat(idx, -1)} disabled={idx === 0}
+                          style={{width:36,height:36,borderRadius:6,border:"1px solid rgba(255,255,255,.15)",
+                            background: idx === 0 ? "rgba(255,255,255,.03)" : "rgba(255,255,255,.07)",
+                            color: idx === 0 ? "rgba(255,255,255,.2)" : "#f0eeff",
+                            cursor: idx === 0 ? "default" : "pointer",
+                            fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center",
+                            lineHeight:1,userSelect:"none",WebkitUserSelect:"none"}}>
+                          ▲
+                        </button>
+                        <button onClick={() => moveDayCat(idx, 1)} disabled={idx === dayCats.length - 1}
+                          style={{width:36,height:36,borderRadius:6,border:"1px solid rgba(255,255,255,.15)",
+                            background: idx === dayCats.length - 1 ? "rgba(255,255,255,.03)" : "rgba(255,255,255,.07)",
+                            color: idx === dayCats.length - 1 ? "rgba(255,255,255,.2)" : "#f0eeff",
+                            cursor: idx === dayCats.length - 1 ? "default" : "pointer",
+                            fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center",
+                            lineHeight:1,userSelect:"none",WebkitUserSelect:"none"}}>
+                          ▼
+                        </button>
+                      </div>
+                      <span style={{fontSize:"1.8rem",minWidth:38,textAlign:"center"}}>{c.emoji}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:"1rem",letterSpacing:".03em",
+                          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.label}</div>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",marginTop:2}}>
+                          clé : <span style={{color:"#fbbf24"}}>{c.key}</span>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:6,flexShrink:0}}>
+                        <button onClick={() => setEditDayCat(c)}
+                          style={{background:"transparent",border:"1px solid rgba(251,191,36,.3)",color:"#fbbf24",
+                            padding:"10px 14px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                            fontSize:".85rem",cursor:"pointer",whiteSpace:"nowrap",minHeight:44}}>
+                          ✏️
+                        </button>
+                        <button onClick={() => deleteDayCat(c.id!)}
+                          style={{background:"transparent",border:"1px solid rgba(255,45,120,.3)",color:"#ff2d78",
+                            padding:"10px 14px",borderRadius:6,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                            fontSize:".85rem",cursor:"pointer",minHeight:44}}>
                           ✕
                         </button>
                       </div>
