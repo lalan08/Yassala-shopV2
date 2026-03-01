@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { initializeApp, getApps } from "firebase/app";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  updateDoc,
+  addDoc,
+  collection,
+  serverTimestamp,
+} from "firebase/firestore";
 
-function initAdmin() {
-  if (getApps().length > 0) return getApps()[0];
-  const svc = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (svc) {
-    return initializeApp({ credential: cert(JSON.parse(svc)) });
-  }
-  return initializeApp();
+const firebaseConfig = {
+  apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
+  authDomain: "yassala-shop.firebaseapp.com",
+  projectId: "yassala-shop",
+  storageBucket: "yassala-shop.firebasestorage.app",
+  messagingSenderId: "871772438691",
+  appId: "1:871772438691:web:403d6672c34e9529eaff16",
+};
+
+function getDb() {
+  const apps = getApps();
+  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
+  return getFirestore(app);
 }
 
 /**
@@ -25,8 +39,7 @@ function initAdmin() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    initAdmin();
-    const db = getFirestore();
+    const db = getDb();
 
     // ── STEP 2: Confirm pickup ─────────────────────────────────────────────
     if (body.confirm === true) {
@@ -39,10 +52,10 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const orderRef = db.collection("orders").doc(orderId);
-      const orderSnap = await orderRef.get();
+      const orderRef = doc(db, "orders", orderId);
+      const orderSnap = await getDoc(orderRef);
 
-      if (!orderSnap.exists) {
+      if (!orderSnap.exists()) {
         return NextResponse.json(
           { error: "Commande introuvable" },
           { status: 404 }
@@ -96,7 +109,7 @@ export async function POST(req: NextRequest) {
       } catch {}
 
       // Update order status
-      await orderRef.update({
+      await updateDoc(orderRef, {
         status: "COLLECTED",
         collectedAt: now.toISOString(),
         collectedBy: collectedBy || "customer",
@@ -104,13 +117,13 @@ export async function POST(req: NextRequest) {
       });
 
       // Create relay log
-      await db.collection("relayLogs").add({
+      await addDoc(collection(db, "relayLogs"), {
         relayId,
         orderId,
         items,
         timestamp: now.toISOString(),
         collectedBy: collectedBy || "customer",
-        createdAt: FieldValue.serverTimestamp(),
+        createdAt: serverTimestamp(),
       });
 
       return NextResponse.json({ success: true, message: "Commande validée avec succès" });
@@ -138,8 +151,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "QR code malformé" }, { status: 400 });
     }
 
-    const orderSnap = await db.collection("orders").doc(orderId).get();
-    if (!orderSnap.exists) {
+    const orderSnap = await getDoc(doc(db, "orders", orderId));
+    if (!orderSnap.exists()) {
       return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
     }
 

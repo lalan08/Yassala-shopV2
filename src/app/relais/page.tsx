@@ -9,6 +9,8 @@ import {
   where,
   orderBy,
   getDocs,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import QRCode from "qrcode";
 import type { RelaySession } from "@/types/relay";
@@ -38,6 +40,7 @@ const C = {
   accentDark: "#059669",
   danger: "#ef4444",
   warning: "#f59e0b",
+  orange: "#f97316",
 };
 
 type ActivityLog = {
@@ -47,6 +50,18 @@ type ActivityLog = {
   items: { productId: string; name: string; qty: number }[];
   timestamp: string;
   collectedBy: "driver" | "customer";
+};
+
+type PendingOrder = {
+  id: string;
+  orderNumber?: number;
+  name?: string;
+  phone?: string;
+  total: number;
+  status: string;
+  fulfillmentMode?: string;
+  createdAt: string;
+  items: { productId: string; name: string; qty: number }[];
 };
 
 type ScannedOrder = {
@@ -116,7 +131,7 @@ function QrScanner({
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function RelaisPage() {
   const [session, setSession] = useState<RelaySession | null>(null);
-  const [tab, setTab] = useState<"scan" | "activity">("scan");
+  const [tab, setTab] = useState<"scan" | "pending" | "activity">("scan");
 
   // Login state
   const [relayId, setRelayIdInput] = useState("");
@@ -137,6 +152,10 @@ export default function RelaisPage() {
   const [todayCount, setTodayCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
   const [activityLoading, setActivityLoading] = useState(false);
+
+  // Pending orders state
+  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
 
   // Load session from localStorage
   useEffect(() => {
@@ -269,9 +288,55 @@ export default function RelaisPage() {
     setActivityLoading(false);
   }
 
+  // ── Load pending orders ─────────────────────────────────────────────────
+  async function loadPending() {
+    if (!session) return;
+    setPendingLoading(true);
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, "orders"),
+          where("relayId", "==", session.relayId),
+          where("status", "==", "READY_FOR_PICKUP"),
+          orderBy("createdAt", "desc")
+        )
+      );
+      const orders: PendingOrder[] = snap.docs.map((d) => {
+        const data = d.data();
+        let items: PendingOrder["items"] = [];
+        try {
+          const raw = typeof data.items === "string" ? JSON.parse(data.items) : data.items;
+          if (Array.isArray(raw)) {
+            items = raw.map((i: any) => ({
+              productId: i.productId || i.id || "",
+              name: i.name || i.productName || "Produit",
+              qty: i.quantity || i.qty || 1,
+            }));
+          }
+        } catch {}
+        return {
+          id: d.id,
+          orderNumber: data.orderNumber,
+          name: data.name || data.customerName,
+          phone: data.phone || data.customerPhone,
+          total: data.total,
+          status: data.status,
+          fulfillmentMode: data.fulfillmentMode,
+          createdAt: data.createdAt,
+          items,
+        };
+      });
+      setPendingOrders(orders);
+    } catch {}
+    setPendingLoading(false);
+  }
+
   useEffect(() => {
     if (tab === "activity" && session) {
       loadActivity();
+    }
+    if (tab === "pending" && session) {
+      loadPending();
     }
   }, [tab, session]);
 
@@ -480,24 +545,30 @@ export default function RelaisPage() {
           background: "rgba(255,255,255,0.02)",
         }}
       >
-        {(["scan", "activity"] as const).map((t) => (
+        {(
+          [
+            ["scan", "📷 Scanner QR"],
+            ["pending", `⏳ En attente${pendingOrders.length > 0 ? ` (${pendingOrders.length})` : ""}`],
+            ["activity", "📊 Activité"],
+          ] as const
+        ).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             style={{
               flex: 1,
-              padding: "14px",
+              padding: "14px 8px",
               background: "none",
               border: "none",
               borderBottom: tab === t ? `2px solid ${C.accent}` : "2px solid transparent",
               color: tab === t ? C.accent : C.muted,
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: tab === t ? 700 : 400,
               cursor: "pointer",
               transition: "all 0.2s",
             }}
           >
-            {t === "scan" ? "📷 Scanner QR" : "📊 Activité"}
+            {label}
           </button>
         ))}
       </div>
@@ -866,6 +937,179 @@ export default function RelaisPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── PENDING ORDERS TAB ───────────────────────────────────── */}
+        {tab === "pending" && (
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "1rem",
+              }}
+            >
+              <div style={{ color: C.muted, fontSize: 12 }}>
+                COMMANDES EN ATTENTE DE REMISE
+              </div>
+              <button
+                onClick={loadPending}
+                disabled={pendingLoading}
+                style={{
+                  background: "rgba(16,185,129,0.1)",
+                  border: "1px solid rgba(16,185,129,0.25)",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  color: C.accent,
+                  fontSize: 13,
+                  cursor: pendingLoading ? "not-allowed" : "pointer",
+                }}
+              >
+                {pendingLoading ? "..." : "↻ Actualiser"}
+              </button>
+            </div>
+
+            {pendingLoading && (
+              <div style={{ textAlign: "center", color: C.muted, padding: "2rem" }}>
+                Chargement...
+              </div>
+            )}
+
+            {!pendingLoading && pendingOrders.length === 0 && (
+              <div
+                style={{
+                  textAlign: "center",
+                  color: C.muted,
+                  padding: "2.5rem",
+                  background: C.card,
+                  borderRadius: 14,
+                  border: `1px solid ${C.cardBorder}`,
+                }}
+              >
+                <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                  Aucune commande en attente
+                </div>
+                <div style={{ fontSize: 13 }}>
+                  Toutes les commandes ont été remises.
+                </div>
+              </div>
+            )}
+
+            {pendingOrders.map((order) => {
+              const totalQty = order.items.reduce((s, i) => s + i.qty, 0);
+              const date = new Date(order.createdAt);
+              return (
+                <div
+                  key={order.id}
+                  style={{
+                    background: "rgba(245,158,11,0.07)",
+                    border: "1px solid rgba(245,158,11,0.25)",
+                    borderRadius: 14,
+                    padding: "1.25rem",
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: 10,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>
+                        #{order.orderNumber || order.id.slice(-6)}
+                      </div>
+                      <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
+                        {order.fulfillmentMode === "DELIVERY" ? "🚚 Livraison" : "🏪 Click & Collect"}
+                        {" · "}
+                        {date.toLocaleDateString("fr-FR")}{" "}
+                        {date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: C.accent, fontWeight: 700 }}>
+                        {order.total?.toFixed(2)} €
+                      </div>
+                      <div
+                        style={{
+                          background: "rgba(245,158,11,0.2)",
+                          color: C.warning,
+                          borderRadius: 6,
+                          padding: "1px 7px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          marginTop: 4,
+                        }}
+                      >
+                        À remettre
+                      </div>
+                    </div>
+                  </div>
+
+                  {order.name && (
+                    <div style={{ fontSize: 13, marginBottom: 8 }}>
+                      <span style={{ color: C.muted }}>Client : </span>
+                      <span style={{ fontWeight: 600 }}>{order.name}</span>
+                      {order.phone && (
+                        <span style={{ color: C.muted }}> · {order.phone}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>
+                    ARTICLES ({totalQty})
+                  </div>
+                  {order.items.map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 13,
+                        padding: "5px 0",
+                        borderBottom:
+                          i < order.items.length - 1
+                            ? `1px solid ${C.cardBorder}`
+                            : "none",
+                      }}
+                    >
+                      <span>{item.name}</span>
+                      <span
+                        style={{
+                          background: "rgba(245,158,11,0.15)",
+                          color: C.warning,
+                          borderRadius: 5,
+                          padding: "1px 7px",
+                          fontWeight: 600,
+                          fontSize: 12,
+                        }}
+                      >
+                        ×{item.qty}
+                      </span>
+                    </div>
+                  ))}
+
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "8px 12px",
+                      background: "rgba(16,185,129,0.08)",
+                      border: "1px solid rgba(16,185,129,0.2)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: C.accent,
+                    }}
+                  >
+                    💡 Demandez le QR code au client ou livreur pour valider la remise
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

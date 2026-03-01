@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { initializeApp, getApps } from "firebase/app";
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+} from "firebase/firestore";
 
-function initAdmin() {
-  if (getApps().length > 0) return getApps()[0];
-  const svc = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (svc) {
-    return initializeApp({ credential: cert(JSON.parse(svc)) });
-  }
-  return initializeApp();
+const firebaseConfig = {
+  apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
+  authDomain: "yassala-shop.firebaseapp.com",
+  projectId: "yassala-shop",
+  storageBucket: "yassala-shop.firebasestorage.app",
+  messagingSenderId: "871772438691",
+  appId: "1:871772438691:web:403d6672c34e9529eaff16",
+};
+
+function getDb() {
+  const apps = getApps();
+  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
+  return getFirestore(app);
 }
 
 // GET /api/relay/activity?relayId=xxx
@@ -21,19 +35,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "relayId requis" }, { status: 400 });
     }
 
-    initAdmin();
-    const db = getFirestore();
+    const db = getDb();
 
-    const logsSnap = await db
-      .collection("relayLogs")
-      .where("relayId", "==", relayId)
-      .orderBy("timestamp", "desc")
-      .limit(200)
-      .get();
+    const logsSnap = await getDocs(
+      query(
+        collection(db, "relayLogs"),
+        where("relayId", "==", relayId),
+        orderBy("timestamp", "desc"),
+        limit(200)
+      )
+    );
 
-    const logs = logsSnap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+    const logs = logsSnap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
     }));
 
     // Aggregate counts

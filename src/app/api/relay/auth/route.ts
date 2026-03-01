@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { initializeApp, getApps } from "firebase/app";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
-function initAdmin() {
-  if (getApps().length > 0) return getApps()[0];
-  const svc = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (svc) {
-    return initializeApp({ credential: cert(JSON.parse(svc)) });
-  }
-  return initializeApp();
+const firebaseConfig = {
+  apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
+  authDomain: "yassala-shop.firebaseapp.com",
+  projectId: "yassala-shop",
+  storageBucket: "yassala-shop.firebasestorage.app",
+  messagingSenderId: "871772438691",
+  appId: "1:871772438691:web:403d6672c34e9529eaff16",
+};
+
+function getDb() {
+  const apps = getApps();
+  const app = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
+  return getFirestore(app);
 }
 
 async function sha256(str: string): Promise<string> {
@@ -33,19 +39,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    initAdmin();
-    const db = getFirestore();
+    const db = getDb();
+    const relaySnap = await getDoc(doc(db, "relays", relayId));
 
-    const relayDoc = await db.collection("relays").doc(relayId).get();
-
-    if (!relayDoc.exists) {
+    if (!relaySnap.exists()) {
       return NextResponse.json(
         { error: "Relais introuvable" },
         { status: 404 }
       );
     }
 
-    const relay = relayDoc.data()!;
+    const relay = relaySnap.data()!;
 
     if (relay.status === "inactive") {
       return NextResponse.json(
@@ -63,7 +67,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       relay: {
-        id: relayDoc.id,
+        id: relaySnap.id,
         name: relay.name,
         address: relay.address,
         status: relay.status,
