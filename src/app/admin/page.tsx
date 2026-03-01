@@ -27,7 +27,7 @@ type Product = { id?: string; name: string; desc: string; price: number; image: 
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; isRush?: boolean; rushFee?: number; };
 type PickupLocation = { id?: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; themeOverride: "auto" | "day" | "night"; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; themeOverride: "auto" | "day" | "night"; nightBannerText: string; dayBannerText: string; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
@@ -69,6 +69,8 @@ const defaultSettings: Settings = {
   aiBannerEnabled: true, aiStockEnabled: true, aiCoachingEnabled: true,
   aiCouponEnabled: true, aiRouteEnabled: true,
   themeOverride: "auto",
+  nightBannerText: "LIVRAISON NOCTURNE DE 21H À 00H00 · CLICK & COLLECT JUSQU'À 6H · MATOURY UNIQUEMENT",
+  dayBannerText: "LIVRAISON JOURNÉE DE 8H À 21H · MATOURY UNIQUEMENT",
 };
 
 export default function AdminPage() {
@@ -4038,6 +4040,55 @@ export default function AdminPage() {
                         </div>
                       </label>
                     ))}
+                  </div>
+                </div>
+
+                {/* ── Bande rose d'information ── */}
+                <div style={{background:"rgba(255,45,120,.06)",border:"1px solid rgba(255,45,120,.2)",
+                  borderRadius:10,padding:18}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                    color:"#ff2d78",letterSpacing:".12em",marginBottom:14}}>
+                    🩷 BANDE D'INFORMATION (HAUT DE PAGE)
+                  </div>
+                  <div style={{display:"grid",gap:12}}>
+                    <div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                        color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>
+                        🌙 TEXTE NUIT (21H–6H)
+                      </div>
+                      <input
+                        type="text"
+                        value={settings.nightBannerText ?? ""}
+                        onChange={e => setSettings(s => ({...s, nightBannerText: e.target.value}))}
+                        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,45,120,.3)",
+                          borderRadius:6,padding:"10px 12px",color:"#fff",
+                          fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                          letterSpacing:".06em",boxSizing:"border-box"}}
+                      />
+                    </div>
+                    <div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                        color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>
+                        ☀️ TEXTE JOUR (8H–21H)
+                      </div>
+                      <input
+                        type="text"
+                        value={settings.dayBannerText ?? ""}
+                        onChange={e => setSettings(s => ({...s, dayBannerText: e.target.value}))}
+                        style={{width:"100%",background:"#080514",border:"1px solid rgba(251,191,36,.3)",
+                          borderRadius:6,padding:"10px 12px",color:"#fff",
+                          fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                          letterSpacing:".06em",boxSizing:"border-box"}}
+                      />
+                    </div>
+                    <div style={{background:"rgba(255,45,120,.04)",borderRadius:6,padding:"10px 14px",
+                      fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470",lineHeight:1.6}}>
+                      Aperçu : <span style={{color:"#fff"}}>{settings.themeOverride === "day"
+                        ? (settings.dayBannerText ?? "")
+                        : settings.themeOverride === "night"
+                          ? (settings.nightBannerText ?? "")
+                          : "Automatique selon l'heure"}</span>
+                    </div>
                   </div>
                 </div>
 
