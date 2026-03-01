@@ -254,9 +254,11 @@ export default function LivreurPage() {
         today: todayDelivered.length,
         total: delivered.length,
       });
-    });
+    },
+    (err) => console.error("[orders listener]", err.message)
+    );
     return unsub;
-  }, [driverData]);
+  }, [driverData, showContract]);
 
   useEffect(() => {
     const unsub = loadOrders();
@@ -403,16 +405,19 @@ export default function LivreurPage() {
   }, []);
 
   // Listener wallet_transactions temps réel
+  // Note: on évite orderBy("createdAt") combiné avec where() pour ne pas nécessiter
+  // un index composite Firestore. On trie côté client à la place.
   useEffect(() => {
     if (!driverData?.id || !loggedIn) return;
     const unsub = onSnapshot(
       query(
         collection(db, "wallet_transactions"),
-        where("driverId", "==", driverData.id),
-        orderBy("createdAt", "desc")
+        where("driverId", "==", driverData.id)
       ),
       snap => {
-        const txns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const txns = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || ""));
         if (!isFirstWalletLoad.current) {
           const newIds = snap.docs.map(d => d.id).filter(id => !prevWalletIdsRef.current.has(id));
           if (newIds.length > 0) {
@@ -430,7 +435,8 @@ export default function LivreurPage() {
         } else { isFirstWalletLoad.current = false; }
         prevWalletIdsRef.current = new Set(snap.docs.map(d => d.id));
         setWalletTxns(txns);
-      }
+      },
+      (err) => console.error("[wallet_transactions listener]", err.message)
     );
     return () => unsub();
   }, [driverData?.id, loggedIn]);
@@ -441,12 +447,15 @@ export default function LivreurPage() {
     const unsub = onSnapshot(
       query(
         collection(db, "deliveries"),
-        where("driverId", "==", driverData.id),
-        orderBy("createdAt", "desc")
+        where("driverId", "==", driverData.id)
       ),
       snap => {
-        setDriverDeliveries(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }
+        const deliveries = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a: any, b: any) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+        setDriverDeliveries(deliveries);
+      },
+      (err) => console.error("[deliveries listener]", err.message)
     );
     return () => unsub();
   }, [driverData?.id, loggedIn]);
