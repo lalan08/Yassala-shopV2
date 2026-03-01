@@ -32,6 +32,8 @@ type Banner = { id?: string; title: string; subtitle: string; desc: string; cta:
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
 type OnlineDriver = { uid: string; name: string; status: "online"|"offline"|"busy"; isOnline: boolean; lastSeen: any; performanceScore?: number; };
+type YassalaDayConfig = { active: boolean; startHour: number; endHour: number; welcomeMessage: string; phone: string; };
+type DayOffer = { id?: string; title: string; desc: string; emoji: string; discount: string; active: boolean; order: number; };
 
 const ADMIN_PASSWORD = "yassala2025";
 
@@ -74,7 +76,7 @@ export default function AdminPage() {
   });
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dispatchFilter, setDispatchFilter] = useState<"available"|"mine"|"delivered">("available");
   const [driverLocations, setDriverLocations] = useState<any[]>([]);
@@ -109,6 +111,11 @@ export default function AdminPage() {
   const [pickupLocations, setPickupLocations] = useState<PickupLocation[]>([]);
   const [editPickupLoc, setEditPickupLoc] = useState<PickupLocation|null>(null);
   const [pickupLocForm, setPickupLocForm] = useState<PickupLocation>({name:"",address:"",city:"Cayenne",instructions:"",isActive:true});
+  const defaultDayConfig: YassalaDayConfig = { active: true, startHour: 7, endHour: 21, welcomeMessage: "Bienvenue sur YASSALA DAY !", phone: "+594 XXX XXX" };
+  const [dayConfig, setDayConfig] = useState<YassalaDayConfig>(defaultDayConfig);
+  const [dayOffers, setDayOffers] = useState<DayOffer[]>([]);
+  const [editDayOffer, setEditDayOffer] = useState<DayOffer|null>(null);
+  const [dayOfferForm, setDayOfferForm] = useState<DayOffer>({title:"",desc:"",emoji:"🌟",discount:"",active:true,order:0});
   const [adminHash, setAdminHash] = useState<string|null>(null);
   const [usersCount, setUsersCount]           = useState(0);
   const [usersWithOrders, setUsersWithOrders] = useState(0);
@@ -116,7 +123,7 @@ export default function AdminPage() {
   const [usersSearch, setUsersSearch]         = useState("");
   const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string;password?:string;contractAccepted?:boolean;contractAcceptedAt?:string}[]>([]);
   const [driverFilter, setDriverFilter]       = useState<"all"|"nouveau"|"accepte"|"refuse">("all");
-  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true,"YASSALA DAY":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
   const [adminWeather, setAdminWeather] = useState<{ condition: string; precipitation: number; isRaining: boolean; isHeavyRain: boolean } | null>(null);
@@ -404,7 +411,14 @@ export default function AdminPage() {
       setPickupLocations(snap.docs.map(d => ({ id: d.id, ...d.data() } as PickupLocation))
         .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); };
+    const unsubDayConfig = onSnapshot(doc(db, "yassala_day", "config"), snap => {
+      if (snap.exists()) setDayConfig(snap.data() as YassalaDayConfig);
+    });
+    const unsubDayOffers = onSnapshot(collection(db, "day_offers"), snap => {
+      setDayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayOffer))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+    });
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -1102,6 +1116,10 @@ export default function AdminPage() {
             { section:"CONFIGURATION", items:[
               { key:"settings",          label:"PARAMÈTRES",      icon:"⚙️" },
               { key:"pickup_locations",  label:"POINTS RELAIS",   icon:"🏪" },
+            ]},
+            { section:"YASSALA DAY", items:[
+              { key:"yassala_day_config", label:"CONFIG JOUR",   icon:"☀️" },
+              { key:"yassala_day_offres", label:"OFFRES DU JOUR", icon:"🎁" },
             ]},
           ] as const).map((group, gi) => (
             <div key={group.section}>
@@ -4078,6 +4096,266 @@ export default function AdminPage() {
                           if (!confirm(`Supprimer "${loc.name}" ?`)) return;
                           await deleteDoc(doc(db, "pickup_locations_v1", loc.id!));
                           showToast("Point relais supprimé");
+                        }}
+                          style={{background:"transparent",border:"1px solid rgba(255,45,120,.2)",color:"#5a5470",
+                            padding:"6px 10px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                            fontSize:".78rem",cursor:"pointer"}}>
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── YASSALA DAY CONFIG ── */}
+          {tab === "yassala_day_config" && (
+            <div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em",marginBottom:24}}>
+                ☀️ <span style={{color:"#fbbf24"}}>CONFIG YASSALA DAY</span>
+              </div>
+
+              <div style={{background:"#0c0918",border:"1px solid rgba(251,191,36,.15)",borderRadius:8,
+                padding:"20px 24px",maxWidth:500,display:"grid",gap:18}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",letterSpacing:".1em",marginBottom:2}}>
+                  // PARAMÈTRES DU MODE JOUR (7h–21h)
+                </div>
+
+                {/* Toggle actif */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                  background:"rgba(251,191,36,.04)",border:"1px solid rgba(251,191,36,.2)",
+                  borderRadius:8,padding:"14px 16px"}}>
+                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:"#fbbf24",letterSpacing:".08em"}}>
+                    ☀️ MODE JOUR ACTIF
+                  </span>
+                  <div onClick={() => setDayConfig(c => ({...c, active: !c.active}))}
+                    style={{width:44,height:24,borderRadius:12,position:"relative",cursor:"pointer",flexShrink:0,
+                      background:dayConfig.active ? "#fbbf24":"rgba(255,255,255,.1)",transition:"background .2s"}}>
+                    <div style={{position:"absolute",top:3,left:dayConfig.active?22:3,
+                      width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s"}} />
+                  </div>
+                </div>
+
+                {/* Heures */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>HEURE OUVERTURE</div>
+                    <input type="number" min={0} max={23} value={dayConfig.startHour}
+                      onChange={e => setDayConfig(c => ({...c, startHour: parseInt(e.target.value)||0}))}
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(251,191,36,.2)",
+                        borderRadius:4,padding:"10px 12px",color:"#fbbf24",fontSize:"1rem",
+                        fontFamily:"'Share Tech Mono',monospace"}} />
+                  </div>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>HEURE FERMETURE</div>
+                    <input type="number" min={0} max={23} value={dayConfig.endHour}
+                      onChange={e => setDayConfig(c => ({...c, endHour: parseInt(e.target.value)||0}))}
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(251,191,36,.2)",
+                        borderRadius:4,padding:"10px 12px",color:"#fbbf24",fontSize:"1rem",
+                        fontFamily:"'Share Tech Mono',monospace"}} />
+                  </div>
+                </div>
+
+                {/* Message d'accueil */}
+                <div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>MESSAGE D'ACCUEIL</div>
+                  <input value={dayConfig.welcomeMessage}
+                    onChange={e => setDayConfig(c => ({...c, welcomeMessage: e.target.value}))}
+                    placeholder="Bienvenue sur YASSALA DAY !"
+                    style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                      borderRadius:4,padding:"10px 12px",color:"#f0eeff",fontSize:".9rem",
+                      fontFamily:"'Rajdhani',sans-serif"}} />
+                </div>
+
+                {/* Téléphone */}
+                <div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>TÉLÉPHONE / WHATSAPP</div>
+                  <input value={dayConfig.phone}
+                    onChange={e => setDayConfig(c => ({...c, phone: e.target.value}))}
+                    placeholder="+594 XXX XXX"
+                    style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                      borderRadius:4,padding:"10px 12px",color:"#f0eeff",fontSize:".9rem",
+                      fontFamily:"'Rajdhani',sans-serif"}} />
+                </div>
+
+                {/* Bouton sauvegarder */}
+                <button onClick={async () => {
+                  await setDoc(doc(db, "yassala_day", "config"), dayConfig);
+                  showToast("Config YASSALA DAY sauvegardée ✓");
+                }}
+                  style={{background:"linear-gradient(135deg,#fbbf24,#f59e0b)",border:"none",
+                    color:"#000",padding:"12px 24px",borderRadius:6,fontFamily:"'Share Tech Mono',monospace",
+                    fontSize:".9rem",letterSpacing:".1em",cursor:"pointer",fontWeight:700,marginTop:4}}>
+                  ☀️ SAUVEGARDER
+                </button>
+              </div>
+
+              {/* Prévisualisation */}
+              <div style={{marginTop:24,background:"rgba(251,191,36,.04)",border:"1px solid rgba(251,191,36,.1)",
+                borderRadius:8,padding:"16px 20px",maxWidth:500}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#fbbf24",
+                  letterSpacing:".1em",marginBottom:10}}>// APERÇU DU MODE ACTUEL</div>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:"1.6rem"}}>{dayConfig.active ? "☀️" : "🌙"}</span>
+                  <div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",
+                      color: dayConfig.active ? "#fbbf24" : "#7a7490"}}>
+                      {dayConfig.active ? "YASSALA DAY ACTIF" : "MODE JOUR DÉSACTIVÉ"}
+                    </div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#5a5470"}}>
+                      {dayConfig.startHour}h00 → {dayConfig.endHour}h00 · {dayConfig.phone}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── YASSALA DAY OFFRES ── */}
+          {tab === "yassala_day_offres" && (
+            <div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em",marginBottom:24}}>
+                🎁 <span style={{color:"#fbbf24"}}>OFFRES DU JOUR</span>
+              </div>
+
+              {/* Formulaire ajout/modif */}
+              <div style={{background:"#0c0918",border:"1px solid rgba(251,191,36,.15)",borderRadius:8,
+                padding:"20px 24px",marginBottom:24}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",
+                  letterSpacing:".1em",marginBottom:14}}>
+                  {editDayOffer ? "// MODIFIER L'OFFRE" : "// NOUVELLE OFFRE DU JOUR"}
+                </div>
+                <div style={{display:"grid",gap:12}}>
+                  <div style={{display:"grid",gridTemplateColumns:"60px 1fr",gap:10}}>
+                    <div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>EMOJI</div>
+                      <input value={dayOfferForm.emoji}
+                        onChange={e => setDayOfferForm(f => ({...f, emoji: e.target.value}))}
+                        style={{width:"100%",background:"#080514",border:"1px solid rgba(251,191,36,.2)",
+                          borderRadius:4,padding:"10px 8px",color:"#fbbf24",fontSize:"1.2rem",
+                          fontFamily:"'Rajdhani',sans-serif",textAlign:"center"}} />
+                    </div>
+                    <div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>TITRE</div>
+                      <input value={dayOfferForm.title}
+                        onChange={e => setDayOfferForm(f => ({...f, title: e.target.value}))}
+                        placeholder="ex: Pack Apéro Plage"
+                        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                          borderRadius:4,padding:"10px 12px",color:"#f0eeff",fontSize:".9rem",
+                          fontFamily:"'Rajdhani',sans-serif"}} />
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>DESCRIPTION</div>
+                    <input value={dayOfferForm.desc}
+                      onChange={e => setDayOfferForm(f => ({...f, desc: e.target.value}))}
+                      placeholder="ex: Sélection de bières fraîches + chips"
+                      style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                        borderRadius:4,padding:"10px 12px",color:"#f0eeff",fontSize:".9rem",
+                        fontFamily:"'Rajdhani',sans-serif"}} />
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:10}}>
+                    <div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>RÉDUCTION / PROMO</div>
+                      <input value={dayOfferForm.discount}
+                        onChange={e => setDayOfferForm(f => ({...f, discount: e.target.value}))}
+                        placeholder="ex: -10% · 2 achetés 1 offert"
+                        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                          borderRadius:4,padding:"10px 12px",color:"#f0eeff",fontSize:".9rem",
+                          fontFamily:"'Rajdhani',sans-serif"}} />
+                    </div>
+                    <div>
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",letterSpacing:".1em",marginBottom:6}}>ORDRE</div>
+                      <input type="number" min={0} value={dayOfferForm.order}
+                        onChange={e => setDayOfferForm(f => ({...f, order: parseInt(e.target.value)||0}))}
+                        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
+                          borderRadius:4,padding:"10px 12px",color:"#f0eeff",fontSize:".9rem",
+                          fontFamily:"'Share Tech Mono',monospace"}} />
+                    </div>
+                  </div>
+                  <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                    <input type="checkbox" checked={dayOfferForm.active}
+                      onChange={e => setDayOfferForm(f => ({...f, active: e.target.checked}))}
+                      style={{width:16,height:16,cursor:"pointer"}} />
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#7a7490",letterSpacing:".08em"}}>
+                      ACTIVE (visible par les clients)
+                    </span>
+                  </label>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={async () => {
+                      if (!dayOfferForm.title) { showToast("Titre requis", "err"); return; }
+                      if (editDayOffer?.id) {
+                        await updateDoc(doc(db, "day_offers", editDayOffer.id), { ...dayOfferForm });
+                        showToast("Offre mise à jour ✓");
+                      } else {
+                        await addDoc(collection(db, "day_offers"), { ...dayOfferForm });
+                        showToast("Offre ajoutée ✓");
+                      }
+                      setDayOfferForm({title:"",desc:"",emoji:"🌟",discount:"",active:true,order:0});
+                      setEditDayOffer(null);
+                    }}
+                      style={{background:"linear-gradient(135deg,#fbbf24,#f59e0b)",border:"none",
+                        color:"#000",padding:"10px 20px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                        fontSize:".88rem",letterSpacing:".08em",cursor:"pointer",fontWeight:700}}>
+                      {editDayOffer ? "METTRE À JOUR" : "+ AJOUTER"}
+                    </button>
+                    {editDayOffer && (
+                      <button onClick={() => { setEditDayOffer(null); setDayOfferForm({title:"",desc:"",emoji:"🌟",discount:"",active:true,order:0}); }}
+                        style={{background:"transparent",border:"1px solid rgba(255,255,255,.1)",
+                          color:"#5a5470",padding:"10px 16px",borderRadius:4,
+                          fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",cursor:"pointer"}}>
+                        ANNULER
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Liste des offres */}
+              {dayOffers.length === 0 ? (
+                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
+                  padding:"40px",fontSize:".8rem",border:"1px dashed rgba(251,191,36,.15)",borderRadius:8}}>
+                  // aucune offre du jour configurée
+                </div>
+              ) : (
+                <div style={{display:"grid",gap:10}}>
+                  {dayOffers.map(offer => (
+                    <div key={offer.id} style={{background:"rgba(255,255,255,.02)",
+                      border:`1px solid ${offer.active ? "rgba(251,191,36,.2)" : "rgba(255,255,255,.06)"}`,
+                      borderRadius:8,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:3}}>
+                          <span style={{fontSize:"1.4rem"}}>{offer.emoji}</span>
+                          <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",color:"#f0eeff"}}>{offer.title}</span>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                            padding:"2px 6px",borderRadius:3,
+                            background: offer.active ? "rgba(251,191,36,.15)" : "rgba(255,255,255,.06)",
+                            color: offer.active ? "#fbbf24" : "#5a5470"}}>
+                            {offer.active ? "ACTIVE" : "INACTIVE"}
+                          </span>
+                          {offer.discount && (
+                            <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                              padding:"2px 6px",borderRadius:3,
+                              background:"rgba(255,45,120,.12)",color:"#ff2d78"}}>
+                              {offer.discount}
+                            </span>
+                          )}
+                        </div>
+                        {offer.desc && <div style={{fontSize:".78rem",color:"#7a7490"}}>{offer.desc}</div>}
+                      </div>
+                      <div style={{display:"flex",gap:6,flexShrink:0}}>
+                        <button onClick={() => { setEditDayOffer(offer); setDayOfferForm({title:offer.title,desc:offer.desc,emoji:offer.emoji,discount:offer.discount,active:offer.active,order:offer.order}); }}
+                          style={{background:"transparent",border:"1px solid rgba(251,191,36,.3)",color:"#fbbf24",
+                            padding:"6px 12px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
+                            fontSize:".78rem",cursor:"pointer"}}>
+                          ✎ MODIFIER
+                        </button>
+                        <button onClick={async () => {
+                          if (!confirm(`Supprimer "${offer.title}" ?`)) return;
+                          await deleteDoc(doc(db, "day_offers", offer.id!));
+                          showToast("Offre supprimée");
                         }}
                           style={{background:"transparent",border:"1px solid rgba(255,45,120,.2)",color:"#5a5470",
                             padding:"6px 10px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
