@@ -143,6 +143,7 @@ export default function RelaisPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [collectedBy, setCollectedBy] = useState<"driver" | "customer">("customer");
+  const [confirmedAt, setConfirmedAt] = useState<Date | null>(null);
 
   // Data state
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -150,6 +151,13 @@ export default function RelaisPage() {
   const [weekCount, setWeekCount] = useState(0);
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+
+  // UX animation state
+  const [glowToday, setGlowToday] = useState(false);
+
+  // Vibration refs
+  const prevPendingCountRef = useRef<number>(-1);
+  const dataLoadedOnce = useRef(false);
 
   // Load session from localStorage
   useEffect(() => {
@@ -165,6 +173,22 @@ export default function RelaisPage() {
   useEffect(() => {
     if (session) loadAll();
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Vibration on new pending orders
+  useEffect(() => {
+    if (dataLoading) return;
+    if (!dataLoadedOnce.current) {
+      dataLoadedOnce.current = true;
+      prevPendingCountRef.current = pendingOrders.length;
+      return;
+    }
+    if (pendingOrders.length > prevPendingCountRef.current && prevPendingCountRef.current >= 0) {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
+    }
+    prevPendingCountRef.current = pendingOrders.length;
+  }, [pendingOrders, dataLoading]);
 
   async function loadAll() {
     setDataLoading(true);
@@ -215,6 +239,7 @@ export default function RelaisPage() {
     setScannedOrder(null);
     setConfirmMessage("");
     setCollectedBy("customer");
+    setConfirmedAt(null);
     setShowScanner(true);
   }
 
@@ -223,6 +248,7 @@ export default function RelaisPage() {
     setScanError("");
     setScannedOrder(null);
     setConfirmMessage("");
+    setConfirmedAt(null);
   }
 
   // ── QR Scan handler ────────────────────────────────────────────────────────
@@ -284,13 +310,18 @@ export default function RelaisPage() {
       }
 
       setConfirmMessage(data.message || "Commande validée !");
+      setConfirmedAt(new Date());
       setScanMode("success");
 
-      // Auto-close scanner and refresh after 2s
+      // Trigger glow animation on today's stat card
+      setGlowToday(true);
+      setTimeout(() => setGlowToday(false), 2000);
+
+      // Auto-close scanner and refresh after 3.5s
       setTimeout(() => {
         closeScanner();
         loadAll();
-      }, 2000);
+      }, 3500);
     } catch {
       setScanError("Erreur réseau lors de la validation");
       setScanMode("error");
@@ -380,7 +411,6 @@ export default function RelaisPage() {
             maxWidth: 380,
           }}
         >
-          {/* Logo */}
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
             <h1 style={{ color: C.text, fontSize: 22, fontWeight: 700, margin: 0 }}>
@@ -482,8 +512,8 @@ export default function RelaisPage() {
     );
   }
 
-  // ── Commission: calculated from today's items processed ──────────────────
   const commissionEarned = (todayCount * 0.5).toFixed(2).replace(".", ",");
+  const hasPending = pendingOrders.length > 0;
 
   // ─────────────────────────────────────────────────────────────────────────
   // DASHBOARD
@@ -497,6 +527,53 @@ export default function RelaisPage() {
         color: C.text,
       }}
     >
+      {/* ── CSS Keyframe Animations ───────────────────────────────────────── */}
+      <style>{`
+        @keyframes pulse-fab {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.55), 0 6px 24px rgba(16,185,129,0.35); }
+          50%       { box-shadow: 0 0 0 14px rgba(16,185,129,0), 0 6px 24px rgba(16,185,129,0.35); }
+        }
+        @keyframes glow-orange-pulse {
+          0%, 100% { box-shadow: 0 0 8px rgba(249,115,22,0.35); }
+          50%       { box-shadow: 0 0 22px rgba(249,115,22,0.75); }
+        }
+        @keyframes glow-green {
+          0%   { box-shadow: 0 0 0px rgba(16,185,129,0); }
+          40%  { box-shadow: 0 0 28px rgba(16,185,129,0.75); }
+          100% { box-shadow: 0 0 0px rgba(16,185,129,0); }
+        }
+        @keyframes count-glow {
+          0%, 100% { text-shadow: none; }
+          50%       { text-shadow: 0 0 18px rgba(16,185,129,0.9), 0 0 36px rgba(16,185,129,0.4); }
+        }
+        @keyframes circle-draw {
+          from { stroke-dashoffset: 252; }
+          to   { stroke-dashoffset: 0; }
+        }
+        @keyframes check-draw {
+          from { stroke-dashoffset: 53; }
+          to   { stroke-dashoffset: 0; }
+        }
+        @keyframes scale-in {
+          from { transform: scale(0.75); opacity: 0; }
+          to   { transform: scale(1);    opacity: 1; }
+        }
+        @keyframes slide-up {
+          from { transform: translateY(14px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes badge-pop {
+          0%   { transform: scale(0); }
+          70%  { transform: scale(1.25); }
+          100% { transform: scale(1); }
+        }
+        @keyframes number-pop {
+          0%   { transform: scale(0.5) translateY(8px); opacity: 0; }
+          70%  { transform: scale(1.2) translateY(-2px); }
+          100% { transform: scale(1)   translateY(0);    opacity: 1; }
+        }
+      `}</style>
+
       {/* ── Scanner Modal Overlay ─────────────────────────────────────────── */}
       {showScanner && (
         <div
@@ -539,7 +616,7 @@ export default function RelaisPage() {
               </button>
             </div>
 
-            {/* Scanning state */}
+            {/* ── Scanning state ── */}
             {scanMode === "scanning" && (
               <div>
                 <div
@@ -566,7 +643,7 @@ export default function RelaisPage() {
               </div>
             )}
 
-            {/* Confirm state */}
+            {/* ── Confirm state ── */}
             {scanMode === "confirm" && scannedOrder && (
               <div>
                 <div
@@ -736,6 +813,7 @@ export default function RelaisPage() {
                     fontWeight: 700,
                     cursor: confirmLoading ? "not-allowed" : "pointer",
                     marginBottom: 8,
+                    transition: "background 0.2s",
                   }}
                 >
                   {confirmLoading ? "Validation en cours..." : "✓ Valider la remise"}
@@ -759,37 +837,171 @@ export default function RelaisPage() {
               </div>
             )}
 
-            {/* Success state */}
+            {/* ── Success state — ENHANCED ── */}
             {scanMode === "success" && (
-              <div style={{ textAlign: "center", paddingTop: "2rem" }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  paddingTop: "1.5rem",
+                  animation: "scale-in 0.4s ease both",
+                }}
+              >
                 <div
                   style={{
-                    background: "rgba(16,185,129,0.1)",
+                    background: "rgba(16,185,129,0.08)",
                     border: "1px solid rgba(16,185,129,0.3)",
-                    borderRadius: 16,
-                    padding: "2.5rem 2rem",
+                    borderRadius: 20,
+                    padding: "2rem 1.5rem",
                   }}
                 >
-                  <div style={{ fontSize: 72, marginBottom: 16 }}>✅</div>
+                  {/* Animated SVG check */}
+                  <div style={{ marginBottom: 18 }}>
+                    <svg
+                      width="88"
+                      height="88"
+                      viewBox="0 0 88 88"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle
+                        cx="44"
+                        cy="44"
+                        r="40"
+                        stroke={C.accent}
+                        strokeWidth="3"
+                        strokeDasharray="252"
+                        strokeDashoffset="252"
+                        style={{ animation: "circle-draw 0.55s ease 0.1s both" }}
+                      />
+                      <path
+                        d="M26 44 L38 56 L62 30"
+                        stroke={C.accent}
+                        strokeWidth="4.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeDasharray="53"
+                        strokeDashoffset="53"
+                        style={{ animation: "check-draw 0.4s ease 0.6s both" }}
+                      />
+                    </svg>
+                  </div>
+
+                  {/* Title */}
                   <h2
                     style={{
                       color: C.accent,
                       fontSize: 22,
                       fontWeight: 700,
-                      margin: "0 0 8px",
+                      margin: "0 0 4px",
+                      animation: "slide-up 0.4s ease 0.75s both",
                     }}
                   >
-                    Remise validée !
+                    Commande validée !
                   </h2>
-                  <p style={{ color: C.muted, fontSize: 14 }}>{confirmMessage}</p>
-                  <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>
-                    Fermeture automatique...
+
+                  {/* Order details card */}
+                  {scannedOrder && (
+                    <div
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        borderRadius: 12,
+                        padding: "1rem",
+                        marginTop: 16,
+                        textAlign: "left",
+                        animation: "slide-up 0.4s ease 0.9s both",
+                      }}
+                    >
+                      {/* Order ID */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          paddingBottom: 10,
+                          marginBottom: 10,
+                          borderBottom: `1px solid ${C.cardBorder}`,
+                        }}
+                      >
+                        <span style={{ color: C.muted, fontSize: 12 }}>Commande</span>
+                        <span style={{ fontWeight: 700, fontSize: 15, color: C.text }}>
+                          #{scannedOrder.orderNumber || scannedOrder.id.slice(-6)}
+                        </span>
+                      </div>
+
+                      {/* Products */}
+                      <div
+                        style={{
+                          paddingBottom: 10,
+                          marginBottom: 10,
+                          borderBottom: `1px solid ${C.cardBorder}`,
+                        }}
+                      >
+                        <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
+                          PRODUITS REMIS
+                        </div>
+                        {scannedOrder.items.map((item, i) => (
+                          <div
+                            key={i}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              fontSize: 13,
+                              paddingBottom: i < scannedOrder.items.length - 1 ? 4 : 0,
+                            }}
+                          >
+                            <span style={{ color: C.text }}>{item.name}</span>
+                            <span style={{ color: C.accent, fontWeight: 600 }}>×{item.qty}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Time */}
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ color: C.muted, fontSize: 12 }}>Heure</span>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>
+                          {(confirmedAt ?? new Date()).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Counter increment */}
+                  <div
+                    style={{
+                      marginTop: 20,
+                      padding: "12px",
+                      background: "rgba(16,185,129,0.12)",
+                      borderRadius: 12,
+                      animation: "slide-up 0.4s ease 1.05s both",
+                    }}
+                  >
+                    <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
+                      RETIRÉS AUJOURD&apos;HUI
+                    </div>
+                    <div
+                      style={{
+                        color: C.accent,
+                        fontSize: 38,
+                        fontWeight: 800,
+                        animation: "number-pop 0.5s ease 1.15s both, count-glow 1.5s ease 1.15s",
+                      }}
+                    >
+                      {todayCount + 1}
+                    </div>
+                  </div>
+
+                  <p style={{ color: C.muted, fontSize: 12, marginTop: 16 }}>
+                    {confirmMessage || "Fermeture automatique..."}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Error state */}
+            {/* ── Error state ── */}
             {scanMode === "error" && (
               <div style={{ textAlign: "center" }}>
                 <div
@@ -849,6 +1061,63 @@ export default function RelaisPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Floating Scanner FAB ──────────────────────────────────────────── */}
+      {!showScanner && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 28,
+            right: 24,
+            zIndex: 90,
+          }}
+        >
+          <button
+            onClick={openScanner}
+            aria-label="Scanner un QR code"
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: C.accent,
+              border: "none",
+              color: "#fff",
+              fontSize: 28,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              animation: "pulse-fab 2.5s ease-in-out infinite",
+            }}
+          >
+            📷
+          </button>
+          {/* Badge pending count on FAB */}
+          {hasPending && (
+            <div
+              style={{
+                position: "absolute",
+                top: -4,
+                right: -4,
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: C.orange,
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid rgba(6,8,18,1)",
+                animation: "badge-pop 0.4s ease both",
+              }}
+            >
+              {pendingOrders.length}
+            </div>
+          )}
         </div>
       )}
 
@@ -921,36 +1190,85 @@ export default function RelaisPage() {
             marginBottom: "1.5rem",
           }}
         >
-          {/* En Attente Retrait */}
+          {/* En Attente Retrait — orange + glow + badge when pending */}
           <div
             style={{
-              background: C.card,
-              border: `1px solid ${C.cardBorder}`,
+              position: "relative",
+              background: hasPending ? "rgba(249,115,22,0.12)" : C.card,
+              border: hasPending
+                ? "1px solid rgba(249,115,22,0.45)"
+                : `1px solid ${C.cardBorder}`,
               borderRadius: 14,
               padding: "1rem",
+              transition: "background 0.4s, border-color 0.4s",
+              animation: hasPending ? "glow-orange-pulse 2s ease-in-out infinite" : "none",
             }}
           >
-            <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
+            <div
+              style={{
+                color: hasPending ? "#fdba74" : C.muted,
+                fontSize: 11,
+                marginBottom: 6,
+              }}
+            >
               En Attente Retrait
             </div>
-            <div style={{ color: C.warning, fontSize: 28, fontWeight: 800 }}>
+            <div
+              style={{
+                color: hasPending ? C.orange : C.warning,
+                fontSize: 28,
+                fontWeight: 800,
+              }}
+            >
               {dataLoading ? "…" : pendingOrders.length}
             </div>
+            {/* Notification badge */}
+            {hasPending && !dataLoading && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: -7,
+                  right: -7,
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: C.orange,
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid rgba(6,8,18,1)",
+                  animation: "badge-pop 0.4s ease both",
+                }}
+              >
+                {pendingOrders.length}
+              </div>
+            )}
           </div>
 
-          {/* Retirés Aujourd'hui */}
+          {/* Retirés Aujourd'hui — glow animation on validation */}
           <div
             style={{
               background: C.card,
               border: `1px solid ${C.cardBorder}`,
               borderRadius: 14,
               padding: "1rem",
+              animation: glowToday ? "glow-green 2s ease both" : "none",
             }}
           >
             <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
               Retirés Aujourd&apos;hui
             </div>
-            <div style={{ color: C.accent, fontSize: 28, fontWeight: 800 }}>
+            <div
+              style={{
+                color: C.accent,
+                fontSize: 28,
+                fontWeight: 800,
+                animation: glowToday ? "count-glow 2s ease both" : "none",
+              }}
+            >
               {dataLoading ? "…" : todayCount}
             </div>
           </div>
@@ -1121,7 +1439,7 @@ export default function RelaisPage() {
         </div>
 
         {/* ── Section: Historique des Retraits ─────────────────────────────── */}
-        <div>
+        <div style={{ paddingBottom: "6rem" }}>
           <div
             style={{
               color: C.muted,
