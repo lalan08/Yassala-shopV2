@@ -196,7 +196,7 @@ const defaultSettings: Settings = {
   hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX",
   paymentOnlineEnabled: true, paymentCashEnabled: true,
   fulfillmentDeliveryEnabled: true, fulfillmentPickupEnabled: true,
-  aiChatEnabled: true, aiVoiceEnabled: true, aiRecommendEnabled: true,
+  aiChatEnabled: false, aiVoiceEnabled: true, aiRecommendEnabled: true,
   aiDescEnabled: true, aiPredictEnabled: true, aiAnomalyEnabled: true,
   aiBannerEnabled: true, aiStockEnabled: true, aiCoachingEnabled: true,
   aiCouponEnabled: true, aiRouteEnabled: true,
