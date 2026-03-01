@@ -1132,6 +1132,24 @@ export default function AdminPage() {
             </div>
           ))}
 
+          {/* ── lien externe : module relais ── */}
+          <div style={{padding:"12px 20px 8px",borderTop:"1px solid rgba(255,255,255,.05)",marginTop:8}}>
+            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".68rem",color:"#4b5563",
+              letterSpacing:".15em",textTransform:"uppercase",marginBottom:8}}>RELAIS</div>
+            <a href="/admin/relais"
+              style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
+                background:"rgba(16,185,129,.06)",border:"none",borderLeft:"2px solid #10b981",
+                color:"#10b981",fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".88rem",
+                letterSpacing:".06em",textTransform:"uppercase",textDecoration:"none",
+                borderRadius:"0 6px 6px 0",transition:"background .15s"}}
+              onMouseEnter={e=>(e.currentTarget.style.background="rgba(16,185,129,.12)")}
+              onMouseLeave={e=>(e.currentTarget.style.background="rgba(16,185,129,.06)")}>
+              <span style={{fontSize:"1.1rem"}}>📦</span>
+              <span>POINT RELAIS</span>
+              <span style={{marginLeft:"auto",fontSize:".75rem",opacity:.6}}>↗</span>
+            </a>
+          </div>
+
           {/* ── lien externe : module rémunération ── */}
           <div style={{padding:"12px 20px 8px",borderTop:"1px solid rgba(255,255,255,.05)",marginTop:8}}>
             <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".68rem",color:"#4b5563",
