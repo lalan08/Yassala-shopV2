@@ -9,10 +9,7 @@ import {
   where,
   orderBy,
   getDocs,
-  doc,
-  getDoc,
 } from "firebase/firestore";
-import QRCode from "qrcode";
 import type { RelaySession } from "@/types/relay";
 
 const firebaseConfig = {
@@ -36,7 +33,7 @@ const C = {
   cardBorder: "rgba(255,255,255,0.09)",
   text: "#f1f5f9",
   muted: "#94a3b8",
-  accent: "#10b981",      // emerald for relay
+  accent: "#10b981",
   accentDark: "#059669",
   danger: "#ef4444",
   warning: "#f59e0b",
@@ -131,7 +128,6 @@ function QrScanner({
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function RelaisPage() {
   const [session, setSession] = useState<RelaySession | null>(null);
-  const [tab, setTab] = useState<"scan" | "pending" | "activity">("scan");
 
   // Login state
   const [relayId, setRelayIdInput] = useState("");
@@ -139,23 +135,21 @@ export default function RelaisPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
 
-  // Scanner state
-  const [scanMode, setScanMode] = useState<"idle" | "scanning" | "confirm" | "success" | "error">("idle");
+  // Scanner modal state
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanMode, setScanMode] = useState<"scanning" | "confirm" | "success" | "error">("scanning");
   const [scanError, setScanError] = useState("");
   const [scannedOrder, setScannedOrder] = useState<ScannedOrder | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [collectedBy, setCollectedBy] = useState<"driver" | "customer">("customer");
 
-  // Activity state
+  // Data state
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [todayCount, setTodayCount] = useState(0);
   const [weekCount, setWeekCount] = useState(0);
-  const [activityLoading, setActivityLoading] = useState(false);
-
-  // Pending orders state
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
-  const [pendingLoading, setPendingLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
 
   // Load session from localStorage
   useEffect(() => {
@@ -166,6 +160,17 @@ export default function RelaisPage() {
       } catch {}
     }
   }, []);
+
+  // Load data when session is available
+  useEffect(() => {
+    if (session) loadAll();
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function loadAll() {
+    setDataLoading(true);
+    await Promise.all([loadPending(), loadActivity()]);
+    setDataLoading(false);
+  }
 
   // ── Login ──────────────────────────────────────────────────────────────────
   async function handleLogin(e: React.FormEvent) {
@@ -200,8 +205,24 @@ export default function RelaisPage() {
   function handleLogout() {
     localStorage.removeItem(RELAY_KEY);
     setSession(null);
-    setScanMode("idle");
+    setShowScanner(false);
+  }
+
+  // ── Scanner modal ──────────────────────────────────────────────────────────
+  function openScanner() {
+    setScanMode("scanning");
+    setScanError("");
     setScannedOrder(null);
+    setConfirmMessage("");
+    setCollectedBy("customer");
+    setShowScanner(true);
+  }
+
+  function closeScanner() {
+    setShowScanner(false);
+    setScanError("");
+    setScannedOrder(null);
+    setConfirmMessage("");
   }
 
   // ── QR Scan handler ────────────────────────────────────────────────────────
@@ -209,7 +230,7 @@ export default function RelaisPage() {
     async (qrData: string) => {
       if (!session) return;
       if (scanMode === "confirm" || scanMode === "success") return;
-      setScanMode("confirm"); // stop re-scanning
+      setScanMode("confirm");
       setScanError("");
 
       try {
@@ -264,6 +285,12 @@ export default function RelaisPage() {
 
       setConfirmMessage(data.message || "Commande validée !");
       setScanMode("success");
+
+      // Auto-close scanner and refresh after 2s
+      setTimeout(() => {
+        closeScanner();
+        loadAll();
+      }, 2000);
     } catch {
       setScanError("Erreur réseau lors de la validation");
       setScanMode("error");
@@ -275,7 +302,6 @@ export default function RelaisPage() {
   // ── Load activity ──────────────────────────────────────────────────────────
   async function loadActivity() {
     if (!session) return;
-    setActivityLoading(true);
     try {
       const res = await fetch(`/api/relay/activity?relayId=${session.relayId}`);
       const data = await res.json();
@@ -285,13 +311,11 @@ export default function RelaisPage() {
         setWeekCount(data.weekCount || 0);
       }
     } catch {}
-    setActivityLoading(false);
   }
 
-  // ── Load pending orders ─────────────────────────────────────────────────
+  // ── Load pending orders ────────────────────────────────────────────────────
   async function loadPending() {
     if (!session) return;
-    setPendingLoading(true);
     try {
       const snap = await getDocs(
         query(
@@ -328,24 +352,6 @@ export default function RelaisPage() {
       });
       setPendingOrders(orders);
     } catch {}
-    setPendingLoading(false);
-  }
-
-  useEffect(() => {
-    if (tab === "activity" && session) {
-      loadActivity();
-    }
-    if (tab === "pending" && session) {
-      loadPending();
-    }
-  }, [tab, session]);
-
-  // ── Reset scan ─────────────────────────────────────────────────────────────
-  function resetScan() {
-    setScanMode("idle");
-    setScannedOrder(null);
-    setScanError("");
-    setConfirmMessage("");
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -376,22 +382,8 @@ export default function RelaisPage() {
         >
           {/* Logo */}
           <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-            <div
-              style={{
-                fontSize: 48,
-                marginBottom: 12,
-              }}
-            >
-              📦
-            </div>
-            <h1
-              style={{
-                color: C.text,
-                fontSize: 22,
-                fontWeight: 700,
-                margin: 0,
-              }}
-            >
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
+            <h1 style={{ color: C.text, fontSize: 22, fontWeight: 700, margin: 0 }}>
               Espace Relais
             </h1>
             <p style={{ color: C.muted, fontSize: 14, marginTop: 6 }}>
@@ -401,9 +393,7 @@ export default function RelaisPage() {
 
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: "1rem" }}>
-              <label
-                style={{ color: C.muted, fontSize: 13, display: "block", marginBottom: 6 }}
-              >
+              <label style={{ color: C.muted, fontSize: 13, display: "block", marginBottom: 6 }}>
                 ID du Relais
               </label>
               <input
@@ -427,9 +417,7 @@ export default function RelaisPage() {
             </div>
 
             <div style={{ marginBottom: "1.5rem" }}>
-              <label
-                style={{ color: C.muted, fontSize: 13, display: "block", marginBottom: 6 }}
-              >
+              <label style={{ color: C.muted, fontSize: 13, display: "block", marginBottom: 6 }}>
                 Code PIN
               </label>
               <input
@@ -494,6 +482,9 @@ export default function RelaisPage() {
     );
   }
 
+  // ── Commission: calculated from today's items processed ──────────────────
+  const commissionEarned = (todayCount * 0.5).toFixed(2).replace(".", ",");
+
   // ─────────────────────────────────────────────────────────────────────────
   // DASHBOARD
   // ─────────────────────────────────────────────────────────────────────────
@@ -506,112 +497,49 @@ export default function RelaisPage() {
         color: C.text,
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          background: "rgba(16,185,129,0.1)",
-          borderBottom: "1px solid rgba(16,185,129,0.2)",
-          padding: "1rem 1.5rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>📦 {session.relayName}</div>
-          <div style={{ color: C.muted, fontSize: 12 }}>{session.relayAddress}</div>
-        </div>
-        <button
-          onClick={handleLogout}
+      {/* ── Scanner Modal Overlay ─────────────────────────────────────────── */}
+      {showScanner && (
+        <div
           style={{
-            background: "rgba(255,255,255,0.08)",
-            border: `1px solid ${C.cardBorder}`,
-            borderRadius: 8,
-            padding: "6px 12px",
-            color: C.muted,
-            fontSize: 13,
-            cursor: "pointer",
+            position: "fixed",
+            inset: 0,
+            background: "rgba(6,8,18,0.97)",
+            zIndex: 1000,
+            overflowY: "auto",
+            padding: "1rem",
           }}
         >
-          Déconnexion
-        </button>
-      </div>
+          <div style={{ maxWidth: 500, margin: "0 auto" }}>
+            {/* Modal header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "1.5rem",
+                paddingTop: "1rem",
+              }}
+            >
+              <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700, margin: 0 }}>
+                📷 Scanner QR
+              </h2>
+              <button
+                onClick={closeScanner}
+                style={{
+                  background: "rgba(255,255,255,0.1)",
+                  border: `1px solid ${C.cardBorder}`,
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                  color: C.muted,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                ✕ Fermer
+              </button>
+            </div>
 
-      {/* Tabs */}
-      <div
-        style={{
-          display: "flex",
-          borderBottom: `1px solid ${C.cardBorder}`,
-          background: "rgba(255,255,255,0.02)",
-        }}
-      >
-        {(
-          [
-            ["scan", "📷 Scanner QR"],
-            ["pending", `⏳ En attente${pendingOrders.length > 0 ? ` (${pendingOrders.length})` : ""}`],
-            ["activity", "📊 Activité"],
-          ] as const
-        ).map(([t, label]) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              flex: 1,
-              padding: "14px 8px",
-              background: "none",
-              border: "none",
-              borderBottom: tab === t ? `2px solid ${C.accent}` : "2px solid transparent",
-              color: tab === t ? C.accent : C.muted,
-              fontSize: 13,
-              fontWeight: tab === t ? 700 : 400,
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ padding: "1.5rem", maxWidth: 500, margin: "0 auto" }}>
-        {/* ── SCAN TAB ─────────────────────────────────────────────────────── */}
-        {tab === "scan" && (
-          <div>
-            {scanMode === "idle" && (
-              <div style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    background: C.card,
-                    border: `1px solid ${C.cardBorder}`,
-                    borderRadius: 16,
-                    padding: "2rem",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  <div style={{ fontSize: 64, marginBottom: 16 }}>📷</div>
-                  <p style={{ color: C.muted, fontSize: 14, marginBottom: "1.5rem" }}>
-                    Scannez le QR code présenté par le client ou le livreur pour
-                    valider la remise de commande.
-                  </p>
-                  <button
-                    onClick={() => setScanMode("scanning")}
-                    style={{
-                      background: C.accent,
-                      border: "none",
-                      borderRadius: 12,
-                      padding: "14px 32px",
-                      color: "#fff",
-                      fontSize: 16,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Démarrer le scan
-                  </button>
-                </div>
-              </div>
-            )}
-
+            {/* Scanning state */}
             {scanMode === "scanning" && (
               <div>
                 <div
@@ -635,27 +563,12 @@ export default function RelaisPage() {
                     }}
                   />
                 </div>
-                <button
-                  onClick={resetScan}
-                  style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.05)",
-                    border: `1px solid ${C.cardBorder}`,
-                    borderRadius: 10,
-                    padding: "12px",
-                    color: C.muted,
-                    fontSize: 14,
-                    cursor: "pointer",
-                  }}
-                >
-                  Annuler
-                </button>
               </div>
             )}
 
+            {/* Confirm state */}
             {scanMode === "confirm" && scannedOrder && (
               <div>
-                {/* Order info card */}
                 <div
                   style={{
                     background: "rgba(16,185,129,0.08)",
@@ -711,14 +624,12 @@ export default function RelaisPage() {
                       </div>
                       <div>
                         <span style={{ color: C.muted }}>Client</span>
-                        <div style={{ fontWeight: 600 }}>
-                          {scannedOrder.name || "—"}
-                        </div>
+                        <div style={{ fontWeight: 600 }}>{scannedOrder.name || "—"}</div>
                       </div>
                       <div>
                         <span style={{ color: C.muted }}>Total</span>
                         <div style={{ fontWeight: 600, color: C.accent }}>
-                          {scannedOrder.total.toFixed(2)} €
+                          {scannedOrder.total?.toFixed(2)} €
                         </div>
                       </div>
                     </div>
@@ -726,9 +637,7 @@ export default function RelaisPage() {
 
                   {/* Items list */}
                   <div style={{ marginBottom: "1rem" }}>
-                    <div
-                      style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}
-                    >
+                    <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>
                       PRODUITS À REMETTRE
                     </div>
                     {scannedOrder.items.map((item, i) => (
@@ -764,9 +673,7 @@ export default function RelaisPage() {
 
                   {/* Collected by selector */}
                   <div style={{ marginBottom: "1rem" }}>
-                    <div
-                      style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}
-                    >
+                    <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>
                       REMIS À
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
@@ -835,7 +742,7 @@ export default function RelaisPage() {
                 </button>
 
                 <button
-                  onClick={resetScan}
+                  onClick={() => setScanMode("scanning")}
                   style={{
                     width: "100%",
                     background: "transparent",
@@ -847,20 +754,20 @@ export default function RelaisPage() {
                     cursor: "pointer",
                   }}
                 >
-                  Annuler
+                  Rescanner
                 </button>
               </div>
             )}
 
+            {/* Success state */}
             {scanMode === "success" && (
-              <div style={{ textAlign: "center" }}>
+              <div style={{ textAlign: "center", paddingTop: "2rem" }}>
                 <div
                   style={{
                     background: "rgba(16,185,129,0.1)",
                     border: "1px solid rgba(16,185,129,0.3)",
                     borderRadius: 16,
                     padding: "2.5rem 2rem",
-                    marginBottom: "1rem",
                   }}
                 >
                   <div style={{ fontSize: 72, marginBottom: 16 }}>✅</div>
@@ -875,26 +782,14 @@ export default function RelaisPage() {
                     Remise validée !
                   </h2>
                   <p style={{ color: C.muted, fontSize: 14 }}>{confirmMessage}</p>
+                  <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>
+                    Fermeture automatique...
+                  </p>
                 </div>
-                <button
-                  onClick={resetScan}
-                  style={{
-                    width: "100%",
-                    background: C.accent,
-                    border: "none",
-                    borderRadius: 12,
-                    padding: "14px",
-                    color: "#fff",
-                    fontSize: 15,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Scanner une autre commande
-                </button>
               </div>
             )}
 
+            {/* Error state */}
             {scanMode === "error" && (
               <div style={{ textAlign: "center" }}>
                 <div
@@ -920,7 +815,7 @@ export default function RelaisPage() {
                   <p style={{ color: C.muted, fontSize: 14 }}>{scanError}</p>
                 </div>
                 <button
-                  onClick={resetScan}
+                  onClick={() => setScanMode("scanning")}
                   style={{
                     width: "100%",
                     background: C.accent,
@@ -931,76 +826,242 @@ export default function RelaisPage() {
                     fontSize: 15,
                     fontWeight: 700,
                     cursor: "pointer",
+                    marginBottom: 8,
                   }}
                 >
                   Réessayer
                 </button>
+                <button
+                  onClick={closeScanner}
+                  style={{
+                    width: "100%",
+                    background: "transparent",
+                    border: `1px solid ${C.cardBorder}`,
+                    borderRadius: 10,
+                    padding: "12px",
+                    color: C.muted,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  Fermer
+                </button>
               </div>
             )}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* ── PENDING ORDERS TAB ───────────────────────────────────── */}
-        {tab === "pending" && (
-          <div>
-            <div
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          background: "rgba(16,185,129,0.1)",
+          borderBottom: "1px solid rgba(16,185,129,0.2)",
+          padding: "1rem 1.5rem",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>📦 {session.relayName}</div>
+            <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
+              {session.relayAddress}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
+            <button
+              onClick={openScanner}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "1rem",
+                background: C.accent,
+                border: "none",
+                borderRadius: 10,
+                padding: "10px 18px",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
-              <div style={{ color: C.muted, fontSize: 12 }}>
-                COMMANDES EN ATTENTE DE REMISE
-              </div>
-              <button
-                onClick={loadPending}
-                disabled={pendingLoading}
-                style={{
-                  background: "rgba(16,185,129,0.1)",
-                  border: "1px solid rgba(16,185,129,0.25)",
-                  borderRadius: 8,
-                  padding: "6px 12px",
-                  color: C.accent,
-                  fontSize: 13,
-                  cursor: pendingLoading ? "not-allowed" : "pointer",
-                }}
-              >
-                {pendingLoading ? "..." : "↻ Actualiser"}
-              </button>
+              📷 Scanner QR
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: `1px solid ${C.cardBorder}`,
+                borderRadius: 8,
+                padding: "5px 10px",
+                color: C.muted,
+                fontSize: 12,
+                cursor: "pointer",
+              }}
+            >
+              Déconnexion
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Content ────────────────────────────────────────────────────────── */}
+      <div style={{ padding: "1.5rem", maxWidth: 500, margin: "0 auto" }}>
+
+        {/* ── Stats 2×2 grid ──────────────────────────────────────────────── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 10,
+            marginBottom: "1.5rem",
+          }}
+        >
+          {/* En Attente Retrait */}
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.cardBorder}`,
+              borderRadius: 14,
+              padding: "1rem",
+            }}
+          >
+            <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
+              En Attente Retrait
             </div>
+            <div style={{ color: C.warning, fontSize: 28, fontWeight: 800 }}>
+              {dataLoading ? "…" : pendingOrders.length}
+            </div>
+          </div>
 
-            {pendingLoading && (
-              <div style={{ textAlign: "center", color: C.muted, padding: "2rem" }}>
-                Chargement...
-              </div>
-            )}
+          {/* Retirés Aujourd'hui */}
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.cardBorder}`,
+              borderRadius: 14,
+              padding: "1rem",
+            }}
+          >
+            <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
+              Retirés Aujourd&apos;hui
+            </div>
+            <div style={{ color: C.accent, fontSize: 28, fontWeight: 800 }}>
+              {dataLoading ? "…" : todayCount}
+            </div>
+          </div>
 
-            {!pendingLoading && pendingOrders.length === 0 && (
-              <div
+          {/* Produits Semaine */}
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.cardBorder}`,
+              borderRadius: 14,
+              padding: "1rem",
+            }}
+          >
+            <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
+              Produits Semaine
+            </div>
+            <div style={{ color: C.text, fontSize: 28, fontWeight: 800 }}>
+              {dataLoading ? "…" : weekCount}
+            </div>
+          </div>
+
+          {/* Commission Gagnée */}
+          <div
+            style={{
+              background: C.card,
+              border: `1px solid ${C.cardBorder}`,
+              borderRadius: 14,
+              padding: "1rem",
+            }}
+          >
+            <div style={{ color: C.muted, fontSize: 11, marginBottom: 6 }}>
+              Commission Gagnée
+            </div>
+            <div style={{ color: C.orange, fontSize: 24, fontWeight: 800 }}>
+              {dataLoading ? "…" : `${commissionEarned} €`}
+            </div>
+          </div>
+        </div>
+
+        {/* Refresh button */}
+        <button
+          onClick={loadAll}
+          disabled={dataLoading}
+          style={{
+            width: "100%",
+            background: "rgba(16,185,129,0.1)",
+            border: "1px solid rgba(16,185,129,0.25)",
+            borderRadius: 10,
+            padding: "10px",
+            color: C.accent,
+            fontSize: 14,
+            cursor: dataLoading ? "not-allowed" : "pointer",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {dataLoading ? "Chargement..." : "↻ Actualiser"}
+        </button>
+
+        {/* ── Section: Commandes à Retirer ─────────────────────────────────── */}
+        <div style={{ marginBottom: "2rem" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 12,
+            }}
+          >
+            <div style={{ color: C.muted, fontSize: 12, fontWeight: 600, letterSpacing: "0.05em" }}>
+              COMMANDES À RETIRER
+            </div>
+            {pendingOrders.length > 0 && (
+              <span
                 style={{
-                  textAlign: "center",
-                  color: C.muted,
-                  padding: "2.5rem",
-                  background: C.card,
-                  borderRadius: 14,
-                  border: `1px solid ${C.cardBorder}`,
+                  background: "rgba(245,158,11,0.2)",
+                  color: C.warning,
+                  borderRadius: 20,
+                  padding: "2px 10px",
+                  fontSize: 12,
+                  fontWeight: 700,
                 }}
               >
-                <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                  Aucune commande en attente
-                </div>
-                <div style={{ fontSize: 13 }}>
-                  Toutes les commandes ont été remises.
-                </div>
-              </div>
+                {pendingOrders.length}
+              </span>
             )}
+          </div>
 
-            {pendingOrders.map((order) => {
-              const totalQty = order.items.reduce((s, i) => s + i.qty, 0);
-              const date = new Date(order.createdAt);
+          {dataLoading ? (
+            <div style={{ textAlign: "center", color: C.muted, padding: "2rem" }}>
+              Chargement...
+            </div>
+          ) : pendingOrders.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                color: C.muted,
+                padding: "2rem",
+                background: C.card,
+                borderRadius: 12,
+                border: `1px solid ${C.cardBorder}`,
+              }}
+            >
+              <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>Aucune commande en attente</div>
+              <div style={{ fontSize: 13 }}>Toutes les commandes ont été remises.</div>
+            </div>
+          ) : (
+            pendingOrders.map((order) => {
+              const itemsSummary = order.items
+                .map((i) => `${i.qty} ${i.name}`)
+                .join(", ");
               return (
                 <div
                   key={order.id}
@@ -1008,203 +1069,90 @@ export default function RelaisPage() {
                     background: "rgba(245,158,11,0.07)",
                     border: "1px solid rgba(245,158,11,0.25)",
                     borderRadius: 14,
-                    padding: "1.25rem",
+                    padding: "1rem 1.25rem",
                     marginBottom: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: 10,
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>
-                        #{order.orderNumber || order.id.slice(-6)}
-                      </div>
-                      <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-                        {order.fulfillmentMode === "DELIVERY" ? "🚚 Livraison" : "🏪 Click & Collect"}
-                        {" · "}
-                        {date.toLocaleDateString("fr-FR")}{" "}
-                        {date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ color: C.accent, fontWeight: 700 }}>
-                        {order.total?.toFixed(2)} €
-                      </div>
-                      <div
-                        style={{
-                          background: "rgba(245,158,11,0.2)",
-                          color: C.warning,
-                          borderRadius: 6,
-                          padding: "1px 7px",
-                          fontSize: 11,
-                          fontWeight: 600,
-                          marginTop: 4,
-                        }}
-                      >
-                        À remettre
-                      </div>
-                    </div>
-                  </div>
-
-                  {order.name && (
-                    <div style={{ fontSize: 13, marginBottom: 8 }}>
-                      <span style={{ color: C.muted }}>Client : </span>
-                      <span style={{ fontWeight: 600 }}>{order.name}</span>
-                      {order.phone && (
-                        <span style={{ color: C.muted }}> · {order.phone}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>
+                      #{order.orderNumber || order.id.slice(-6)}{" "}
+                      {order.name && (
+                        <span style={{ color: C.text }}>{order.name}</span>
                       )}
                     </div>
-                  )}
-
-                  <div style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>
-                    ARTICLES ({totalQty})
-                  </div>
-                  {order.items.map((item, i) => (
                     <div
-                      key={i}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
+                        color: C.muted,
                         fontSize: 13,
-                        padding: "5px 0",
-                        borderBottom:
-                          i < order.items.length - 1
-                            ? `1px solid ${C.cardBorder}`
-                            : "none",
+                        marginTop: 3,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      <span>{item.name}</span>
-                      <span
-                        style={{
-                          background: "rgba(245,158,11,0.15)",
-                          color: C.warning,
-                          borderRadius: 5,
-                          padding: "1px 7px",
-                          fontWeight: 600,
-                          fontSize: 12,
-                        }}
-                      >
-                        ×{item.qty}
-                      </span>
+                      {itemsSummary}
                     </div>
-                  ))}
-
-                  <div
+                  </div>
+                  <button
+                    onClick={openScanner}
                     style={{
-                      marginTop: 12,
-                      padding: "8px 12px",
-                      background: "rgba(16,185,129,0.08)",
-                      border: "1px solid rgba(16,185,129,0.2)",
+                      background: C.accent,
+                      border: "none",
                       borderRadius: 8,
-                      fontSize: 12,
-                      color: C.accent,
+                      padding: "10px 18px",
+                      color: "#fff",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      letterSpacing: "0.03em",
                     }}
                   >
-                    💡 Demandez le QR code au client ou livreur pour valider la remise
-                  </div>
+                    VALIDER
+                  </button>
                 </div>
               );
-            })}
+            })
+          )}
+        </div>
+
+        {/* ── Section: Historique des Retraits ─────────────────────────────── */}
+        <div>
+          <div
+            style={{
+              color: C.muted,
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+              marginBottom: 12,
+            }}
+          >
+            HISTORIQUE DES RETRAITS
           </div>
-        )}
 
-        {/* ── ACTIVITY TAB ─────────────────────────────────────────────────── */}
-        {tab === "activity" && (
-          <div>
-            {/* Stats cards */}
+          {dataLoading ? (
+            <div style={{ textAlign: "center", color: C.muted, padding: "2rem" }}>
+              Chargement...
+            </div>
+          ) : activityLogs.length === 0 ? (
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                marginBottom: "1.5rem",
+                textAlign: "center",
+                color: C.muted,
+                padding: "2rem",
+                background: C.card,
+                borderRadius: 12,
+                border: `1px solid ${C.cardBorder}`,
               }}
             >
-              {[
-                { label: "Aujourd'hui", value: todayCount, icon: "📦" },
-                { label: "Cette semaine", value: weekCount, icon: "📊" },
-              ].map((s) => (
-                <div
-                  key={s.label}
-                  style={{
-                    background: C.card,
-                    border: `1px solid ${C.cardBorder}`,
-                    borderRadius: 14,
-                    padding: "1.25rem",
-                    textAlign: "center",
-                  }}
-                >
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
-                  <div
-                    style={{
-                      fontSize: 32,
-                      fontWeight: 800,
-                      color: C.accent,
-                      marginBottom: 4,
-                    }}
-                  >
-                    {activityLoading ? "..." : s.value}
-                  </div>
-                  <div style={{ color: C.muted, fontSize: 12 }}>
-                    produits sortis — {s.label}
-                  </div>
-                </div>
-              ))}
+              Aucune activité enregistrée
             </div>
-
-            {/* Refresh */}
-            <button
-              onClick={loadActivity}
-              disabled={activityLoading}
-              style={{
-                width: "100%",
-                background: "rgba(16,185,129,0.1)",
-                border: "1px solid rgba(16,185,129,0.25)",
-                borderRadius: 10,
-                padding: "10px",
-                color: C.accent,
-                fontSize: 14,
-                cursor: activityLoading ? "not-allowed" : "pointer",
-                marginBottom: "1.5rem",
-              }}
-            >
-              {activityLoading ? "Chargement..." : "↻ Actualiser"}
-            </button>
-
-            {/* Logs */}
-            <div
-              style={{ color: C.muted, fontSize: 12, marginBottom: 10 }}
-            >
-              HISTORIQUE DES REMISES
-            </div>
-
-            {activityLoading && (
-              <div style={{ textAlign: "center", color: C.muted, padding: "2rem" }}>
-                Chargement...
-              </div>
-            )}
-
-            {!activityLoading && activityLogs.length === 0 && (
-              <div
-                style={{
-                  textAlign: "center",
-                  color: C.muted,
-                  padding: "2rem",
-                  background: C.card,
-                  borderRadius: 12,
-                  border: `1px solid ${C.cardBorder}`,
-                }}
-              >
-                Aucune activité enregistrée
-              </div>
-            )}
-
-            {activityLogs.map((log) => {
+          ) : (
+            activityLogs.map((log) => {
               const totalQty = log.items.reduce((s, i) => s + i.qty, 0);
               const date = new Date(log.timestamp);
               return (
@@ -1238,13 +1186,7 @@ export default function RelaisPage() {
                         })}
                       </div>
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 6,
-                        alignItems: "center",
-                      }}
-                    >
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <span
                         style={{
                           background: "rgba(16,185,129,0.15)",
@@ -1287,9 +1229,9 @@ export default function RelaisPage() {
                   ))}
                 </div>
               );
-            })}
-          </div>
-        )}
+            })
+          )}
+        </div>
       </div>
     </div>
   );
