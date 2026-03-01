@@ -2915,7 +2915,7 @@ export default function Home() {
               </div>
             )}
 
-            {/* 3. ESPACE LIVREUR — bien séparé, bloc bleu en bas */}
+            {/* 3. ESPACE PROFESSIONNEL — livreur + point relay */}
             <div style={{margin:"22px 24px 28px",
               background:"rgba(0,180,255,.04)",
               border:"1px solid rgba(0,180,255,.2)",
@@ -2935,6 +2935,18 @@ export default function Home() {
                 ESPACE LIVREUR
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
                   color:"rgba(0,180,255,.5)",marginLeft:4}}>→</span>
+              </a>
+              <a href="/relais"
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                  background:"linear-gradient(135deg,rgba(16,185,129,.18) 0%,rgba(5,150,105,.12) 100%)",
+                  border:"1px solid rgba(16,185,129,.35)",
+                  borderRadius:10,padding:"14px",textDecoration:"none",marginTop:8,
+                  color:"#10b981",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  fontSize:"1rem",letterSpacing:".06em"}}>
+                <span style={{fontSize:"1.3rem"}}>📦</span>
+                ESPACE POINT RELAY
+                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                  color:"rgba(16,185,129,.5)",marginLeft:4}}>→</span>
               </a>
             </div>
           </div>
