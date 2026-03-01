@@ -237,9 +237,9 @@ export default function YassalaDayView() {
     loadRelays();
   }, [loadRelays]);
 
-  // Chargement bannières jour en temps réel
+  // Chargement bannières pub (collection partagée Night + Day)
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "day_banners"), snap => {
+    const unsub = onSnapshot(collection(db, "banners"), snap => {
       setDayBanners(
         snap.docs
           .map(d => ({ id: d.id, ...d.data() } as DayBanner))

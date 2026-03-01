@@ -76,7 +76,7 @@ export default function AdminPage() {
   });
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres"|"yassala_day_banners"|"yassala_day_cats">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres"|"yassala_day_cats">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dispatchFilter, setDispatchFilter] = useState<"available"|"mine"|"delivered">("available");
   const [driverLocations, setDriverLocations] = useState<any[]>([]);
@@ -116,9 +116,6 @@ export default function AdminPage() {
   const [dayOffers, setDayOffers] = useState<DayOffer[]>([]);
   const [editDayOffer, setEditDayOffer] = useState<DayOffer|null>(null);
   const [dayOfferForm, setDayOfferForm] = useState<DayOffer>({title:"",desc:"",emoji:"🌟",discount:"",active:true,order:0});
-  const [dayBanners, setDayBanners]               = useState<Banner[]>([]);
-  const [editDayBanner, setEditDayBanner]         = useState<Banner | null>(null);
-  const [showDayBannerForm, setShowDayBannerForm] = useState(false);
   const [dayCats, setDayCats]                     = useState<Category[]>([]);
   const [editDayCat, setEditDayCat]               = useState<Category | null>(null);
   const [dayCatForm, setDayCatForm]               = useState<Category>({key:"",label:"",emoji:"",order:0});
@@ -424,15 +421,11 @@ export default function AdminPage() {
       setDayOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayOffer))
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
     });
-    const unsubDayBanners = onSnapshot(collection(db, "day_banners"), snap => {
-      setDayBanners(snap.docs.map(d => ({ id: d.id, ...d.data() } as Banner))
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-    });
     const unsubDayCats = onSnapshot(collection(db, "day_categories"), snap => {
       setDayCats(snap.docs.map(d => ({ id: d.id, ...d.data() } as Category))
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); unsubDayBanners(); unsubDayCats(); };
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); unsubDayCats(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -708,28 +701,6 @@ export default function AdminPage() {
       batch.update(doc(db, "categories", c.id!), { order: i });
     });
     await batch.commit();
-  };
-
-  const saveDayBanner = async (b: Banner) => {
-    try {
-      const { id, ...data } = b;
-      if (id) { await setDoc(doc(db, "day_banners", id), data, { merge: true }); }
-      else { await addDoc(collection(db, "day_banners"), data); }
-      showToast(b.id ? "Bannière jour mise à jour ✓" : "Bannière jour ajoutée ✓");
-      setShowDayBannerForm(false); setEditDayBanner(null);
-    } catch (e: any) { showToast(e.message || "Erreur lors de la sauvegarde", "err"); }
-  };
-
-  const deleteDayBanner = async (id: string) => {
-    if (!confirm("Supprimer cette bannière jour ?")) return;
-    try { await deleteDoc(doc(db, "day_banners", id)); showToast("Bannière jour supprimée"); }
-    catch { showToast("Erreur suppression", "err"); }
-  };
-
-  const toggleDayBannerActive = async (b: Banner) => {
-    if (!b.id) return;
-    await updateDoc(doc(db, "day_banners", b.id), { active: !b.active });
-    showToast(`Bannière jour ${!b.active ? "activée" : "désactivée"} ✓`);
   };
 
   const saveDayCat = async () => {
@@ -1185,7 +1156,6 @@ export default function AdminPage() {
             { section:"YASSALA DAY", items:[
               { key:"yassala_day_config",   label:"CONFIG JOUR",     icon:"☀️" },
               { key:"yassala_day_offres",   label:"OFFRES DU JOUR",  icon:"🎁" },
-              { key:"yassala_day_banners",  label:"BANNIÈRES JOUR",  icon:"🎨" },
               { key:"yassala_day_cats",     label:"CATÉGORIES JOUR", icon:"🗂️" },
             ]},
           ] as const).map((group, gi) => (
@@ -4433,101 +4403,6 @@ export default function AdminPage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* ── YASSALA DAY BANNIÈRES ── */}
-          {tab === "yassala_day_banners" && (
-            <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
-                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em"}}>
-                  🎨 <span style={{color:"#fbbf24"}}>BANNIÈRES JOUR</span>
-                </div>
-                <button onClick={() => { setEditDayBanner({title:"",subtitle:"",desc:"",cta:"COMMANDER →",link:"catalogue",gradient:"linear-gradient(135deg,rgba(251,191,36,.85) 0%,rgba(245,158,11,.9) 100%)",image:"",brightness:0.28,active:true,order:dayBanners.length}); setShowDayBannerForm(true); }}
-                  style={{background:"#fbbf24",color:"#000",border:"none",borderRadius:8,
-                    padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:600,
-                    fontSize:".85rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
-                  + AJOUTER
-                </button>
-              </div>
-
-              {dayBanners.length === 0 ? (
-                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
-                  padding:"40px",fontSize:".8rem",border:"1px dashed rgba(251,191,36,.2)",borderRadius:8}}>
-                  // aucune bannière jour — crée ta première bannière !
-                </div>
-              ) : (
-                <div style={{display:"grid",gap:10}}>
-                  {dayBanners.map(b => (
-                    <div key={b.id} style={{borderRadius:6,overflow:"hidden",
-                      border:`1px solid ${b.active ? "rgba(251,191,36,.35)" : "rgba(255,255,255,.06)"}`,
-                      opacity: b.active ? 1 : 0.55}}>
-                      <div style={{height:80,position:"relative",
-                        background: b.gradient || "linear-gradient(135deg,rgba(251,191,36,.85) 0%,rgba(245,158,11,.9) 100%)"}}>
-                        {b.image && (
-                          <div style={{position:"absolute",inset:0,
-                            backgroundImage:`url(${b.image})`,backgroundSize:"cover",backgroundPosition:"center",opacity:.3}} />
-                        )}
-                        <div style={{position:"absolute",inset:0,padding:"12px 16px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
-                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#fbbf24",letterSpacing:".15em",marginBottom:4}}>
-                            &gt; {b.subtitle || "tagline"}
-                          </div>
-                          <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",color:"#fff",
-                            textShadow:"0 0 15px rgba(255,255,255,.2)",letterSpacing:".03em"}}>
-                            {b.title || "Titre de la bannière"}
-                          </div>
-                        </div>
-                        <div style={{position:"absolute",top:8,right:8,background:"rgba(0,0,0,.6)",
-                          border:`1px solid ${b.active ? "#fbbf24" : "#5a5470"}`,
-                          color: b.active ? "#fbbf24" : "#5a5470",
-                          fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
-                          padding:"3px 8px",borderRadius:2,letterSpacing:".1em"}}>
-                          {b.active ? "● ACTIVE" : "○ INACTIVE"}
-                        </div>
-                      </div>
-                      <div style={{background:"#0c0918",padding:"10px 16px",
-                        display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",color:"#5a5470",letterSpacing:".08em"}}>
-                          CTA: <span style={{color:"#f0eeff"}}>{b.cta || "—"}</span>
-                          &nbsp;·&nbsp;LIEN: <span style={{color:"#fbbf24"}}>{b.link || "catalogue"}</span>
-                          &nbsp;·&nbsp;ORDRE: <span style={{color:"#fbbf24"}}>{b.order ?? 0}</span>
-                        </div>
-                        <div style={{display:"flex",gap:8,flexShrink:0}}>
-                          <button onClick={() => toggleDayBannerActive(b)}
-                            style={{background:"transparent",border:"1px solid rgba(251,191,36,.4)",
-                              color: b.active ? "#ff2d78" : "#fbbf24",
-                              padding:"5px 12px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",
-                              fontSize:".82rem",letterSpacing:".08em",cursor:"pointer"}}>
-                            {b.active ? "DÉSACTIVER" : "ACTIVER"}
-                          </button>
-                          <button onClick={() => { setEditDayBanner(b); setShowDayBannerForm(true); }}
-                            style={{background:"transparent",border:"1px solid rgba(251,191,36,.3)",color:"#fbbf24",
-                              padding:"5px 12px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",
-                              fontSize:".82rem",letterSpacing:".08em",cursor:"pointer"}}>
-                            ÉDITER
-                          </button>
-                          <button onClick={() => deleteDayBanner(b.id!)}
-                            style={{background:"transparent",border:"1px solid rgba(255,45,120,.3)",color:"#ff2d78",
-                              padding:"5px 12px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",
-                              fontSize:".82rem",letterSpacing:".08em",cursor:"pointer"}}>
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {showDayBannerForm && editDayBanner && (
-                <BannerForm
-                  banner={editDayBanner}
-                  onSave={saveDayBanner}
-                  onClose={() => { setShowDayBannerForm(false); setEditDayBanner(null); }}
-                  showToast={showToast}
-                  settings={settings}
-                />
               )}
             </div>
           )}
