@@ -721,14 +721,14 @@ export default function YassalaDayView() {
               fontFamily: "'Share Tech Mono',monospace", fontSize: ".68rem",
               color: "#0099bb", letterSpacing: ".15em", textTransform: "uppercase", marginBottom: 8,
             }}>
-              // PRODUITS DISPONIBLES
+              // CATALOGUE
             </div>
             <h2 style={{
               fontFamily: "'Black Ops One',cursive",
               fontSize: "1.6rem", color: "#1a0022",
               letterSpacing: ".04em", margin: 0,
             }}>
-              NOS PRODUITS DU JOUR
+              NOS PRODUITS
             </h2>
           </div>
 
@@ -857,7 +857,7 @@ export default function YassalaDayView() {
               fontSize: "1.6rem", color: "#1a0022",
               letterSpacing: ".04em", margin: 0,
             }}>
-              PACKS DU JOUR
+              NOS PACKS
             </h2>
           </div>
 
