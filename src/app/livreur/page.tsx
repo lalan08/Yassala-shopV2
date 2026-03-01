@@ -64,6 +64,12 @@ export default function LivreurPage() {
   const isFirstWalletLoad = useRef(true);
   const prevWalletIdsRef = useRef<Set<string>>(new Set());
 
+  // ── Espace Point Relay ───────────────────────────────────────────────────
+  const [relayIdInput, setRelayIdInput] = useState("");
+  const [relayPin, setRelayPin] = useState("");
+  const [relayLoginError, setRelayLoginError] = useState("");
+  const [relayLoggingIn, setRelayLoggingIn] = useState(false);
+
 
   const showToast = (msg: string) => {
     setToast({ msg, show: true });
@@ -157,6 +163,37 @@ export default function LivreurPage() {
       isOnline: true,
       lastSeen: serverTimestamp(),
     }, { merge: true }), 20000);
+  };
+
+  const handleRelayLogin = async () => {
+    if (!relayIdInput.trim() || !relayPin.trim()) {
+      setRelayLoginError("Remplis tous les champs.");
+      return;
+    }
+    setRelayLoginError("");
+    setRelayLoggingIn(true);
+    try {
+      const res = await fetch("/api/relay/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ relayId: relayIdInput.trim(), pin: relayPin }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRelayLoginError(data.error || "Erreur de connexion");
+      } else {
+        localStorage.setItem("yassala_relay", JSON.stringify({
+          relayId: data.id,
+          relayName: data.name,
+          relayAddress: data.address,
+        }));
+        window.location.href = "/relais";
+      }
+    } catch {
+      setRelayLoginError("Erreur réseau, réessaie.");
+    } finally {
+      setRelayLoggingIn(false);
+    }
   };
 
   const acceptContract = async () => {
@@ -672,6 +709,57 @@ export default function LivreurPage() {
               ← RETOUR AU SHOP
             </a>
           </div>
+
+          {/* ── Espace Point Relay ──────────────────────────────────────── */}
+          <div style={{marginTop:40}}>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:"2.2rem",marginBottom:8}}>📦</div>
+              <div style={{fontFamily:"'Orbitron',sans-serif",fontSize:"1.05rem",fontWeight:900,
+                background:"linear-gradient(135deg,#10b981,#00f5ff)",WebkitBackgroundClip:"text",
+                WebkitTextFillColor:"transparent",letterSpacing:".08em",marginBottom:4}}>
+                ESPACE POINT RELAY
+              </div>
+              <div style={{fontFamily:"'Exo 2',sans-serif",fontSize:".72rem",color:"#5a5470",
+                letterSpacing:".2em",marginTop:4,fontWeight:600}}>YASSALA NIGHT DELIVERY</div>
+            </div>
+            <div style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(16,185,129,.2)",
+              borderRadius:18,padding:28,backdropFilter:"blur(10px)",
+              boxShadow:"0 0 40px rgba(16,185,129,.06),0 20px 60px rgba(0,0,0,.4)"}}>
+              <div style={{marginBottom:16}}>
+                <label style={{fontFamily:"'Exo 2',sans-serif",fontSize:".68rem",color:"#5a5470",
+                  letterSpacing:".16em",display:"block",marginBottom:6,fontWeight:700}}>ID POINT RELAY</label>
+                <input value={relayIdInput} onChange={e=>setRelayIdInput(e.target.value)}
+                  placeholder="relay_..." type="text"
+                  onKeyDown={e=>e.key==="Enter"&&handleRelayLogin()}
+                  style={{width:"100%",background:"rgba(255,255,255,.04)",
+                    border:"1px solid rgba(16,185,129,.2)",borderRadius:10,
+                    padding:"13px 15px",color:"#f0eeff",fontFamily:"'Exo 2',sans-serif",fontSize:".95rem"}} />
+              </div>
+              <div style={{marginBottom:16}}>
+                <label style={{fontFamily:"'Exo 2',sans-serif",fontSize:".68rem",color:"#5a5470",
+                  letterSpacing:".16em",display:"block",marginBottom:6,fontWeight:700}}>CODE PIN</label>
+                <input value={relayPin} onChange={e=>setRelayPin(e.target.value)}
+                  placeholder="••••" type="password"
+                  onKeyDown={e=>e.key==="Enter"&&handleRelayLogin()}
+                  style={{width:"100%",background:"rgba(255,255,255,.04)",
+                    border:"1px solid rgba(16,185,129,.2)",borderRadius:10,
+                    padding:"13px 15px",color:"#f0eeff",fontFamily:"'Exo 2',sans-serif",fontSize:".95rem"}} />
+              </div>
+              {relayLoginError&&<div style={{color:"#ff2d78",fontSize:".82rem",fontFamily:"'Exo 2',sans-serif",
+                fontWeight:600,marginBottom:12,letterSpacing:".04em"}}>{relayLoginError}</div>}
+              <button onClick={handleRelayLogin} disabled={relayLoggingIn}
+                style={{width:"100%",padding:"14px",borderRadius:12,border:"none",
+                  background:"linear-gradient(135deg,#10b981,#059669)",
+                  color:"#fff",fontFamily:"'Orbitron',sans-serif",fontWeight:700,
+                  fontSize:".88rem",cursor:relayLoggingIn?"not-allowed":"pointer",
+                  letterSpacing:".1em",opacity:relayLoggingIn?0.7:1,
+                  boxShadow:"0 4px 20px rgba(16,185,129,.3)"}}>
+                {relayLoggingIn ? "CONNEXION..." : "ACCÉDER →"}
+              </button>
+            </div>
+          </div>
+          {/* ─────────────────────────────────────────────────────────────── */}
+
         </div>
       </div>
     </>
