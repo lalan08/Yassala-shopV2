@@ -28,7 +28,7 @@ const STRIPE_APPEARANCE_DAY = {
     colorBackground: "#ffffff",
     colorText:       "#1a0033",
     colorDanger:     "#ff2d78",
-    fontFamily:      "'Rajdhani', sans-serif",
+    fontFamily:      "'Nunito', sans-serif",
     borderRadius:    "4px",
   },
   rules: {
@@ -81,7 +81,7 @@ function CheckoutPaymentFormDay({ onSuccess, onCancel }: { onSuccess: () => void
         </div>
       )}
       <button onClick={handleConfirm} disabled={confirming || !stripe}
-        style={{ width:"100%", marginTop:16, background: confirming ? "#9a8aaa" : "#ff2d78", color:"#fff", border:"none", borderRadius:4, padding:"16px", fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:"1rem", letterSpacing:".1em", textTransform:"uppercase", cursor: confirming ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+        style={{ width:"100%", marginTop:16, background: confirming ? "#9a8aaa" : "#ff2d78", color:"#fff", border:"none", borderRadius:4, padding:"16px", fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"1rem", letterSpacing:".1em", textTransform:"uppercase", cursor: confirming ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
         {confirming ? "⏳ CONFIRMATION EN COURS..." : "🔒 CONFIRMER LE PAIEMENT"}
       </button>
       <button onClick={onCancel} disabled={confirming}
@@ -789,28 +789,28 @@ export default function YassalaDayView() {
 
   // ── DAY COLORS ──
   const D = {
-    bg:       "#faf7ff",
+    bg:       "#ffffff",
     card:     "#ffffff",
-    cardDark: "#f4f0ff",
+    cardDark: "#f7f7f7",
     text:     "#1a0033",
-    muted:    "#9a8aaa",
+    muted:    "#7a6a8a",
     pink:     "#ff2d78",
     cyan:     "#0099cc",
     lime:     "#b8ff00",
     border:   "rgba(0,0,0,.08)",
     borderPink:"rgba(255,45,120,.25)",
-    overlay:  "rgba(250,247,255,.97)",
-    navBg:    "rgba(250,247,255,.92)",
+    overlay:  "rgba(255,255,255,.97)",
+    navBg:    "rgba(255,255,255,.95)",
   };
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Nunito:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap');
         :root { --bg:${D.bg}; --card:${D.card}; --pink:${D.pink}; --cyan:${D.cyan}; --lime:${D.lime}; --text:${D.text}; --muted:${D.muted}; }
         *{margin:0;padding:0;box-sizing:border-box;}
-        html{scroll-behavior:smooth;}
-        body{background:${D.bg} !important;color:${D.text} !important;font-family:'Rajdhani',sans-serif !important;font-weight:500;min-height:100vh;overflow-x:hidden;}
+        html{scroll-behavior:smooth;font-size:17px;}
+        body{background:${D.bg} !important;color:${D.text} !important;font-family:'Nunito',sans-serif !important;font-weight:500;min-height:100vh;overflow-x:hidden;}
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.4);}}
         @keyframes flicker{0%,95%,100%{opacity:1;}96%{opacity:.7;}97%{opacity:1;}98%{opacity:.5;}99%{opacity:1;}}
         @keyframes gridScroll{from{background-position:0 0;}to{background-position:50px 50px;}}
@@ -825,16 +825,16 @@ export default function YassalaDayView() {
           .nav-main{padding:10px 14px !important;}
           .nav-logo{font-size:1.4rem !important;}
           .nav-status{display:none !important;}
-          .nav-driver-btn{padding:7px 10px !important;font-size:.75rem !important;}
+          .nav-driver-btn{padding:7px 10px !important;font-size:.82rem !important;}
           .nav-driver-label{display:none !important;}
-          .nav-cart-btn{padding:7px 12px !important;font-size:.78rem !important;gap:5px !important;}
+          .nav-cart-btn{padding:7px 12px !important;font-size:.85rem !important;gap:5px !important;}
           .hero-content{padding:36px 16px 72px !important;max-width:100% !important;}
           .hero-content h1{font-size:clamp(2.6rem,14vw,4.5rem) !important;}
           .clock-hero{display:none !important;}
           .info-bar{flex-wrap:wrap !important;}
           .info-bar-item{flex:0 0 50% !important;}
           .cat-bar{gap:6px !important;padding:12px 12px !important;}
-          .cat-btn{padding:9px 16px !important;font-size:.8rem !important;}
+          .cat-btn{padding:10px 18px !important;font-size:.88rem !important;}
           .section-title{font-size:1.4rem !important;}
           .products-grid{grid-template-columns:1fr !important;}
         }
@@ -848,10 +848,8 @@ export default function YassalaDayView() {
         body{padding-bottom:90px;}
       `}</style>
 
-      {/* Fond dégradé Day */}
-      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,
-        background:"radial-gradient(ellipse 50% 50% at 10% 20%,rgba(255,45,120,.05) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 90% 70%,rgba(0,153,204,.04) 0%,transparent 60%)",
-        animation:"bgShift 8s ease-in-out infinite alternate"}} />
+      {/* Fond blanc Day */}
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"#ffffff"}} />
 
       {/* Bande info + countdown vers Night */}
       <div style={{background:settings.shopOpen ? D.pink : "#9a8aaa",color:"#fff",textAlign:"center",padding:"8px",
@@ -891,14 +889,14 @@ export default function YassalaDayView() {
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <button className="nav-driver-btn" onClick={() => setShowDriverForm(true)}
             style={{background:"rgba(0,153,204,.08)",border:`1px solid rgba(0,153,204,.35)`,color:D.cyan,
-              padding:"8px 14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+              padding:"8px 14px",fontFamily:"'Nunito',sans-serif",fontWeight:700,
               fontSize:".82rem",letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",
               display:"flex",alignItems:"center",gap:6,borderRadius:6,whiteSpace:"nowrap"}}>
             🏍️ <span className="nav-driver-label">LIVREUR</span>
           </button>
           <button className="nav-cart-btn" onClick={openCart}
             style={{background:"transparent",border:`1px solid ${D.pink}`,color:D.pink,
-              padding:"8px 18px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+              padding:"8px 18px",fontFamily:"'Nunito',sans-serif",fontWeight:700,
               fontSize:".85rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",
               display:"flex",alignItems:"center",gap:8,borderRadius:3}}>
             🛒 PANIER
@@ -932,7 +930,7 @@ export default function YassalaDayView() {
           style={{position:"relative",zIndex:2,maxWidth:580,padding:"60px 28px 70px",
             animation: banners.length > 0 ? "bannerIn .5s .12s both" : undefined}}>
           <div className={banners.length === 0 ? "fade1" : undefined}
-            style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.cyan,letterSpacing:".2em",textTransform:"uppercase",marginBottom:18}}>
+            style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".8rem",color:D.cyan,letterSpacing:".15em",textTransform:"uppercase",marginBottom:18}}>
             &gt; {banners.length > 0 ? (banners[bannerIdx]?.subtitle || "livraison de jour — guyane") : "livraison de jour — guyane"}
           </div>
           <h1 className={banners.length === 0 ? "fade2" : undefined}
@@ -950,7 +948,7 @@ export default function YassalaDayView() {
           {banners.length > 0 && banners[bannerIdx]?.desc ? (
             <p style={{fontSize:"1rem",color:D.text,lineHeight:1.65,maxWidth:400,marginBottom:32,opacity:.75}}>{banners[bannerIdx].desc}</p>
           ) : banners.length === 0 ? (
-            <p className="fade3" style={{fontSize:"1rem",color:D.muted,lineHeight:1.65,maxWidth:400,marginBottom:32}}>
+            <p className="fade3" style={{fontSize:"1.05rem",color:D.muted,lineHeight:1.7,maxWidth:400,marginBottom:32}}>
               Boissons, snacks et repas livrés chez toi en moins de 30 minutes. Partout à Cayenne, toute la journée.
             </p>
           ) : <div style={{marginBottom:32}} />}
@@ -960,14 +958,14 @@ export default function YassalaDayView() {
               if (link==="catalogue"||link==="") document.getElementById("catalogue")?.scrollIntoView({behavior:"smooth"});
               else if (link==="packs") document.getElementById("packs")?.scrollIntoView({behavior:"smooth"});
               else window.open(link,"_blank");
-            }} style={{padding:"13px 26px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+            }} style={{padding:"13px 26px",fontFamily:"'Nunito',sans-serif",fontWeight:700,
               fontSize:".9rem",letterSpacing:".12em",textTransform:"uppercase",border:"none",
               cursor:"pointer",borderRadius:3,background:D.pink,color:"#fff"}}>
               {banners.length > 0 ? (banners[bannerIdx]?.cta||"COMMANDER →") : "COMMANDER →"}
             </button>
             {banners.length === 0 && (
               <button onClick={() => document.getElementById("packs")?.scrollIntoView({behavior:"smooth"})}
-                style={{padding:"13px 26px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                style={{padding:"13px 26px",fontFamily:"'Nunito',sans-serif",fontWeight:700,
                   fontSize:".9rem",letterSpacing:".12em",textTransform:"uppercase",
                   background:"transparent",color:D.cyan,border:`1px solid ${D.cyan}`,
                   cursor:"pointer",borderRadius:3}}>
@@ -1011,8 +1009,8 @@ export default function YassalaDayView() {
           <div key={i} className="info-bar-item" style={{flex:1,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,borderRight:`1px solid ${D.border}`,background:D.cardDark}}>
             <span style={{fontSize:"1.2rem"}}>{item.icon}</span>
             <div>
-              <strong style={{display:"block",fontWeight:700,fontSize:".82rem",letterSpacing:".06em",color:D.text,textTransform:"uppercase"}}>{item.title}</strong>
-              <small style={{fontSize:".72rem",color:D.muted,fontFamily:"'Share Tech Mono',monospace"}}>{item.sub}</small>
+              <strong style={{display:"block",fontWeight:700,fontSize:".9rem",letterSpacing:".04em",color:D.text,textTransform:"uppercase"}}>{item.title}</strong>
+              <small style={{fontSize:".8rem",color:D.muted}}>{item.sub}</small>
             </div>
           </div>
         ))}
@@ -1055,8 +1053,8 @@ export default function YassalaDayView() {
                     style={{flexShrink:0,width:140,background:D.card,border: p.badge==="HOT" ? `1px solid rgba(255,45,120,.3)` : `1px solid rgba(255,180,0,.3)`,borderRadius:8,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
                     {p.image && <img src={p.image} alt={p.name} style={{width:"100%",height:90,objectFit:"cover",display:"block"}} />}
                     <div style={{padding:"8px 10px"}}>
-                      <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",color:D.text,letterSpacing:".03em",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color: p.badge==="HOT" ? D.pink : "#ffb400",marginTop:2}}>{p.price.toFixed(2)}€</div>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".95rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".9rem",color: p.badge==="HOT" ? D.pink : "#ffb400",marginTop:2}}>{p.price.toFixed(2)}€</div>
                     </div>
                     <span style={{position:"absolute",top:6,right:6,background: p.badge==="HOT" ? "rgba(255,45,120,.9)" : "rgba(255,180,0,.95)",color:"#fff",fontSize:".6rem",fontFamily:"'Share Tech Mono',monospace",fontWeight:700,padding:"2px 6px",borderRadius:3,letterSpacing:".08em"}}>
                       {p.badge==="HOT" ? "🔥 HOT" : "⭐ BEST"}
@@ -1072,7 +1070,7 @@ export default function YassalaDayView() {
         <div className="cat-bar" style={{display:"flex",gap:8,marginBottom:14,padding:"0 12px 6px"}}>
           {cats.map(c => (
             <button key={c.key} className="cat-btn" onClick={() => setActiveCat(c.key)}
-              style={{padding:"12px 24px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",borderRadius:24,whiteSpace:"nowrap",transition:"all .2s",
+              style={{padding:"12px 24px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",borderRadius:24,whiteSpace:"nowrap",transition:"all .2s",
                 border: activeCat===c.key ? `1px solid ${D.pink}` : `1px solid rgba(0,0,0,.15)`,
                 background: activeCat===c.key ? "rgba(255,45,120,.08)" : D.card,
                 color: activeCat===c.key ? D.pink : D.muted,
@@ -1119,7 +1117,7 @@ export default function YassalaDayView() {
           <p style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.muted}}>// pour toute commande à partir de {deliveryConfig.free_delivery_threshold}€</p>
         </div>
         <button onClick={() => document.getElementById("catalogue")?.scrollIntoView({behavior:"smooth"})}
-          style={{padding:"13px 26px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",letterSpacing:".12em",textTransform:"uppercase",border:"none",cursor:"pointer",borderRadius:3,background:D.pink,color:"#fff"}}>
+          style={{padding:"13px 26px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".9rem",letterSpacing:".12em",textTransform:"uppercase",border:"none",cursor:"pointer",borderRadius:3,background:D.pink,color:"#fff"}}>
           COMMANDER
         </button>
       </div>
@@ -1151,7 +1149,7 @@ export default function YassalaDayView() {
                   <small style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,textDecoration:"line-through"}}>valeur : {pk.real}€</small>
                 </div>
                 <button onClick={() => addToCart(pk.id, pk.name, pk.price)}
-                  style={{background:"transparent",border:`1px solid ${D.pink}`,color:D.pink,padding:"9px 18px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",borderRadius:3}}>
+                  style={{background:"transparent",border:`1px solid ${D.pink}`,color:D.pink,padding:"9px 18px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".8rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",borderRadius:3}}>
                   AJOUTER
                 </button>
               </div>
@@ -1195,7 +1193,7 @@ export default function YassalaDayView() {
             {lastConfirmPickup && (
               <div style={{background:"rgba(0,153,204,.04)",border:"1px solid rgba(0,153,204,.12)",borderRadius:8,padding:"14px 16px",marginBottom:16,textAlign:"left"}}>
                 <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.cyan,letterSpacing:".1em",marginBottom:8}}>🏠 RETRAIT STOCK</div>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",color:D.text,marginBottom:2}}>{lastConfirmPickup.snapshot?.name}</div>
+                <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".95rem",color:D.text,marginBottom:2}}>{lastConfirmPickup.snapshot?.name}</div>
                 <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,marginBottom:6}}>{lastConfirmPickup.snapshot?.address}{lastConfirmPickup.snapshot?.city ? `, ${lastConfirmPickup.snapshot.city}` : ""}</div>
                 {lastConfirmPickup.snapshot?.instructions && <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.cyan,marginBottom:6}}>ℹ️ {lastConfirmPickup.snapshot.instructions}</div>}
                 <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted}}>🕐 {lastConfirmPickup.time === 'asap' ? 'Dès que possible' : lastConfirmPickup.time}</div>
@@ -1203,7 +1201,7 @@ export default function YassalaDayView() {
               </div>
             )}
             <a href={`/suivi?id=${orderConfirmId}`}
-              style={{display:"block",background: lastConfirmPickup ? D.cyan : D.pink,color:"#fff",borderRadius:4,padding:"13px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".1em",textDecoration:"none",textTransform:"uppercase",marginBottom:12}}>
+              style={{display:"block",background: lastConfirmPickup ? D.cyan : D.pink,color:"#fff",borderRadius:4,padding:"13px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".1em",textDecoration:"none",textTransform:"uppercase",marginBottom:12}}>
               🔎 SUIVRE MA COMMANDE
             </a>
             <button onClick={() => { setOrderConfirmId(null); setLastConfirmPickup(null); }}
@@ -1269,17 +1267,17 @@ export default function YassalaDayView() {
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                         <div onClick={() => setFulfillmentType('delivery')} style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",border: fulfillmentType==='delivery' ? `2px solid ${D.pink}` : `1px solid ${D.border}`,background: fulfillmentType==='delivery' ? "rgba(255,45,120,.06)" : D.cardDark,transition:"all .2s"}}>
                           <div style={{fontSize:"1.3rem",marginBottom:3}}>🚗</div>
-                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",color: fulfillmentType==='delivery' ? D.pink : D.muted,letterSpacing:".05em"}}>LIVRAISON</div>
+                          <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color: fulfillmentType==='delivery' ? D.pink : D.muted,letterSpacing:".05em"}}>LIVRAISON</div>
                         </div>
                         <div onClick={() => setFulfillmentType('pickup')} style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",border: fulfillmentType==='pickup' ? `2px solid ${D.cyan}` : `1px solid ${D.border}`,background: fulfillmentType==='pickup' ? "rgba(0,153,204,.06)" : D.cardDark,transition:"all .2s"}}>
                           <div style={{fontSize:"1.3rem",marginBottom:3}}>🏪</div>
-                          <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",color: fulfillmentType==='pickup' ? D.cyan : D.muted,letterSpacing:".05em"}}>CLICK & COLLECT</div>
+                          <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color: fulfillmentType==='pickup' ? D.cyan : D.muted,letterSpacing:".05em"}}>CLICK & COLLECT</div>
                         </div>
                       </div>
                     ) : (
                       <div style={{padding:"12px",borderRadius:6,textAlign:"center",border:`2px solid ${settings.fulfillmentDeliveryEnabled !== false ? D.pink : D.cyan}`,background:`rgba(${settings.fulfillmentDeliveryEnabled !== false ? "255,45,120" : "0,153,204"},.06)`}}>
                         <div style={{fontSize:"1.3rem",marginBottom:3}}>{settings.fulfillmentDeliveryEnabled !== false ? "🚗" : "🏪"}</div>
-                        <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".82rem",color: settings.fulfillmentDeliveryEnabled !== false ? D.pink : D.cyan,letterSpacing:".05em"}}>{settings.fulfillmentDeliveryEnabled !== false ? "LIVRAISON" : "CLICK & COLLECT"}</div>
+                        <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color: settings.fulfillmentDeliveryEnabled !== false ? D.pink : D.cyan,letterSpacing:".05em"}}>{settings.fulfillmentDeliveryEnabled !== false ? "LIVRAISON" : "CLICK & COLLECT"}</div>
                       </div>
                     )}
                   </div>
@@ -1357,7 +1355,7 @@ export default function YassalaDayView() {
                           <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:D.card,border:`1px solid rgba(0,153,204,.2)`,borderRadius:"0 0 6px 6px",maxHeight:200,overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.12)"}}>
                             {addressSuggestions.map((s,i) => (
                               <div key={i} onMouseDown={() => { setOrderForm(f => ({...f, address:s.display, lat:s.lat, lng:s.lng})); setShowSuggestions(false); showToast("Adresse localisée ✓"); }}
-                                style={{padding:"10px 14px",cursor:"pointer",fontSize:".82rem",color:D.text,borderBottom:`1px solid ${D.border}`,fontFamily:"'Rajdhani',sans-serif",transition:"background .15s",display:"flex",alignItems:"center",gap:8}}
+                                style={{padding:"10px 14px",cursor:"pointer",fontSize:".82rem",color:D.text,borderBottom:`1px solid ${D.border}`,fontFamily:"'Nunito',sans-serif",transition:"background .15s",display:"flex",alignItems:"center",gap:8}}
                                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,153,204,.06)")}
                                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                                 <span style={{color:D.cyan,flexShrink:0}}>📍</span>{s.display}
@@ -1375,7 +1373,7 @@ export default function YassalaDayView() {
                           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                             <span style={{fontSize:"1.4rem"}}>🏠</span>
                             <div>
-                              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",color:D.text}}>Retrait Yassala Day Stock</div>
+                              <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",color:D.text}}>Retrait Yassala Day Stock</div>
                               <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.muted}}>Retrait chez Yassala Day, Cayenne</div>
                             </div>
                           </div>
@@ -1385,15 +1383,15 @@ export default function YassalaDayView() {
                           <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.muted,letterSpacing:".1em",marginBottom:8}}>// HEURE DE RETRAIT</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                             <div onClick={() => setPickupTimeMode('asap')} style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",border: pickupTimeMode==='asap' ? `2px solid ${D.pink}` : `1px solid ${D.border}`,background: pickupTimeMode==='asap' ? "rgba(255,45,120,.06)" : D.cardDark,transition:"all .2s"}}>
-                              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",color: pickupTimeMode==='asap' ? D.pink : D.muted}}>⚡ DÈS QUE POSSIBLE</div>
+                              <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".8rem",color: pickupTimeMode==='asap' ? D.pink : D.muted}}>⚡ DÈS QUE POSSIBLE</div>
                             </div>
                             <div onClick={() => setPickupTimeMode('scheduled')} style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",border: pickupTimeMode==='scheduled' ? `2px solid ${D.cyan}` : `1px solid ${D.border}`,background: pickupTimeMode==='scheduled' ? "rgba(0,153,204,.06)" : D.cardDark,transition:"all .2s"}}>
-                              <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",color: pickupTimeMode==='scheduled' ? D.cyan : D.muted}}>🕐 CHOISIR L&apos;HEURE</div>
+                              <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".8rem",color: pickupTimeMode==='scheduled' ? D.cyan : D.muted}}>🕐 CHOISIR L&apos;HEURE</div>
                             </div>
                           </div>
                           {pickupTimeMode === 'scheduled' && (
                             <input type="time" value={pickupTimeValue} onChange={e => setPickupTimeValue(e.target.value)}
-                              style={{width:"100%",background:D.cardDark,border:`1px solid rgba(0,153,204,.25)`,borderRadius:4,padding:"12px",color:D.text,fontSize:".9rem",fontFamily:"'Rajdhani',sans-serif",cursor:"pointer"}} />
+                              style={{width:"100%",background:D.cardDark,border:`1px solid rgba(0,153,204,.25)`,borderRadius:4,padding:"12px",color:D.text,fontSize:".9rem",fontFamily:"'Nunito',sans-serif",cursor:"pointer"}} />
                           )}
                         </div>
                       </div>
@@ -1438,21 +1436,21 @@ export default function YassalaDayView() {
                           {settings.paymentOnlineEnabled !== false && (
                           <div onClick={() => setPaymentMethod('online')} style={{padding:"12px 8px",borderRadius:6,cursor: settings.paymentCashEnabled !== false ? "pointer" : "default",textAlign:"center",border: paymentMethod==='online' ? `2px solid ${D.cyan}` : `1px solid ${D.border}`,background: paymentMethod==='online' ? "rgba(0,153,204,.06)" : D.cardDark,transition:"all .2s"}}>
                             <div style={{fontSize:"1.4rem",marginBottom:4}}>💳</div>
-                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",color: paymentMethod==='online' ? D.cyan : D.text,letterSpacing:".05em"}}>PAYER EN LIGNE</div>
+                            <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".8rem",color: paymentMethod==='online' ? D.cyan : D.text,letterSpacing:".05em"}}>PAYER EN LIGNE</div>
                             <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:D.muted,marginTop:2}}>Carte · Apple Pay</div>
                           </div>
                           )}
                           {settings.paymentCashEnabled !== false && (
                           <div onClick={() => setPaymentMethod('cash')} style={{padding:"12px 8px",borderRadius:6,cursor: settings.paymentOnlineEnabled !== false ? "pointer" : "default",textAlign:"center",border: paymentMethod==='cash' ? `2px solid ${D.pink}` : `1px solid ${D.border}`,background: paymentMethod==='cash' ? "rgba(255,45,120,.06)" : D.cardDark,transition:"all .2s"}}>
                             <div style={{fontSize:"1.4rem",marginBottom:4}}>💵</div>
-                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".8rem",color: paymentMethod==='cash' ? D.pink : D.text,letterSpacing:".05em"}}>{fulfillmentType==='pickup' ? 'CASH AU RETRAIT' : 'CASH LIVRAISON'}</div>
+                            <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".8rem",color: paymentMethod==='cash' ? D.pink : D.text,letterSpacing:".05em"}}>{fulfillmentType==='pickup' ? 'CASH AU RETRAIT' : 'CASH LIVRAISON'}</div>
                             <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:D.muted,marginTop:2}}>Payer à la réception</div>
                           </div>
                           )}
                         </div>
                       </div>
                       <button onClick={submitOrder} disabled={submitting || cartTotal < deliveryConfig.minimum_order_amount || (settings.paymentOnlineEnabled === false && settings.paymentCashEnabled === false) || (settings.fulfillmentDeliveryEnabled === false && settings.fulfillmentPickupEnabled === false)}
-                        style={{width:"100%",background: submitting ? D.muted : paymentMethod==='online' ? D.cyan : D.pink,color: submitting ? "#fff" : "#fff",border:"none",borderRadius:4,padding:"16px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".1em",textTransform:"uppercase",cursor: submitting ? "not-allowed" : "pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                        style={{width:"100%",background: submitting ? D.muted : paymentMethod==='online' ? D.cyan : D.pink,color: submitting ? "#fff" : "#fff",border:"none",borderRadius:4,padding:"16px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".1em",textTransform:"uppercase",cursor: submitting ? "not-allowed" : "pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         {submitting ? "TRAITEMENT EN COURS..." : paymentMethod==='online' ? "💳 PAYER EN LIGNE" : fulfillmentType==='pickup' ? "🏪 CONFIRMER LE RETRAIT" : "💵 COMMANDER — CASH À LA LIVRAISON"}
                       </button>
                     </>
@@ -1497,7 +1495,7 @@ export default function YassalaDayView() {
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={() => shareProduct(selectedProduct)} style={{background:"transparent",border:`1px solid ${D.border}`,color:D.muted,borderRadius:4,padding:"10px 14px",cursor:"pointer",fontSize:".85rem"}}>↗</button>
                   <button onClick={() => { addToCart(selectedProduct.id, selectedProduct.name, selectedProduct.price); setSelectedProduct(null); }} disabled={selectedProduct.stock === 0}
-                    style={{background: selectedProduct.stock === 0 ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:4,padding:"10px 24px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".9rem",letterSpacing:".08em",cursor: selectedProduct.stock === 0 ? "not-allowed" : "pointer",textTransform:"uppercase"}}>
+                    style={{background: selectedProduct.stock === 0 ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:4,padding:"10px 24px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".9rem",letterSpacing:".08em",cursor: selectedProduct.stock === 0 ? "not-allowed" : "pointer",textTransform:"uppercase"}}>
                     {selectedProduct.stock === 0 ? "RUPTURE" : "+ AJOUTER"}
                   </button>
                 </div>
@@ -1565,10 +1563,10 @@ export default function YassalaDayView() {
                 {forgotSuccess ? (
                   <>
                     <div style={{textAlign:"center",fontSize:"2.5rem",lineHeight:1}}>✉️</div>
-                    <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.1rem",color:D.cyan,textAlign:"center",letterSpacing:".04em"}}>Email envoyé !</div>
+                    <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1.1rem",color:D.cyan,textAlign:"center",letterSpacing:".04em"}}>Email envoyé !</div>
                     <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,textAlign:"center",lineHeight:1.6}}>Vérifie ta boîte mail (et les spams).<br/>Le lien expire dans 1 heure.</div>
                     <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(""); }}
-                      style={{background:D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
+                      style={{background:D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
                       RETOUR À LA CONNEXION
                     </button>
                   </>
@@ -1576,10 +1574,10 @@ export default function YassalaDayView() {
                   <>
                     <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.muted,letterSpacing:".06em",lineHeight:1.6}}>Entre ton email et on t&apos;envoie un lien pour réinitialiser ton mot de passe.</div>
                     <input type="email" placeholder="Ton email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} onKeyDown={e => e.key==="Enter" && handleForgotPassword()}
-                      style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Rajdhani',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
+                      style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Nunito',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
                     {forgotError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.pink}}>{forgotError}</div>}
                     <button onClick={handleForgotPassword} disabled={forgotLoading}
-                      style={{background: forgotLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: forgotLoading ? "not-allowed" : "pointer"}}>
+                      style={{background: forgotLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: forgotLoading ? "not-allowed" : "pointer"}}>
                       {forgotLoading ? "..." : "ENVOYER LE LIEN"}
                     </button>
                     <button onClick={() => { setShowForgotPassword(false); setForgotError(""); setForgotEmail(""); }}
@@ -1593,12 +1591,12 @@ export default function YassalaDayView() {
               <div style={{padding:"22px 24px 0",display:"flex",flexDirection:"column",gap:14}}>
                 {authMode === "signup" && (
                   <input placeholder="Ton prénom" value={authName} onChange={e => setAuthName(e.target.value)}
-                    style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Rajdhani',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
+                    style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Nunito',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
                 )}
                 <input type="email" placeholder="Email" value={authEmail} onChange={e => setAuthEmail(e.target.value)}
-                  style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Rajdhani',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
+                  style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Nunito',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
                 <input type="password" placeholder="Mot de passe" value={authPassword} onChange={e => setAuthPassword(e.target.value)} onKeyDown={e => e.key==="Enter" && (authMode==="login" ? handleLogin() : handleSignup())}
-                  style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Rajdhani',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
+                  style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Nunito',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
                 {authMode === "login" && (
                   <button onClick={() => { setShowForgotPassword(true); setForgotEmail(authEmail); setForgotError(""); setForgotSuccess(false); }}
                     style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",letterSpacing:".06em",textDecoration:"underline",padding:0,textAlign:"right",alignSelf:"flex-end"}}>
@@ -1607,7 +1605,7 @@ export default function YassalaDayView() {
                 )}
                 {authError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.pink}}>{authError}</div>}
                 <button onClick={authMode==="login" ? handleLogin : handleSignup} disabled={authLoading}
-                  style={{background: authLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: authLoading ? "not-allowed" : "pointer"}}>
+                  style={{background: authLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: authLoading ? "not-allowed" : "pointer"}}>
                   {authLoading ? "..." : authMode==="login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
                 </button>
                 <button onClick={() => { setAuthMode(authMode==="login" ? "signup" : "login"); setAuthError(""); }}
@@ -1620,7 +1618,7 @@ export default function YassalaDayView() {
                   <div style={{flex:1,height:1,background:D.border}} />
                 </div>
                 <button onClick={handleGoogleLogin} disabled={authLoading}
-                  style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"#fff",color:"#111",border:`1px solid ${D.border}`,borderRadius:10,padding:"14px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",cursor: authLoading ? "not-allowed" : "pointer",letterSpacing:".04em",boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
+                  style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"#fff",color:"#111",border:`1px solid ${D.border}`,borderRadius:10,padding:"14px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",cursor: authLoading ? "not-allowed" : "pointer",letterSpacing:".04em",boxShadow:"0 1px 4px rgba(0,0,0,.08)"}}>
                   <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
                   {authLoading ? "..." : "Continuer avec Google"}
                 </button>
@@ -1630,7 +1628,7 @@ export default function YassalaDayView() {
             {/* Espace livreur */}
             <div style={{margin:"22px 24px 28px",background:"rgba(0,153,204,.04)",border:`1px solid rgba(0,153,204,.15)`,borderRadius:12,padding:"16px 18px"}}>
               <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"rgba(0,153,204,.5)",letterSpacing:".14em",marginBottom:10,textAlign:"center"}}>— ESPACE PROFESSIONNEL —</div>
-              <a href="/livreur" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"linear-gradient(135deg,rgba(0,153,204,.12) 0%,rgba(0,80,200,.08) 100%)",border:`1px solid rgba(0,153,204,.3)`,borderRadius:10,padding:"14px",textDecoration:"none",color:D.cyan,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em"}}>
+              <a href="/livreur" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"linear-gradient(135deg,rgba(0,153,204,.12) 0%,rgba(0,80,200,.08) 100%)",border:`1px solid rgba(0,153,204,.3)`,borderRadius:10,padding:"14px",textDecoration:"none",color:D.cyan,fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em"}}>
                 <span style={{fontSize:"1.3rem"}}>🏍️</span>
                 ESPACE LIVREUR
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"rgba(0,153,204,.5)",marginLeft:4}}>→</span>
@@ -1654,7 +1652,7 @@ export default function YassalaDayView() {
                   {(currentUser.displayName||currentUser.email||"?")[0].toUpperCase()}
                 </div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.1rem",color:D.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentUser.displayName||"Mon compte"}</div>
+                  <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1.1rem",color:D.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentUser.displayName||"Mon compte"}</div>
                   <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentUser.email}</div>
                 </div>
                 <button onClick={handleSignout} style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.15)`,color:D.pink,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".08em",whiteSpace:"nowrap"}}>DÉCO</button>
@@ -1726,7 +1724,7 @@ export default function YassalaDayView() {
             {driverSuccess ? (
               <div style={{padding:"40px 28px",textAlign:"center"}}>
                 <div style={{fontSize:"3rem",marginBottom:12}}>✅</div>
-                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1.2rem",color:"#22c55e",marginBottom:6}}>CANDIDATURE ENVOYÉE !</div>
+                <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1.2rem",color:"#22c55e",marginBottom:6}}>CANDIDATURE ENVOYÉE !</div>
                 <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:D.muted}}>On te recontacte très vite.</div>
               </div>
             ) : (
@@ -1735,7 +1733,7 @@ export default function YassalaDayView() {
                   <div key={f.field}>
                     <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>{f.label}</label>
                     <input value={(driverForm as any)[f.field]} onChange={e => setDriverForm(prev => ({...prev, [f.field]:e.target.value}))} placeholder={f.placeholder} type={f.type}
-                      style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Rajdhani',sans-serif",fontSize:".95rem"}} />
+                      style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Nunito',sans-serif",fontSize:".95rem"}} />
                   </div>
                 ))}
                 <div>
@@ -1743,7 +1741,7 @@ export default function YassalaDayView() {
                   <div style={{display:"flex",gap:8}}>
                     {([{val:"moto",label:"🏍️ Moto"},{val:"voiture",label:"🚗 Voiture"},{val:"velo",label:"🚲 Vélo"}] as const).map(v => (
                       <button key={v.val} onClick={() => setDriverForm(f => ({...f, vehicle:v.val}))}
-                        style={{flex:1,padding:"10px 8px",borderRadius:8,cursor:"pointer",background: driverForm.vehicle===v.val ? "rgba(0,153,204,.08)" : D.cardDark,border: driverForm.vehicle===v.val ? `1px solid rgba(0,153,204,.35)` : `1px solid ${D.border}`,color: driverForm.vehicle===v.val ? D.cyan : D.muted,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",transition:"all .2s"}}>
+                        style={{flex:1,padding:"10px 8px",borderRadius:8,cursor:"pointer",background: driverForm.vehicle===v.val ? "rgba(0,153,204,.08)" : D.cardDark,border: driverForm.vehicle===v.val ? `1px solid rgba(0,153,204,.35)` : `1px solid ${D.border}`,color: driverForm.vehicle===v.val ? D.cyan : D.muted,fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".85rem",transition:"all .2s"}}>
                         {v.label}
                       </button>
                     ))}
@@ -1752,12 +1750,12 @@ export default function YassalaDayView() {
                 <div>
                   <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>MESSAGE (optionnel)</label>
                   <textarea value={driverForm.message} onChange={e => setDriverForm(f => ({...f, message:e.target.value}))} placeholder="Parle-nous de toi, tes disponibilités..." rows={3}
-                    style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Rajdhani',sans-serif",fontSize:".95rem",resize:"vertical"}} />
+                    style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Nunito',sans-serif",fontSize:".95rem",resize:"vertical"}} />
                 </div>
                 <div style={{display:"flex",gap:10,marginTop:4}}>
-                  <button onClick={() => setShowDriverForm(false)} style={{flex:1,padding:"13px",borderRadius:10,border:`1px solid ${D.border}`,background:"transparent",color:D.muted,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",cursor:"pointer",letterSpacing:".06em"}}>ANNULER</button>
+                  <button onClick={() => setShowDriverForm(false)} style={{flex:1,padding:"13px",borderRadius:10,border:`1px solid ${D.border}`,background:"transparent",color:D.muted,fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".95rem",cursor:"pointer",letterSpacing:".06em"}}>ANNULER</button>
                   <button onClick={submitDriverApplication} disabled={driverSubmitting}
-                    style={{flex:2,padding:"13px",borderRadius:10,border:"none",background: driverSubmitting ? D.muted : `linear-gradient(135deg,${D.cyan},#0070aa)`,color:"#fff",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",cursor: driverSubmitting ? "wait" : "pointer",letterSpacing:".06em"}}>
+                    style={{flex:2,padding:"13px",borderRadius:10,border:"none",background: driverSubmitting ? D.muted : `linear-gradient(135deg,${D.cyan},#0070aa)`,color:"#fff",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".95rem",cursor: driverSubmitting ? "wait" : "pointer",letterSpacing:".06em"}}>
                     {driverSubmitting ? "ENVOI..." : "ENVOYER MA CANDIDATURE →"}
                   </button>
                 </div>
@@ -1788,7 +1786,7 @@ export default function YassalaDayView() {
                     Pour confirmer ta commande <span style={{color:D.pink}}>cash</span>, nous envoyons un code SMS au numéro :<div style={{color:D.text,fontSize:".9rem",marginTop:8,letterSpacing:".08em"}}>📞 {orderForm.phone.startsWith("+") ? orderForm.phone : `${phoneCountry} ${orderForm.phone}`}</div>
                   </div>
                   <div id="recaptcha-cash-sms-day" />
-                  <button onClick={handleCashSmsSend} disabled={cashSmsLoading} style={{background: cashSmsLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"15px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: cashSmsLoading ? "not-allowed" : "pointer"}}>
+                  <button onClick={handleCashSmsSend} disabled={cashSmsLoading} style={{background: cashSmsLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"15px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: cashSmsLoading ? "not-allowed" : "pointer"}}>
                     {cashSmsLoading ? "ENVOI EN COURS..." : "ENVOYER LE CODE SMS"}
                   </button>
                 </>
@@ -1797,7 +1795,7 @@ export default function YassalaDayView() {
                   <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".05em",lineHeight:1.6}}>Code envoyé ! Saisis les 6 chiffres reçus par SMS.</div>
                   <input type="number" placeholder="• • • • • •" maxLength={6} value={cashSmsCode} onChange={e => setCashSmsCode(e.target.value)} onKeyDown={e => e.key==="Enter" && handleCashSmsVerify()} autoFocus
                     style={{background:D.cardDark,border:`1px solid rgba(255,45,120,.25)`,borderRadius:8,padding:"16px",color:D.pink,fontFamily:"'Share Tech Mono',monospace",fontSize:"2rem",letterSpacing:".6em",textAlign:"center",outline:"none",width:"100%"}} />
-                  <button onClick={handleCashSmsVerify} disabled={cashSmsLoading || cashSmsCode.length < 6} style={{background: cashSmsLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"15px",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: cashSmsLoading ? "not-allowed" : "pointer",opacity: cashSmsCode.length < 6 ? .5 : 1}}>
+                  <button onClick={handleCashSmsVerify} disabled={cashSmsLoading || cashSmsCode.length < 6} style={{background: cashSmsLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"15px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: cashSmsLoading ? "not-allowed" : "pointer",opacity: cashSmsCode.length < 6 ? .5 : 1}}>
                     {cashSmsLoading ? "VÉRIFICATION..." : "✓ CONFIRMER LA COMMANDE"}
                   </button>
                   <button onClick={() => { setCashSmsStep("send"); setCashSmsCode(""); setCashSmsError(""); }} style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",textDecoration:"underline"}}>Renvoyer un code</button>
@@ -1839,7 +1837,7 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
         )}
         <div style={{position:"absolute",bottom:0,left:0,right:0,height:"55%",background:"linear-gradient(to top,rgba(255,255,255,.96),transparent)",pointerEvents:"none"}} />
         <div style={{position:"absolute",bottom:10,left:12,lineHeight:1}}>
-          {pp !== null && <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,textDecoration:"line-through",marginBottom:1}}>{Number(p.price).toFixed(2)}€</div>}
+          {pp !== null && <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,textDecoration:"line-through",marginBottom:1}}>{Number(p.price).toFixed(2)}€</div>}
           <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.35rem",color: pp !== null ? D.pink : D.pink}}>{(pp ?? Number(p.price)).toFixed(2)}€</div>
         </div>
         <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",flexDirection:"column",gap:5}}>
@@ -1861,12 +1859,12 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
         ) : null}
       </div>
       <div style={{padding:"12px 14px 14px"}}>
-        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:catColor(p.cat),letterSpacing:".15em",textTransform:"uppercase",marginBottom:5}}>{catLabel(p.cat)}</div>
-        <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".04em",textTransform:"uppercase",color:D.text,marginBottom:4}}>{p.name}</div>
-        <div style={{fontSize:".78rem",color:D.muted,lineHeight:1.5,marginBottom:10,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.desc}</div>
-        {p.stock > 0 && p.stock < 10 && <div style={{fontSize:".68rem",color:"#ff6b35",fontFamily:"'Share Tech Mono',monospace",marginBottom:8}}>Plus que {p.stock} en stock !</div>}
+        <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".72rem",color:catColor(p.cat),letterSpacing:".1em",textTransform:"uppercase",marginBottom:5}}>{catLabel(p.cat)}</div>
+        <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1.05rem",color:D.text,marginBottom:4}}>{p.name}</div>
+        <div style={{fontSize:".88rem",color:D.muted,lineHeight:1.6,marginBottom:10,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.desc}</div>
+        {p.stock > 0 && p.stock < 10 && <div style={{fontSize:".78rem",color:"#ff6b35",fontWeight:700,marginBottom:8}}>Plus que {p.stock} en stock !</div>}
         <button onClick={e => { e.stopPropagation(); addToCart(p.id, p.name, p.price); }} disabled={p.stock === 0}
-          style={{width:"100%",padding:"10px 0",borderRadius:3,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".85rem",letterSpacing:".12em",textTransform:"uppercase",border: p.stock===0 ? `1px solid ${D.muted}` : lastAddedId===p.id ? "1px solid #22c55e" : `1px solid ${D.pink}`,background: p.stock===0 ? "transparent" : lastAddedId===p.id ? "rgba(34,197,94,.06)" : "rgba(255,45,120,.06)",color: p.stock===0 ? D.muted : lastAddedId===p.id ? "#22c55e" : D.pink,cursor: p.stock===0 ? "not-allowed" : "pointer",transition:"all .3s"}}>
+          style={{width:"100%",padding:"11px 0",borderRadius:6,fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".9rem",letterSpacing:".08em",textTransform:"uppercase",border: p.stock===0 ? `1px solid ${D.muted}` : lastAddedId===p.id ? "1px solid #22c55e" : `1px solid ${D.pink}`,background: p.stock===0 ? "transparent" : lastAddedId===p.id ? "rgba(34,197,94,.06)" : "rgba(255,45,120,.06)",color: p.stock===0 ? D.muted : lastAddedId===p.id ? "#22c55e" : D.pink,cursor: p.stock===0 ? "not-allowed" : "pointer",transition:"all .3s"}}>
           {p.stock===0 ? "ÉPUISÉ" : lastAddedId===p.id ? "✓ AJOUTÉ" : "AJOUTER →"}
         </button>
       </div>
