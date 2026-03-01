@@ -55,14 +55,39 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ── orders ────────────────────────────────────────────────
-    // Conserver les règles existantes : admin RW, lecture publique limitée
-    match /orders/{orderId} {
-      allow read:  if isAdmin()
-        || resource.data.phone == request.auth.token.phone_number;
+    // ── relays ────────────────────────────────────────────────
+    // Lecture publique (authentification relai par PIN côté API)
+    // Écriture réservée à l'admin
+    match /relays/{relayId} {
+      allow read:  if true;
       allow write: if isAdmin();
-      // Création publique (passage de commande client)
+    }
+
+    // ── relayLogs ─────────────────────────────────────────────
+    // Lecture publique (stats relai)
+    // Création publique (scan QR par l'opérateur relai)
+    // Mise à jour/suppression réservées à l'admin
+    match /relayLogs/{logId} {
+      allow read:   if true;
       allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // ── orders ────────────────────────────────────────────────
+    // Lecture publique (nécessaire pour le scan QR relai)
+    // Création publique (passage de commande client)
+    // Mise à jour limitée : admin OU opérateur relai (COLLECTED uniquement)
+    match /orders/{orderId} {
+      allow read:   if true;
+      allow write:  if isAdmin();
+      allow create: if true;
+      // Opérateur relai peut uniquement marquer une commande comme COLLECTED
+      allow update: if isAdmin()
+        || (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["status", "collectedAt", "collectedBy", "updatedAt"])
+          && request.resource.data.status == "COLLECTED"
+        );
     }
 
     // ── autres collections existantes ─────────────────────────
