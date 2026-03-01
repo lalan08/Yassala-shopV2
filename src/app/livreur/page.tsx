@@ -144,17 +144,19 @@ export default function LivreurPage() {
     try { localStorage.setItem("yassala_driver", JSON.stringify({ phone: phone.trim(), driverId: driverDoc.id })); } catch {}
 
     // ── Marquer EN LIGNE dans la collection "drivers" ──
-    const goOnline = () => setDoc(doc(db, "drivers", driverDoc.id), {
+    setDoc(doc(db, "drivers", driverDoc.id), {
       uid: driverDoc.id,
       name: data.name || phone.trim(),
       status: "online",
       isOnline: true,
       lastSeen: serverTimestamp(),
     }, { merge: true });
-    goOnline();
-    // Heartbeat toutes les 20 secondes pour rester visible dans l'admin
+    // Heartbeat toutes les 20 secondes — ne touche PAS au status pour ne pas écraser "busy"
     if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    heartbeatRef.current = setInterval(goOnline, 20000);
+    heartbeatRef.current = setInterval(() => setDoc(doc(db, "drivers", driverDoc.id), {
+      isOnline: true,
+      lastSeen: serverTimestamp(),
+    }, { merge: true }), 20000);
   };
 
   const acceptContract = async () => {
@@ -195,16 +197,19 @@ export default function LivreurPage() {
         setLoggedIn(true);
 
         // Remettre le heartbeat en ligne
-        const goOnline = () => setDoc(doc(db, "drivers", snap.id), {
+        setDoc(doc(db, "drivers", snap.id), {
           uid: snap.id,
           name: data.name || saved.phone,
           status: "online",
           isOnline: true,
           lastSeen: serverTimestamp(),
         }, { merge: true });
-        goOnline();
+        // Heartbeat toutes les 20 secondes — ne touche PAS au status pour ne pas écraser "busy"
         if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-        heartbeatRef.current = setInterval(goOnline, 20000);
+        heartbeatRef.current = setInterval(() => setDoc(doc(db, "drivers", snap.id), {
+          isOnline: true,
+          lastSeen: serverTimestamp(),
+        }, { merge: true }), 20000);
       }).catch(() => {
         // Erreur réseau : on reste sur le formulaire de connexion
       });
@@ -297,6 +302,10 @@ export default function LivreurPage() {
   };
 
   const markDelivered = async (orderId: string) => {
+    // Fermer immédiatement le dialog pour éviter le double-clic
+    setConfirmAction(null);
+    setFilter("available");
+    const order = orders.find(o => o.id === orderId);
     await updateDoc(doc(db, "orders", orderId), {
       status: "livre",
       deliveredAt: new Date().toISOString(),
@@ -308,7 +317,6 @@ export default function LivreurPage() {
       lastSeen: serverTimestamp(),
       activeOrderIds: arrayRemove(orderId),
     }, { merge: true }).catch(() => {});
-    const order = orders.find(o => o.id === orderId);
     // Créditer le portefeuille + créer le document deliveries via API serveur (Admin SDK, fiable)
     fetch('/api/driver-wallet-credit', {
       method: 'POST',
@@ -320,7 +328,14 @@ export default function LivreurPage() {
         paidOnline: order?.paidOnline !== false,
         orderTotal: order?.total ?? 0,
       }),
-    }).catch(() => {});
+    }).then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.skipped) {
+        showToast("⚠️ Livraison confirmée mais le crédit wallet a échoué. Contacte le support.");
+      }
+    }).catch(() => {
+      showToast("⚠️ Livraison confirmée mais le crédit wallet a échoué. Contacte le support.");
+    });
     if (order?.email) {
       fetch('/api/email', {
         method: 'POST',
@@ -341,8 +356,6 @@ export default function LivreurPage() {
     }).catch(() => {});
 
     showToast("Commande marquée comme livrée !");
-    setConfirmAction(null);
-    setFilter("available");
   };
 
   const notifyArrival = async (orderId: string) => {
