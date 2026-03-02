@@ -810,18 +810,18 @@ export default function YassalaDayView() {
 
   // ── DAY COLORS ──
   const D = {
-    bg:       "#F6F7F9",
-    card:     "#FFFFFF",
-    cardDark: "#F1F3F6",
+    bg:       "#EEEDF4",
+    card:     "#F7F5FB",
+    cardDark: "#E8E6F0",
     text:     "#1a0033",
     muted:    "#7a6a8a",
     pink:     "#ff2d78",
     cyan:     "#0099cc",
     lime:     "#b8ff00",
-    border:   "#E6E8EC",
+    border:   "#DDDBE8",
     borderPink:"rgba(255,45,120,.25)",
-    overlay:  "rgba(246,247,249,.97)",
-    navBg:    "rgba(246,247,249,.95)",
+    overlay:  "rgba(238,237,244,.97)",
+    navBg:    "rgba(238,237,244,.95)",
   };
 
   return (
