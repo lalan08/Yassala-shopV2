@@ -307,10 +307,15 @@ export default function EtablissementsPage() {
                     style={{ background: "transparent", border: "1px solid rgba(251,191,36,.3)", color: "#fbbf24", padding: "8px 14px", borderRadius: 6, fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem", cursor: "pointer" }}>
                     ✏️ MODIFIER
                   </button>
-                  {/* Gérer (fiche) */}
+                  {/* Gérer menu (raccourci) */}
+                  <a href={`/admin/yassala-day/etablissements/${etab.id}/menu`}
+                    style={{ background: "linear-gradient(135deg,#ff2d78,#e01060)", color: "#fff", padding: "8px 16px", borderRadius: 6, fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+                    📋 MENU
+                  </a>
+                  {/* Gérer (fiche complète) */}
                   <a href={`/admin/yassala-day/etablissements/${etab.id}`}
                     style={{ background: "linear-gradient(135deg,#fbbf24,#f59e0b)", color: "#000", padding: "8px 16px", borderRadius: 6, fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
-                    GÉRER →
+                    ⚙ OPTIONS
                   </a>
                   {/* Supprimer */}
                   <button onClick={() => remove(etab)} style={S.btnDanger}>✕</button>
