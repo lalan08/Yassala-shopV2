@@ -25,7 +25,7 @@ const STRIPE_APPEARANCE_DAY = {
   theme: "stripe" as const,
   variables: {
     colorPrimary:    "#ff2d78",
-    colorBackground: "#ffffff",
+    colorBackground: "#f8f5ff",
     colorText:       "#1a0033",
     colorDanger:     "#ff2d78",
     fontFamily:      "'Nunito', sans-serif",
@@ -848,8 +848,8 @@ export default function YassalaDayView() {
         body{padding-bottom:90px;}
       `}</style>
 
-      {/* Fond blanc Day */}
-      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"#ffffff"}} />
+      {/* Fond Day */}
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"#f8f5ff"}} />
 
       {/* Bande info + countdown vers Night */}
       {/* Bande info livraison — uniquement les infos du jour */}
