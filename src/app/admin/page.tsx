@@ -1208,11 +1208,12 @@ export default function AdminPage() {
               { key:"pickup_locations",  label:"POINTS RELAIS",   icon:"🏪" },
             ]},
             { section:"YASSALA DAY", items:[
-              { key:"yassala_day_config",    label:"CONFIG JOUR",     icon:"☀️" },
-              { key:"yassala_day_products",  label:"PRODUITS JOUR",   icon:"🛍️" },
-              { key:"yassala_day_cats",      label:"CATÉGORIES JOUR", icon:"🗂️" },
-              { key:"yassala_day_packs",     label:"PACKS JOUR",      icon:"📦" },
-              { key:"yassala_day_offres",    label:"OFFRES DU JOUR",  icon:"🎁" },
+              { key:"yassala_day_config",          label:"CONFIG JOUR",     icon:"☀️" },
+              { key:"yassala_day_etablissements",  label:"ÉTABLISSEMENTS",  icon:"🏪" },
+              { key:"yassala_day_products",        label:"PRODUITS JOUR",   icon:"🛍️" },
+              { key:"yassala_day_cats",            label:"CATÉGORIES JOUR", icon:"🗂️" },
+              { key:"yassala_day_packs",           label:"PACKS JOUR",      icon:"📦" },
+              { key:"yassala_day_offres",          label:"OFFRES DU JOUR",  icon:"🎁" },
             ]},
           ] as const).map((group, gi) => (
             <div key={group.section}>
@@ -1230,7 +1231,7 @@ export default function AdminPage() {
               {!collapsedSections[group.section] && group.items.map(item => (
                 <button key={item.key}
                   className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
-                  onClick={() => { setTab(item.key); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
+                  onClick={() => { if (item.key === "yassala_day_etablissements") { window.location.href = "/admin/yassala-day/etablissements"; return; } setTab(item.key as any); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
                     background: tab===item.key ? "rgba(255,45,120,.08)" : "transparent",
                     border:"none",borderLeft: tab===item.key ? "2px solid #ff2d78" : "2px solid transparent",
@@ -1261,24 +1262,6 @@ export default function AdminPage() {
               ))}
             </div>
           ))}
-
-          {/* ── lien externe : nouvelle section Yassala Day ── */}
-          <div style={{padding:"12px 20px 8px",borderTop:"1px solid rgba(251,191,36,.12)",marginTop:8}}>
-            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".68rem",color:"#7a6520",
-              letterSpacing:".15em",textTransform:"uppercase",marginBottom:8}}>NOUVELLE SECTION</div>
-            <a href="/admin/yassala-day"
-              style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
-                background:"rgba(251,191,36,.08)",border:"none",borderLeft:"2px solid #fbbf24",
-                color:"#fbbf24",fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".88rem",
-                letterSpacing:".06em",textTransform:"uppercase",textDecoration:"none",
-                borderRadius:"0 6px 6px 0",transition:"background .15s"}}
-              onMouseEnter={e=>(e.currentTarget.style.background="rgba(251,191,36,.16)")}
-              onMouseLeave={e=>(e.currentTarget.style.background="rgba(251,191,36,.08)")}>
-              <span style={{fontSize:"1.1rem"}}>☀️</span>
-              <span>YASSALA DAY v2</span>
-              <span style={{marginLeft:"auto",fontSize:".75rem",opacity:.7}}>↗</span>
-            </a>
-          </div>
 
           {/* ── lien externe : module relais ── */}
           <div style={{padding:"12px 20px 8px",borderTop:"1px solid rgba(255,255,255,.05)",marginTop:8}}>

@@ -129,6 +129,7 @@ type Pack = { id: string; name: string; tag: string; emoji: string; items: strin
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
+type Etablissement = { id: string; name: string; slug?: string; description?: string; address?: string; phone?: string; logoUrl?: string; coverUrl?: string; openHours?: string; isActive: boolean; };
 
 const DEFAULT_DAY_CATS: Category[] = [
   { key: "boisson", label: "🥤 BOISSONS",   emoji: "🥤", order: 1 },
@@ -250,6 +251,10 @@ export default function YassalaDayView() {
   const [pickupTimeMode, setPickupTimeMode]   = useState<'asap'|'scheduled'>('asap');
   const [pickupTimeValue, setPickupTimeValue] = useState<string>('');
   const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock';snapshot:any;time:string|undefined}|null>(null);
+  // ÉTABLISSEMENTS
+  const [etablissements, setEtablissements] = useState<Etablissement[]>([]);
+  const [selectedEtab, setSelectedEtab]     = useState<Etablissement|null>(null);
+  const [etabSearch, setEtabSearch]         = useState("");
   // DELIVERY PRICING
   const [distanceKm, setDistanceKm]       = useState(0);
   const [deliveryStats, setDeliveryStats] = useState({ activeOrders:0, availableDrivers:1 });
@@ -299,9 +304,12 @@ export default function YassalaDayView() {
     });
   };
 
+  const etabCats = selectedEtab
+    ? dbCats.filter((c: any) => c.etablissementId === selectedEtab.id)
+    : (dbCats.length > 0 ? dbCats : DEFAULT_DAY_CATS);
   const cats = [
     { key:"all", label:"TOUT", emoji:"", order:0 },
-    ...(dbCats.length > 0 ? dbCats : DEFAULT_DAY_CATS),
+    ...etabCats,
   ];
 
   // LOAD DATA — collections Day
@@ -342,6 +350,11 @@ export default function YassalaDayView() {
         .sort((a,b) => (a.order??0)-(b.order??0));
       setDbCats(loaded);
     });
+    const unsubEtabs = onSnapshot(collection(db, "day_etablissements"), snap => {
+      setEtablissements(snap.docs.map(d => ({ id:d.id, ...d.data() } as Etablissement))
+        .filter(e => e.isActive)
+        .sort((a,b) => (a.name||"").localeCompare(b.name||"")));
+    });
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
@@ -360,7 +373,7 @@ export default function YassalaDayView() {
     const unsubPromos = onSnapshot(collection(db, "promotions"), snap => {
       setPromotions(snap.docs.map(d => ({ id:d.id, ...d.data() } as Promotion)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPromos(); };
+    return () => { unsubEtabs(); unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPromos(); };
   }, []);
 
   useEffect(() => {
@@ -643,8 +656,16 @@ export default function YassalaDayView() {
 
   const handlePaymentCancel = useCallback(() => { setStripeClientSecret(null); }, []);
 
-  const filtered = products.filter(p => p.isActive !== false && (activeCat === "all" || p.cat === activeCat));
-  const suggestions = selectedProduct ? products.filter(p => p.cat === selectedProduct.cat && p.id !== selectedProduct.id && p.stock > 0).slice(0, 4) : [];
+  const etabProds = selectedEtab
+    ? products.filter((p: any) => p.etablissementId === selectedEtab.id)
+    : products.filter((p: any) => !p.etablissementId);
+  const searchQ = etabSearch.toLowerCase().trim();
+  const filtered = etabProds.filter(p =>
+    p.isActive !== false &&
+    (activeCat === "all" || p.cat === activeCat) &&
+    (!searchQ || p.name.toLowerCase().includes(searchQ) || p.desc?.toLowerCase().includes(searchQ))
+  );
+  const suggestions = selectedProduct ? etabProds.filter(p => p.cat === selectedProduct.cat && p.id !== selectedProduct.id && p.stock > 0).slice(0, 4) : [];
 
   useEffect(() => {
     if (!selectedProduct || products.length < 3 || settings.aiRecommendEnabled === false) { setAiRecs([]); return; }
@@ -1033,8 +1054,175 @@ export default function YassalaDayView() {
         ))}
       </div>
 
+      {/* ── LISTE DES ÉTABLISSEMENTS (si aucun sélectionné) ── */}
+      {!selectedEtab && (
+        <section style={{padding:"44px 20px 56px",position:"relative",zIndex:1,background:"#F6F7F9"}}>
+          <div style={{maxWidth:960,margin:"0 auto"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28}}>
+              <div>
+                <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.7rem",color:"#1a1a2e",margin:0,letterSpacing:".02em"}}>
+                  ☀️ <span style={{color:D.pink}}>NOS ÉTABLISSEMENTS</span>
+                </h2>
+                <p style={{fontFamily:"'Nunito',sans-serif",fontSize:".82rem",color:D.muted,margin:"4px 0 0"}}>
+                  Choisissez un établissement pour voir son menu
+                </p>
+              </div>
+              {etablissements.length > 0 && (
+                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,background:"#f0f0f4",padding:"4px 12px",borderRadius:20}}>
+                  {etablissements.length} partenaire{etablissements.length>1?"s":""}
+                </span>
+              )}
+            </div>
+            {etablissements.length === 0 ? (
+              <div style={{textAlign:"center",padding:"72px 0",border:"1px dashed rgba(255,45,120,.2)",borderRadius:20}}>
+                <div style={{fontSize:"3.5rem",marginBottom:16}}>🏪</div>
+                <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",color:D.muted}}>
+                  Aucun établissement disponible pour le moment.
+                </div>
+                <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".85rem",color:"#bbb",marginTop:8}}>
+                  Revenez bientôt !
+                </div>
+              </div>
+            ) : (
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:20}}>
+                {etablissements.map(etab => (
+                  <div key={etab.id}
+                    onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); window.scrollTo({top:0,behavior:"smooth"}); }}
+                    style={{background:"#fff",borderRadius:18,overflow:"hidden",cursor:"pointer",
+                      boxShadow:"0 2px 14px rgba(0,0,0,.08)",transition:"transform .18s,box-shadow .18s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLDivElement).style.boxShadow="0 8px 28px rgba(0,0,0,.13)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="";(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 14px rgba(0,0,0,.08)";}}>
+                    {/* Cover image */}
+                    <div style={{height:140,position:"relative",overflow:"hidden",
+                      background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.18) 0%,rgba(0,153,204,.12) 100%)"}}>
+                      {etab.coverUrl && (
+                        <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                      )}
+                      {!etab.coverUrl && (
+                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",opacity:.18}}>🏪</div>
+                      )}
+                      {/* Logo flottant */}
+                      {etab.logoUrl && (
+                        <div style={{position:"absolute",bottom:-22,left:18,width:52,height:52,
+                          borderRadius:14,background:"#fff",border:"2.5px solid #fff",overflow:"hidden",
+                          boxShadow:"0 3px 12px rgba(0,0,0,.18)"}}>
+                          <img src={etab.logoUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                        </div>
+                      )}
+                    </div>
+                    {/* Infos */}
+                    <div style={{padding:etab.logoUrl?"28px 18px 18px 82px":"18px",paddingTop:etab.logoUrl?10:18}}>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:"#1a1a2e",marginBottom:3}}>
+                        {etab.name}
+                      </div>
+                      {etab.description && (
+                        <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".82rem",color:D.muted,marginBottom:8,lineHeight:1.45,
+                          overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>
+                          {etab.description}
+                        </div>
+                      )}
+                      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
+                        {etab.openHours && (
+                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.muted}}>🕐 {etab.openHours}</span>
+                        )}
+                        {etab.address && (
+                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:160}}>📍 {etab.address}</span>
+                        )}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color:D.pink}}>
+                          Voir le menu →
+                        </span>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
+                          color:"#22c55e",background:"rgba(34,197,94,.1)",padding:"3px 9px",borderRadius:20,letterSpacing:".06em"}}>
+                          OUVERT
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── HEADER ÉTABLISSEMENT SÉLECTIONNÉ (Uber Eats style) ── */}
+      {selectedEtab && (
+        <div style={{position:"sticky",top:0,zIndex:90,background:"#fff",borderBottom:"1px solid rgba(0,0,0,.08)",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
+          {/* Cover de l'établissement */}
+          {selectedEtab.coverUrl && (
+            <div style={{height:200,overflow:"hidden",position:"relative"}}>
+              <img src={selectedEtab.coverUrl} alt={selectedEtab.name} style={{width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.85)"}} />
+              <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5))"}} />
+            </div>
+          )}
+          <div style={{padding:"0 20px",maxWidth:960,margin:"0 auto"}}>
+            <div style={{display:"flex",alignItems:"flex-end",gap:16,paddingTop:selectedEtab.coverUrl?0:16,paddingBottom:16,
+              marginTop:selectedEtab.coverUrl?-40:0}}>
+              {/* Logo */}
+              {selectedEtab.logoUrl && (
+                <div style={{width:72,height:72,borderRadius:16,border:"3px solid #fff",overflow:"hidden",
+                  background:"#fff",flexShrink:0,boxShadow:"0 2px 14px rgba(0,0,0,.15)"}}>
+                  <img src={selectedEtab.logoUrl} alt={selectedEtab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                </div>
+              )}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <h1 style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.3rem",margin:0,
+                    textShadow:selectedEtab.coverUrl?"0 1px 4px rgba(0,0,0,.3)":undefined,
+                    color:selectedEtab.coverUrl?"#fff":"#1a1a2e"}}>
+                    {selectedEtab.name}
+                  </h1>
+                  <button onClick={() => { setSelectedEtab(null); setActiveCat("all"); window.scrollTo({top:0,behavior:"smooth"}); }}
+                    style={{background:"rgba(255,255,255,.15)",backdropFilter:"blur(4px)",border:"1px solid rgba(255,255,255,.3)",
+                      color:selectedEtab.coverUrl?"#fff":"#666",padding:"5px 12px",borderRadius:20,
+                      fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".75rem",cursor:"pointer",letterSpacing:".04em",whiteSpace:"nowrap"}}>
+                    ← Retour
+                  </button>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:14,marginTop:6,flexWrap:"wrap"}}>
+                  {selectedEtab.openHours && (
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                      color:selectedEtab.coverUrl?"rgba(255,255,255,.8)":"#6b7280"}}>
+                      🕐 {selectedEtab.openHours}
+                    </span>
+                  )}
+                  {selectedEtab.address && (
+                    <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",
+                      color:selectedEtab.coverUrl?"rgba(255,255,255,.75)":"#6b7280"}}>
+                      📍 {selectedEtab.address}
+                    </span>
+                  )}
+                  {selectedEtab.phone && (
+                    <a href={`tel:${selectedEtab.phone}`} style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",
+                      color:D.pink,textDecoration:"none",fontWeight:600}}>
+                      📞 {selectedEtab.phone}
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Barre de recherche dans l'établissement */}
+            <div style={{paddingBottom:14}}>
+              <div style={{position:"relative",maxWidth:420}}>
+                <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
+                <input
+                  value={etabSearch}
+                  onChange={e => setEtabSearch(e.target.value)}
+                  placeholder={`Rechercher dans ${selectedEtab.name}`}
+                  style={{width:"100%",background:"#f5f5f7",border:"1px solid #e5e7eb",borderRadius:24,
+                    padding:"10px 16px 10px 38px",fontFamily:"'Nunito',sans-serif",fontSize:".88rem",
+                    color:"#1a1a2e",outline:"none",boxSizing:"border-box"}}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── CATALOGUE ── */}
-      <section id="catalogue" style={{padding:"48px 16px 48px 16px",position:"relative",zIndex:1}}>
+      {selectedEtab && <section id="catalogue" style={{padding:"48px 16px 48px 16px",position:"relative",zIndex:1}}>
         {activePromo && (
           <div style={{padding:"0 12px",marginBottom:8}}>
             <FlashDealBanner promo={activePromo} products={products} source="home" onAddToCart={addToCart} />
@@ -1043,15 +1231,15 @@ export default function YassalaDayView() {
 
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px",flexWrap:"wrap",gap:10}}>
           <div className="section-title" style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.4rem",color:D.text,letterSpacing:".01em"}}>
-            Notre menu
+            {selectedEtab ? "Menu" : "Notre menu"}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             {settings.aiVoiceEnabled !== false && (
-              <VoiceOrderButton products={products} onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))} />
+              <VoiceOrderButton products={etabProds} onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))} />
             )}
             {!loading && (
               <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:600,fontSize:".78rem",color:D.muted,background:"#f5f5f7",borderRadius:20,padding:"4px 12px"}}>
-                {products.filter(p => p.stock > 0).length} articles
+                {etabProds.filter(p => p.stock > 0).length} articles
               </span>
             )}
           </div>
@@ -1059,7 +1247,7 @@ export default function YassalaDayView() {
 
         {/* À la une — Populaire */}
         {(() => {
-          const featured = products.filter(p => (p.badge === "HOT" || p.badge === "BEST") && p.stock > 0);
+          const featured = etabProds.filter(p => (p.badge === "HOT" || p.badge === "BEST") && p.stock > 0);
           if (!featured.length) return null;
           return (
             <div style={{marginBottom:28}}>
@@ -1135,7 +1323,7 @@ export default function YassalaDayView() {
             })}
           </div>
         )}
-      </section>
+      </section>}
 
       {/* LIVRAISON GRATUITE BANNER */}
       <div style={{margin:"0 28px 44px",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,flexWrap:"wrap",background:"linear-gradient(135deg,rgba(255,45,120,.04),rgba(0,153,204,.03))",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
