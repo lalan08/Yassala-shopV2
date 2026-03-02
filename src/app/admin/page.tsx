@@ -4056,30 +4056,52 @@ export default function AdminPage() {
                         color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>
                         🌙 TEXTE NUIT (21H–6H)
                       </div>
-                      <input
-                        type="text"
-                        value={settings.nightBannerText ?? ""}
-                        onChange={e => setSettings(s => ({...s, nightBannerText: e.target.value}))}
-                        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,45,120,.3)",
-                          borderRadius:6,padding:"10px 12px",color:"#fff",
-                          fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
-                          letterSpacing:".06em",boxSizing:"border-box"}}
-                      />
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <input
+                          type="text"
+                          value={settings.nightBannerText ?? ""}
+                          onChange={e => setSettings(s => ({...s, nightBannerText: e.target.value}))}
+                          style={{flex:1,background:"#080514",border:"1px solid rgba(255,45,120,.3)",
+                            borderRadius:6,padding:"10px 12px",color:"#fff",
+                            fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                            letterSpacing:".06em",boxSizing:"border-box"}}
+                        />
+                        <button
+                          onClick={() => setSettings(s => ({...s, nightBannerText: ""}))}
+                          title="Supprimer le texte"
+                          style={{background:"rgba(255,45,120,.15)",border:"1px solid rgba(255,45,120,.4)",
+                            borderRadius:6,padding:"10px 12px",color:"#ff2d78",cursor:"pointer",
+                            fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",flexShrink:0,
+                            lineHeight:1}}>
+                          ×
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
                         color:"#5a5470",letterSpacing:".1em",marginBottom:6}}>
                         ☀️ TEXTE JOUR (8H–21H)
                       </div>
-                      <input
-                        type="text"
-                        value={settings.dayBannerText ?? ""}
-                        onChange={e => setSettings(s => ({...s, dayBannerText: e.target.value}))}
-                        style={{width:"100%",background:"#080514",border:"1px solid rgba(251,191,36,.3)",
-                          borderRadius:6,padding:"10px 12px",color:"#fff",
-                          fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
-                          letterSpacing:".06em",boxSizing:"border-box"}}
-                      />
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <input
+                          type="text"
+                          value={settings.dayBannerText ?? ""}
+                          onChange={e => setSettings(s => ({...s, dayBannerText: e.target.value}))}
+                          style={{flex:1,background:"#080514",border:"1px solid rgba(251,191,36,.3)",
+                            borderRadius:6,padding:"10px 12px",color:"#fff",
+                            fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",
+                            letterSpacing:".06em",boxSizing:"border-box"}}
+                        />
+                        <button
+                          onClick={() => setSettings(s => ({...s, dayBannerText: ""}))}
+                          title="Supprimer le texte"
+                          style={{background:"rgba(251,191,36,.15)",border:"1px solid rgba(251,191,36,.4)",
+                            borderRadius:6,padding:"10px 12px",color:"#fbbf24",cursor:"pointer",
+                            fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",flexShrink:0,
+                            lineHeight:1}}>
+                          ×
+                        </button>
+                      </div>
                     </div>
                     <div style={{background:"rgba(255,45,120,.04)",borderRadius:6,padding:"10px 14px",
                       fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#5a5470",lineHeight:1.6}}>
