@@ -53,9 +53,6 @@ export default function NotFound() {
           </Link>
         </div>
 
-        <div style={{position:"fixed",inset:0,pointerEvents:"none",
-          background:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px)",
-          zIndex:1}} />
       </div>
     </>
   );
