@@ -54,6 +54,8 @@ export default function YassalaNightBanner() {
               : isDay ? dayText : nightText;
 
   if (pathname?.startsWith("/admin")) return null;
+  if (pathname?.startsWith("/livreur")) return null;
+  if (pathname?.startsWith("/relais")) return null;
   if (!text) return null;
 
   return (
@@ -61,7 +63,7 @@ export default function YassalaNightBanner() {
       style={{
         background: "#ff2d78",
         width: "100%",
-        padding: "8px 12px",
+        padding: "4px 12px",
         textAlign: "center",
         zIndex: 60,
         position: "relative",
@@ -71,12 +73,12 @@ export default function YassalaNightBanner() {
       <span
         style={{
           fontFamily: "'Share Tech Mono', monospace, sans-serif",
-          fontSize: ".72rem",
+          fontSize: ".68rem",
           color: "#fff",
           letterSpacing: ".1em",
           textTransform: "uppercase",
           fontWeight: 600,
-          lineHeight: 1.4,
+          lineHeight: 1.3,
         }}
       >
         {text}
