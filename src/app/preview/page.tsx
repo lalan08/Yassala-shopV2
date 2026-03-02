@@ -72,9 +72,7 @@ export default function Preview() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
         *{margin:0;padding:0;box-sizing:border-box;}
-        html,body{background:#04020a;color:#f0eeff;font-family:'Rajdhani',sans-serif;font-weight:500;min-height:100vh;overflow-x:hidden;}
-        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-          background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);}
+        html,body{background:#ffffff;color:#f0eeff;font-family:'Rajdhani',sans-serif;font-weight:500;min-height:100vh;overflow-x:hidden;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.4);}}
         .card-in{animation:fadeUp .35s both;}

@@ -1207,16 +1207,12 @@ function NightHome() {
         *{margin:0;padding:0;box-sizing:border-box;}
         html{scroll-behavior:smooth;}
         body{
-          background:#04020a !important;
+          background:#ffffff !important;
           color:#f0eeff !important;
           font-family:'Rajdhani',sans-serif !important;
           font-weight:500;
           min-height:100vh;
           overflow-x:hidden;
-        }
-        body::before{
-          content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-          background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
         }
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.4);}}
         @keyframes flicker{0%,95%,100%{opacity:1;}96%{opacity:.7;}97%{opacity:1;}98%{opacity:.5;}99%{opacity:1;}}
