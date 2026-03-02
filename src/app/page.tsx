@@ -1207,7 +1207,7 @@ function NightHome() {
         *{margin:0;padding:0;box-sizing:border-box;}
         html{scroll-behavior:smooth;}
         body{
-          background:#ffffff !important;
+          background:#04020a !important;
           color:#f0eeff !important;
           font-family:'Rajdhani',sans-serif !important;
           font-weight:500;
