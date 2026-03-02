@@ -25,7 +25,7 @@ const STRIPE_APPEARANCE_DAY = {
   theme: "stripe" as const,
   variables: {
     colorPrimary:    "#ff2d78",
-    colorBackground: "#f8f5ff",
+    colorBackground: "#F6F7F9",
     colorText:       "#1a0033",
     colorDanger:     "#ff2d78",
     fontFamily:      "'Nunito', sans-serif",
@@ -33,10 +33,10 @@ const STRIPE_APPEARANCE_DAY = {
   },
   rules: {
     ".Input": {
-      border:     "1px solid rgba(0,0,0,.15)",
+      border:     "1px solid #E6E8EC",
       padding:    "12px",
       fontSize:   ".9rem",
-      background: "#f4f0ff",
+      background: "#F1F3F6",
       color:      "#1a0033",
     },
     ".Label": {
@@ -46,7 +46,7 @@ const STRIPE_APPEARANCE_DAY = {
       letterSpacing: ".08em",
       textTransform: "uppercase",
     },
-    ".Tab": { border: "1px solid rgba(0,0,0,.1)", background: "#f4f0ff" },
+    ".Tab": { border: "1px solid #E6E8EC", background: "#F1F3F6" },
     ".Tab--selected": { border: "1px solid #ff2d78", background: "rgba(255,45,120,.06)" },
   },
 } as const;
@@ -789,18 +789,18 @@ export default function YassalaDayView() {
 
   // ── DAY COLORS ──
   const D = {
-    bg:       "#ffffff",
-    card:     "#ffffff",
-    cardDark: "#f7f7f7",
+    bg:       "#F6F7F9",
+    card:     "#FFFFFF",
+    cardDark: "#F1F3F6",
     text:     "#1a0033",
     muted:    "#7a6a8a",
     pink:     "#ff2d78",
     cyan:     "#0099cc",
     lime:     "#b8ff00",
-    border:   "rgba(0,0,0,.08)",
+    border:   "#E6E8EC",
     borderPink:"rgba(255,45,120,.25)",
-    overlay:  "rgba(255,255,255,.97)",
-    navBg:    "rgba(255,255,255,.95)",
+    overlay:  "rgba(246,247,249,.97)",
+    navBg:    "rgba(246,247,249,.95)",
   };
 
   return (
@@ -849,7 +849,7 @@ export default function YassalaDayView() {
       `}</style>
 
       {/* Fond Day */}
-      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"#f8f5ff"}} />
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"#F6F7F9"}} />
 
       {/* Bande info + countdown vers Night */}
       {/* Bande info livraison — uniquement les infos du jour */}
