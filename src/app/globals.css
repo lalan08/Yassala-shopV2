@@ -4,7 +4,7 @@
 
 :root {
   --radius: 0.75rem;
-  --background: #f8f5ff;
+  --background: #F6F7F9;
   --foreground: #FFFFFF;
   --card: #12121A;
   --card-foreground: #FFFFFF;
@@ -364,7 +364,9 @@ body {
 /* Yassala Day theme overrides */
 .yassala-day {
   --yd-pink: #ff2d78;
-  --yd-bg: #f9fafb;
-  --yd-card: #ffffff;
-  --yd-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --yd-bg: #F6F7F9;
+  --yd-section: #F1F3F6;
+  --yd-card: #FFFFFF;
+  --yd-border: #E6E8EC;
+  --yd-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
