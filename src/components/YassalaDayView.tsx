@@ -1093,17 +1093,20 @@ export default function YassalaDayView() {
                     onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLDivElement).style.boxShadow="0 8px 28px rgba(0,0,0,.13)";}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="";(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 14px rgba(0,0,0,.08)";}}>
                     {/* Cover image */}
-                    <div style={{height:140,position:"relative",overflow:"hidden",
+                    <div style={{height:140,position:"relative",
                       background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.18) 0%,rgba(0,153,204,.12) 100%)"}}>
-                      {etab.coverUrl && (
-                        <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
-                      )}
-                      {!etab.coverUrl && (
-                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",opacity:.18}}>🏪</div>
-                      )}
+                      {/* Clip only the image, not the floating logo */}
+                      <div style={{position:"absolute",inset:0,overflow:"hidden"}}>
+                        {etab.coverUrl && (
+                          <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                        )}
+                        {!etab.coverUrl && (
+                          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",opacity:.18}}>🏪</div>
+                        )}
+                      </div>
                       {/* Logo flottant */}
                       {etab.logoUrl && (
-                        <div style={{position:"absolute",bottom:-22,left:18,width:52,height:52,
+                        <div style={{position:"absolute",bottom:-22,left:18,width:52,height:52,zIndex:2,
                           borderRadius:14,background:"#fff",border:"2.5px solid #fff",overflow:"hidden",
                           boxShadow:"0 3px 12px rgba(0,0,0,.18)"}}>
                           <img src={etab.logoUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
