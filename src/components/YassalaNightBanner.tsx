@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, doc, onSnapshot } from "firebase/firestore";
 
@@ -17,6 +18,7 @@ const db = getFirestore(app);
 
 const DEFAULT_NIGHT = "LIVRAISON NOCTURNE DE 21H À 00H00 · CLICK & COLLECT JUSQU'À 6H · MATOURY UNIQUEMENT";
 const DEFAULT_DAY   = "LIVRAISON JOURNÉE DE 8H À 21H · MATOURY UNIQUEMENT";
+const UNSET = "__unset__";
 
 function isDayAuto(): boolean {
   const h = new Date().getHours();
@@ -24,8 +26,9 @@ function isDayAuto(): boolean {
 }
 
 export default function YassalaNightBanner() {
-  const [nightText, setNightText] = useState(DEFAULT_NIGHT);
-  const [dayText, setDayText]     = useState(DEFAULT_DAY);
+  const pathname = usePathname();
+  const [nightText, setNightText] = useState<string>(UNSET);
+  const [dayText, setDayText]     = useState<string>(UNSET);
   const [override, setOverride]   = useState<"auto" | "day" | "night">("auto");
   const [dayAuto, setDayAuto]     = useState(isDayAuto);
 
@@ -33,8 +36,8 @@ export default function YassalaNightBanner() {
     const unsub = onSnapshot(doc(db, "settings", "main"), snap => {
       if (snap.exists()) {
         const d = snap.data();
-        if (d.nightBannerText) setNightText(d.nightBannerText);
-        if (d.dayBannerText)   setDayText(d.dayBannerText);
+        setNightText(typeof d.nightBannerText === "string" ? d.nightBannerText : DEFAULT_NIGHT);
+        setDayText(typeof d.dayBannerText === "string" ? d.dayBannerText : DEFAULT_DAY);
         setOverride((d.themeOverride ?? "auto") as "auto" | "day" | "night");
       }
     });
@@ -47,6 +50,11 @@ export default function YassalaNightBanner() {
   }, []);
 
   const isDay = override === "day" ? true : override === "night" ? false : dayAuto;
+  const text  = nightText === UNSET ? (isDay ? DEFAULT_DAY : DEFAULT_NIGHT)
+              : isDay ? dayText : nightText;
+
+  if (pathname?.startsWith("/admin")) return null;
+  if (!text) return null;
 
   return (
     <div
@@ -71,7 +79,7 @@ export default function YassalaNightBanner() {
           lineHeight: 1.4,
         }}
       >
-        {isDay ? dayText : nightText}
+        {text}
       </span>
     </div>
   );
