@@ -833,10 +833,10 @@ export default function YassalaDayView() {
           .clock-hero{display:none !important;}
           .info-bar{flex-wrap:wrap !important;}
           .info-bar-item{flex:0 0 50% !important;}
-          .cat-bar{gap:6px !important;padding:12px 12px !important;}
-          .cat-btn{padding:10px 18px !important;font-size:.88rem !important;}
-          .section-title{font-size:1.4rem !important;}
-          .products-grid{grid-template-columns:1fr !important;}
+          .cat-bar{gap:8px !important;padding:10px 12px !important;}
+          .cat-btn{padding:8px 10px !important;min-width:60px !important;}
+          .section-title{font-size:1.2rem !important;}
+          .products-grid{grid-template-columns:repeat(2,1fr) !important;}
         }
         @media(max-width:400px){
           .nav-logo{font-size:1.2rem !important;}
@@ -1042,39 +1042,46 @@ export default function YassalaDayView() {
         )}
 
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px",flexWrap:"wrap",gap:10}}>
-          <div className="section-title" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",letterSpacing:".05em",color:D.text}}>
-            🛒 <span style={{color:D.pink}}>CATALOGUE</span>
+          <div className="section-title" style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.4rem",color:D.text,letterSpacing:".01em"}}>
+            Notre menu
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             {settings.aiVoiceEnabled !== false && (
               <VoiceOrderButton products={products} onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))} />
             )}
             {!loading && (
-              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.cyan,letterSpacing:".1em",textTransform:"uppercase",background:"rgba(0,153,204,.06)",border:`1px solid rgba(0,153,204,.2)`,borderRadius:12,padding:"4px 10px"}}>
-                {products.filter(p => p.stock > 0).length} dispo
+              <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:600,fontSize:".78rem",color:D.muted,background:"#f5f5f7",borderRadius:20,padding:"4px 12px"}}>
+                {products.filter(p => p.stock > 0).length} articles
               </span>
             )}
           </div>
         </div>
 
-        {/* À la une */}
+        {/* À la une — Populaire */}
         {(() => {
           const featured = products.filter(p => (p.badge === "HOT" || p.badge === "BEST") && p.stock > 0);
           if (!featured.length) return null;
           return (
             <div style={{marginBottom:28}}>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".12em",textTransform:"uppercase",padding:"0 12px",marginBottom:10}}>★ À LA UNE</div>
-              <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 12px 6px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 12px",marginBottom:14}}>
+                <span style={{fontSize:"1.2rem"}}>🔥</span>
+                <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>Populaire</div>
+              </div>
+              <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 12px 8px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
                 {featured.map(p => (
                   <div key={p.id} onClick={() => openProductModal(p)}
-                    style={{flexShrink:0,width:140,background:D.card,border: p.badge==="HOT" ? `1px solid rgba(255,45,120,.3)` : `1px solid rgba(255,180,0,.3)`,borderRadius:8,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
-                    {p.image && <img src={p.image} alt={p.name} style={{width:"100%",height:90,objectFit:"cover",display:"block"}} />}
-                    <div style={{padding:"8px 10px"}}>
-                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".95rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
-                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".9rem",color: p.badge==="HOT" ? D.pink : "#ffb400",marginTop:2}}>{p.price.toFixed(2)}€</div>
+                    style={{flexShrink:0,width:150,background:"#fff",borderRadius:14,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
+                    {p.image ? (
+                      <img src={p.image} alt={p.name} style={{width:"100%",height:100,objectFit:"cover",display:"block"}} />
+                    ) : (
+                      <div style={{width:"100%",height:100,display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f5f7",fontSize:"2.5rem",opacity:.3}}>🍽️</div>
+                    )}
+                    <div style={{padding:"8px 10px 10px"}}>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".9rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".88rem",color:D.pink,marginTop:3}}>{p.price.toFixed(2)}€</div>
                     </div>
-                    <span style={{position:"absolute",top:6,right:6,background: p.badge==="HOT" ? "rgba(255,45,120,.9)" : "rgba(255,180,0,.95)",color:"#fff",fontSize:".6rem",fontFamily:"'Share Tech Mono',monospace",fontWeight:700,padding:"2px 6px",borderRadius:3,letterSpacing:".08em"}}>
-                      {p.badge==="HOT" ? "🔥 HOT" : "⭐ BEST"}
+                    <span style={{position:"absolute",top:8,left:8,background: p.badge==="HOT" ? D.pink : "#ffb400",color:"#fff",fontSize:".6rem",fontFamily:"'Nunito',sans-serif",fontWeight:700,padding:"2px 8px",borderRadius:20}}>
+                      {p.badge==="HOT" ? "🔥" : "⭐"}
                     </span>
                   </div>
                 ))}
@@ -1084,25 +1091,28 @@ export default function YassalaDayView() {
         })()}
 
         {/* Filtres catégories */}
-        <div className="cat-bar" style={{display:"flex",gap:8,marginBottom:14,padding:"0 12px 6px"}}>
+        <div className="cat-bar" style={{display:"flex",gap:10,marginBottom:20,padding:"0 12px 10px"}}>
           {cats.map(c => (
             <button key={c.key} className="cat-btn" onClick={() => setActiveCat(c.key)}
-              style={{padding:"12px 24px",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",borderRadius:24,whiteSpace:"nowrap",transition:"all .2s",
-                border: activeCat===c.key ? `1px solid ${D.pink}` : `1px solid rgba(0,0,0,.15)`,
-                background: activeCat===c.key ? "rgba(255,45,120,.08)" : D.card,
-                color: activeCat===c.key ? D.pink : D.muted,
-                boxShadow: activeCat===c.key ? "0 0 12px rgba(255,45,120,.15)" : "0 1px 4px rgba(0,0,0,.06)"}}>
-              {c.label}
+              style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,
+                padding:"10px 14px",minWidth:72,cursor:"pointer",borderRadius:16,transition:"all .2s",border:"none",
+                background: activeCat===c.key ? D.pink : "#f5f5f7",
+                color: activeCat===c.key ? "#fff" : D.muted,
+                boxShadow: activeCat===c.key ? "0 4px 14px rgba(255,45,120,.28)" : "0 1px 3px rgba(0,0,0,.07)"}}>
+              <span style={{fontSize:"1.5rem",lineHeight:1}}>{c.emoji || "🛍️"}</span>
+              <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".65rem",letterSpacing:".05em",textTransform:"uppercase",lineHeight:1.2,textAlign:"center"}}>
+                {c.emoji ? c.label.replace(c.emoji,"").trim() : c.label}
+              </span>
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div style={{textAlign:"center",color:D.muted,fontFamily:"'Share Tech Mono',monospace",padding:"60px",fontSize:".85rem"}}>// chargement des produits...</div>
+          <div style={{textAlign:"center",color:D.muted,fontFamily:"'Nunito',sans-serif",padding:"60px",fontSize:".9rem"}}>Chargement des produits...</div>
         ) : filtered.length === 0 ? (
-          <div style={{textAlign:"center",color:D.muted,fontFamily:"'Share Tech Mono',monospace",padding:"60px",fontSize:".85rem",border:`1px dashed rgba(0,0,0,.15)`,borderRadius:8}}>// aucun produit pour le moment — revenez plus tard !</div>
+          <div style={{textAlign:"center",color:D.muted,fontFamily:"'Nunito',sans-serif",padding:"60px",fontSize:".9rem",background:"#f9f9f9",borderRadius:12}}>Aucun produit disponible pour le moment.</div>
         ) : activeCat !== "all" ? (
-          <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:14}}>
+          <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
             {filtered.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
           </div>
         ) : (
@@ -1112,12 +1122,12 @@ export default function YassalaDayView() {
               if (catProds.length === 0) return null;
               return (
                 <div key={cat.key}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:10,borderBottom:`1px solid ${catColor(cat.key)}22`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:10,borderBottom:`1px solid rgba(0,0,0,.08)`}}>
                     <span style={{fontSize:"1.3rem"}}>{cat.emoji}</span>
-                    <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",letterSpacing:".06em",color:catColor(cat.key)}}>{cat.label.toUpperCase()}</span>
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.muted,letterSpacing:".1em",marginLeft:4}}>{catProds.length} produit{catProds.length > 1 ? "s" : ""}</span>
+                    <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>{cat.emoji ? cat.label.replace(cat.emoji,"").trim() : cat.label}</span>
+                    <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",color:D.muted,marginLeft:2}}>{catProds.length} produit{catProds.length > 1 ? "s" : ""}</span>
                   </div>
-                  <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:14}}>
+                  <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
                     {catProds.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
                   </div>
                 </div>
@@ -1845,45 +1855,51 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
   const pp = getProductPromoPrice(p.id, p.price, activePromo);
   return (
     <div onClick={() => openProductModal(p)}
-      style={{background:D.card,border: lastAddedId===p.id ? `1px solid #22c55e` : p.cat==="snack_peyi" ? `1px solid rgba(255,140,0,.2)` : `1px solid ${D.border}`,borderRadius:8,overflow:"hidden",cursor:"pointer",position:"relative",opacity: p.stock===0 ? 0.55 : 1,transition:"border-color .3s, box-shadow .3s",boxShadow: lastAddedId===p.id ? "0 0 14px rgba(34,197,94,.2)" : "0 2px 8px rgba(0,0,0,.06)"}}>
-      <div style={{position:"relative",aspectRatio:"16/9",overflow:"hidden",background:"linear-gradient(135deg,rgba(255,45,120,.04),rgba(0,153,204,.03))"}}>
+      style={{background:"#fff",borderRadius:16,overflow:"hidden",cursor:"pointer",position:"relative",opacity: p.stock===0 ? 0.6 : 1,transition:"transform .2s, box-shadow .2s",boxShadow: lastAddedId===p.id ? "0 4px 20px rgba(34,197,94,.18)" : "0 2px 12px rgba(0,0,0,.08)",border: lastAddedId===p.id ? "2px solid #22c55e" : "2px solid transparent"}}>
+
+      {/* Image */}
+      <div style={{position:"relative",height:160,overflow:"hidden",background:"#f5f5f7"}}>
         {p.image ? (
           <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
         ) : (
-          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3.5rem",opacity:.3}}>📷</div>
+          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",opacity:.25}}>🍽️</div>
         )}
-        <div style={{position:"absolute",bottom:0,left:0,right:0,height:"55%",background:"linear-gradient(to top,rgba(255,255,255,.96),transparent)",pointerEvents:"none"}} />
-        <div style={{position:"absolute",bottom:10,left:12,lineHeight:1}}>
-          {pp !== null && <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,textDecoration:"line-through",marginBottom:1}}>{Number(p.price).toFixed(2)}€</div>}
-          <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.35rem",color: pp !== null ? D.pink : D.pink}}>{(pp ?? Number(p.price)).toFixed(2)}€</div>
-        </div>
-        <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",flexDirection:"column",gap:5}}>
-          <button onClick={e => { e.stopPropagation(); toggleLike(p.id); }}
-            style={{width:32,height:32,background:"rgba(255,255,255,.85)",backdropFilter:"blur(6px)",border: likes.has(p.id) ? `1px solid rgba(255,45,120,.4)` : `1px solid ${D.border}`,borderRadius:6,cursor:"pointer",fontSize:".95rem",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
-            <span style={{color: likes.has(p.id) ? D.pink : D.muted,lineHeight:1}}>{likes.has(p.id) ? "♥" : "♡"}</span>
-          </button>
-          <button onClick={e => { e.stopPropagation(); shareProduct(p); }}
-            style={{width:32,height:32,background:"rgba(255,255,255,.85)",backdropFilter:"blur(6px)",border:`1px solid ${D.border}`,borderRadius:6,cursor:"pointer",fontSize:".72rem",color:D.muted,display:"flex",alignItems:"center",justifyContent:"center"}}>↗</button>
-        </div>
+
+        {/* Bouton like */}
+        <button onClick={e => { e.stopPropagation(); toggleLike(p.id); }}
+          style={{position:"absolute",top:10,right:10,width:34,height:34,background:"rgba(255,255,255,.92)",backdropFilter:"blur(8px)",border:"none",borderRadius:"50%",cursor:"pointer",fontSize:"1rem",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",zIndex:3}}>
+          <span style={{color: likes.has(p.id) ? D.pink : "#aaa",lineHeight:1}}>{likes.has(p.id) ? "♥" : "♡"}</span>
+        </button>
+
+        {/* Badge */}
         {p.stock === 0 ? (
-          <span style={{position:"absolute",top:8,left:8,fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".12em",textTransform:"uppercase",padding:"3px 9px",borderRadius:3,zIndex:4,background:"rgba(0,0,0,.55)",color:"#fff",fontWeight:700,backdropFilter:"blur(4px)"}}>RUPTURE</span>
+          <span style={{position:"absolute",top:10,left:10,background:"rgba(0,0,0,.65)",color:"#fff",fontSize:".65rem",fontFamily:"'Nunito',sans-serif",fontWeight:700,padding:"3px 10px",borderRadius:20,zIndex:4}}>ÉPUISÉ</span>
         ) : activePromo && activePromo.productIds.includes(p.id) ? (
-          <span style={{position:"absolute",top:8,left:8,fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".12em",textTransform:"uppercase",padding:"3px 9px",borderRadius:3,zIndex:4,fontWeight:700,backdropFilter:"blur(4px)",background:"rgba(255,45,120,.9)",color:"#fff",boxShadow:"0 0 10px rgba(255,45,120,.4)",animation:"flashPulse 1.2s ease-in-out infinite"}}>🔥 FLASH</span>
+          <span style={{position:"absolute",top:10,left:10,background:D.pink,color:"#fff",fontSize:".65rem",fontFamily:"'Nunito',sans-serif",fontWeight:700,padding:"3px 10px",borderRadius:20,zIndex:4,animation:"flashPulse 1.2s ease-in-out infinite"}}>🔥 FLASH</span>
         ) : p.badge ? (
-          <span style={{position:"absolute",top:8,left:8,fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".12em",textTransform:"uppercase",padding:"3px 9px",borderRadius:3,zIndex:4,fontWeight:700,backdropFilter:"blur(4px)",background: getBadgeType(p.badge)==="hot" ? "rgba(255,45,120,.9)" : getBadgeType(p.badge)==="new" ? "rgba(34,197,94,.9)" : getBadgeType(p.badge)==="best" ? "rgba(255,180,0,.95)" : "rgba(0,153,204,.9)",color:"#fff"}}>
+          <span style={{position:"absolute",top:10,left:10,background: getBadgeType(p.badge)==="hot" ? D.pink : getBadgeType(p.badge)==="new" ? "#22c55e" : getBadgeType(p.badge)==="best" ? "#ffb400" : D.cyan,color:"#fff",fontSize:".65rem",fontFamily:"'Nunito',sans-serif",fontWeight:700,padding:"3px 10px",borderRadius:20,zIndex:4}}>
             {p.badge === "BEST" ? "⭐ BEST" : p.badge}
           </span>
         ) : null}
       </div>
+
+      {/* Infos */}
       <div style={{padding:"12px 14px 14px"}}>
-        <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".72rem",color:catColor(p.cat),letterSpacing:".1em",textTransform:"uppercase",marginBottom:5}}>{catLabel(p.cat)}</div>
-        <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1.05rem",color:D.text,marginBottom:4}}>{p.name}</div>
-        <div style={{fontSize:".88rem",color:D.muted,lineHeight:1.6,marginBottom:10,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{p.desc}</div>
-        {p.stock > 0 && p.stock < 10 && <div style={{fontSize:".78rem",color:"#ff6b35",fontWeight:700,marginBottom:8}}>Plus que {p.stock} en stock !</div>}
-        <button onClick={e => { e.stopPropagation(); addToCart(p.id, p.name, p.price); }} disabled={p.stock === 0}
-          style={{width:"100%",padding:"11px 0",borderRadius:6,fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".9rem",letterSpacing:".08em",textTransform:"uppercase",border: p.stock===0 ? `1px solid ${D.muted}` : lastAddedId===p.id ? "1px solid #22c55e" : `1px solid ${D.pink}`,background: p.stock===0 ? "transparent" : lastAddedId===p.id ? "rgba(34,197,94,.06)" : "rgba(255,45,120,.06)",color: p.stock===0 ? D.muted : lastAddedId===p.id ? "#22c55e" : D.pink,cursor: p.stock===0 ? "not-allowed" : "pointer",transition:"all .3s"}}>
-          {p.stock===0 ? "ÉPUISÉ" : lastAddedId===p.id ? "✓ AJOUTÉ" : "AJOUTER →"}
-        </button>
+        <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",color:D.text,marginBottom:3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+        <div style={{fontSize:".82rem",color:D.muted,lineHeight:1.5,marginBottom:10,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",fontFamily:"'Nunito',sans-serif"}}>{p.desc}</div>
+        {p.stock > 0 && p.stock < 10 && <div style={{fontSize:".75rem",color:"#ff6b35",fontWeight:700,marginBottom:8}}>Plus que {p.stock} !</div>}
+
+        {/* Prix + bouton + */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div>
+            {pp !== null && <div style={{fontSize:".72rem",color:D.muted,textDecoration:"line-through",fontFamily:"'Nunito',sans-serif"}}>{Number(p.price).toFixed(2)}€</div>}
+            <div style={{fontWeight:800,fontSize:"1.1rem",color:D.text,fontFamily:"'Nunito',sans-serif",lineHeight:1}}>{(pp ?? Number(p.price)).toFixed(2)}€</div>
+          </div>
+          <button onClick={e => { e.stopPropagation(); addToCart(p.id, p.name, p.price); }} disabled={p.stock === 0}
+            style={{width:38,height:38,background: p.stock===0 ? "#e5e5e5" : lastAddedId===p.id ? "#22c55e" : D.pink,border:"none",borderRadius:"50%",color:"#fff",fontSize: lastAddedId===p.id ? "1rem" : "1.4rem",display:"flex",alignItems:"center",justifyContent:"center",cursor: p.stock===0 ? "not-allowed" : "pointer",boxShadow: p.stock===0 ? "none" : lastAddedId===p.id ? "0 2px 8px rgba(34,197,94,.35)" : `0 2px 8px rgba(255,45,120,.35)`,transition:"all .25s",fontFamily:"'Nunito',sans-serif",fontWeight:700}}>
+            {p.stock===0 ? "✕" : lastAddedId===p.id ? "✓" : "+"}
+          </button>
+        </div>
       </div>
     </div>
   );
