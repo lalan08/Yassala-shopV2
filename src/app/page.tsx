@@ -1470,7 +1470,7 @@ function NightHome() {
             {icon:"📡", color:"#00c3ff", glow:"rgba(0,195,255,.35)",   title:settings.zone,      sub:"couverture totale"},
             {icon:"🌙", color:"#a78bfa", glow:"rgba(167,139,250,.35)", title:settings.hours,     sub:"7j/7"},
           ].map((item,i,arr) => (
-            <div key={i} style={{
+            <div key={i} className="info-bar-item" style={{
               flex:1,
               padding:"16px 10px",
               display:"flex",
