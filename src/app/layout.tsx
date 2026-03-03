@@ -3,6 +3,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import ChatWidgetLoader from "@/components/ChatWidgetLoader";
 import YassalaNightBanner from "@/components/YassalaNightBanner";
+import ModeCountdownBanner from "@/components/ModeCountdownBanner";
 
 export const viewport: Viewport = {
   themeColor: "#ff2d78",
@@ -59,6 +60,7 @@ export default function RootLayout({
       </head>
       <body>
         <YassalaNightBanner />
+        <ModeCountdownBanner />
         {children}
         <ChatWidgetLoader />
         <SpeedInsights />
