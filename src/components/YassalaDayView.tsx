@@ -1087,126 +1087,63 @@ export default function YassalaDayView() {
               </div>
             </div>
           ) : (
-            <>
-              {/* Scroll horizontal — style Uber Eats */}
-              <div style={{display:"flex",gap:14,overflowX:"auto",padding:"4px 20px 12px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+            <div style={{padding:"4px 20px 20px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
                 {etablissements.map(etab => (
                   <div key={etab.id}
                     onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
-                    style={{flexShrink:0,width:208,background:"#fff",borderRadius:20,overflow:"hidden",cursor:"pointer",
-                      boxShadow:"0 2px 12px rgba(0,0,0,.08)",transition:"transform .15s,box-shadow .15s"}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLDivElement).style.boxShadow="0 8px 24px rgba(0,0,0,.13)";}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="";(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 12px rgba(0,0,0,.08)";}}>
-                    {/* Cover image */}
-                    <div style={{height:120,position:"relative",
-                      background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.2) 0%,rgba(0,153,204,.14) 100%)"}}>
+                    style={{background:"#fff",borderRadius:16,overflow:"hidden",cursor:"pointer",
+                      boxShadow:"0 2px 12px rgba(0,0,0,.07)",transition:"transform .15s,box-shadow .15s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLDivElement).style.boxShadow="0 8px 28px rgba(0,0,0,.12)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="";(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 12px rgba(0,0,0,.07)";}}>
+                    {/* Image 16:9 */}
+                    <div style={{position:"relative",aspectRatio:"16/9",
+                      background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.12) 0%,rgba(0,153,204,.1) 100%)"}}>
                       {etab.coverUrl ? (
-                        <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                        <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
                       ) : (
-                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3.5rem",opacity:.2}}>🏪</div>
+                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",opacity:.15}}>🏪</div>
                       )}
                       {/* Badge statut */}
-                      <div style={{position:"absolute",top:8,right:8,
-                        background: etab.isActive ? "rgba(34,197,94,.9)" : "rgba(120,120,120,.8)",
-                        color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 9px",borderRadius:20,
-                        fontFamily:"'Nunito',sans-serif",backdropFilter:"blur(4px)"}}>
+                      <div style={{position:"absolute",top:10,left:10,
+                        background:etab.isActive?"rgba(34,197,94,.92)":"rgba(100,100,100,.82)",
+                        color:"#fff",fontSize:".65rem",fontWeight:700,padding:"4px 10px",borderRadius:20,
+                        fontFamily:"'Nunito',sans-serif",backdropFilter:"blur(4px)",letterSpacing:".06em"}}>
                         {etab.isActive ? "OUVERT" : "FERMÉ"}
                       </div>
-                      {/* Logo flottant */}
-                      {etab.logoUrl && (
-                        <div style={{position:"absolute",bottom:-18,left:14,width:44,height:44,zIndex:2,
-                          borderRadius:12,background:"#fff",border:"2.5px solid #fff",overflow:"hidden",
-                          boxShadow:"0 3px 10px rgba(0,0,0,.16)"}}>
-                          <img src={etab.logoUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
-                        </div>
-                      )}
                     </div>
                     {/* Infos */}
-                    <div style={{padding:"14px 12px 12px",paddingTop:etab.logoUrl?24:12}}>
-                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".95rem",color:"#1a1a2e",
-                        overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",marginBottom:3}}>
+                    <div style={{padding:"14px 16px 16px"}}>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1.08rem",
+                        color:"#1a1a2e",marginBottom:5,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
                         {etab.name}
                       </div>
                       {etab.description && (
-                        <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,
-                          overflow:"hidden",display:"-webkit-box",WebkitLineClamp:1,WebkitBoxOrient:"vertical",marginBottom:4}}>
+                        <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".82rem",color:D.muted,marginBottom:8,
+                          overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>
                           {etab.description}
                         </div>
                       )}
-                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                         {etab.openHours && (
-                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".7rem",color:D.muted}}>🕐 {etab.openHours}</span>
+                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",color:D.muted}}>🕐 {etab.openHours}</span>
                         )}
                         {etab.address && (
-                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".7rem",color:D.muted,
-                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:130}}>📍 {etab.address}</span>
+                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",color:D.muted,
+                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180}}>📍 {etab.address}</span>
                         )}
                       </div>
-                      <div style={{marginTop:8,fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".78rem",color:D.pink}}>
-                        Voir le menu →
+                      <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color:D.pink}}>
+                          Voir le menu
+                        </span>
+                        <span style={{color:D.pink,fontSize:"1.1rem",fontWeight:700}}>›</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-
-              {/* Grille complète en dessous */}
-              {etablissements.length > 3 && (
-                <div style={{padding:"8px 20px 0"}}>
-                  <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color:D.muted,marginBottom:14}}>
-                    Tous les établissements
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:16}}>
-                    {etablissements.map(etab => (
-                      <div key={`grid-${etab.id}`}
-                        onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
-                        style={{background:"#fff",borderRadius:18,overflow:"hidden",cursor:"pointer",
-                          boxShadow:"0 2px 10px rgba(0,0,0,.07)",display:"flex",alignItems:"center",gap:14,padding:14,
-                          transition:"box-shadow .15s"}}
-                        onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow="0 6px 20px rgba(0,0,0,.12)";}}
-                        onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 10px rgba(0,0,0,.07)";}}>
-                        {/* Logo / image miniature */}
-                        <div style={{width:56,height:56,flexShrink:0,borderRadius:14,overflow:"hidden",
-                          background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.15) 0%,rgba(0,153,204,.1) 100%)"}}>
-                          {etab.logoUrl ? (
-                            <img src={etab.logoUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
-                          ) : etab.coverUrl ? (
-                            <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
-                          ) : (
-                            <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.6rem",opacity:.3}}>🏪</div>
-                          )}
-                        </div>
-                        {/* Infos */}
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".95rem",color:"#1a1a2e",
-                            overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
-                            {etab.name}
-                          </div>
-                          {etab.description && (
-                            <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,
-                              overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",marginTop:2}}>
-                              {etab.description}
-                            </div>
-                          )}
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
-                            {etab.openHours && (
-                              <span style={{fontSize:".68rem",color:D.muted,fontFamily:"'Nunito',sans-serif"}}>🕐 {etab.openHours}</span>
-                            )}
-                            <span style={{fontSize:".65rem",fontWeight:700,fontFamily:"'Nunito',sans-serif",
-                              color: etab.isActive ? "#22c55e" : "#9ca3af",
-                              background: etab.isActive ? "rgba(34,197,94,.1)" : "rgba(156,163,175,.1)",
-                              padding:"2px 8px",borderRadius:20}}>
-                              {etab.isActive ? "OUVERT" : "FERMÉ"}
-                            </span>
-                          </div>
-                        </div>
-                        <div style={{color:D.pink,fontSize:"1rem",flexShrink:0}}>›</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
       </section>
