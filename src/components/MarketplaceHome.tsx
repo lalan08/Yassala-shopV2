@@ -262,59 +262,78 @@ function ProximityCard({
 }) {
   return (
     <div
-      className="flex-shrink-0 w-52 bg-white rounded-2xl overflow-hidden"
-      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}
+      className="flex-shrink-0 w-52 bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.98] transition-transform"
+      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.09)" }}
     >
-      {/* Banner */}
-      <div className="relative h-28" style={{ backgroundColor: commerce.bgColor }}>
-        <div className="absolute inset-0 flex items-center justify-center text-5xl select-none">
-          {commerce.emoji}
+      {/* Cover */}
+      <div className="relative rounded-t-2xl overflow-hidden" style={{ height: 120 }}>
+        {/* Gradient background */}
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: commerce.bgColor }}
+        />
+        {/* Emoji watermark */}
+        <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
+          <span style={{ fontSize: 72, opacity: 0.18 }}>{commerce.emoji}</span>
         </div>
+        {/* Bottom gradient overlay */}
+        <div
+          className="absolute bottom-0 left-0 right-0"
+          style={{ height: 52, background: "linear-gradient(to top, rgba(0,0,0,0.42) 0%, transparent 100%)" }}
+        />
 
-        {/* Promo badge */}
-        {commerce.promo && (
-          <div
-            className="absolute bottom-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ backgroundColor: YASSALA_PINK }}
-          >
-            {commerce.promo}
-          </div>
-        )}
-
-        {/* Tags: Nouveau / Populaire */}
+        {/* Top badges */}
         <div className="absolute top-2 left-2 flex gap-1">
           {commerce.isNew && (
-            <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+            <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
               Nouveau
             </span>
           )}
           {commerce.isPopular && (
             <span
-              className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+              className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm"
               style={{ backgroundColor: "#f59e0b" }}
             >
-              Populaire
+              🔥 Top
             </span>
           )}
         </div>
 
+        {/* Promo on cover */}
+        {commerce.promo && (
+          <div
+            className="absolute bottom-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow"
+            style={{ backgroundColor: YASSALA_PINK }}
+          >
+            🎁 {commerce.promo}
+          </div>
+        )}
+
         {/* Favorite button */}
         <button
-          className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm"
+          className="absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow"
           onClick={() => onToggleFavorite(commerce.id)}
           aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
         >
           <Heart
-            size={13}
+            size={11}
             fill={isFavorite ? YASSALA_PINK : "none"}
             stroke={isFavorite ? YASSALA_PINK : "#9CA3AF"}
           />
         </button>
 
+        {/* Logo overlapping body */}
+        <div
+          className="absolute left-3 bg-white rounded-xl flex items-center justify-center text-xl shadow"
+          style={{ width: 36, height: 36, bottom: -16, border: "2px solid #fff", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
+        >
+          {commerce.emoji}
+        </div>
+
         {/* Closed overlay */}
         {!commerce.isOpen && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="text-white text-xs font-semibold bg-black/60 px-2 py-1 rounded-full">
+          <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+            <span className="text-white text-[11px] font-semibold bg-black/60 px-2 py-1 rounded-full">
               Ouvre à {commerce.opensAt}
             </span>
           </div>
@@ -322,30 +341,22 @@ function ProximityCard({
       </div>
 
       {/* Body */}
-      <div className="p-2.5">
-        <p className="font-semibold text-gray-900 text-sm truncate">{commerce.name}</p>
-        <div className="flex items-center gap-1.5 mt-1 text-gray-500 text-xs">
-          <Clock size={11} />
-          <span>
-            {commerce.deliveryMin}–{commerce.deliveryMax} min
-          </span>
-          <span className="text-gray-300">·</span>
-          <Navigation size={11} />
-          <span>{formatDistance(commerce.distanceKm)}</span>
-        </div>
-        <div className="flex items-center justify-between mt-1.5">
-          <span className="text-xs text-gray-500">
-            {commerce.deliveryFee === 0 ? (
-              <span className="font-semibold text-emerald-600">0€ livraison</span>
-            ) : (
-              `${commerce.deliveryFee.toFixed(2)}€ livraison`
-            )}
-          </span>
-          <div className="flex items-center gap-0.5">
-            <Star size={10} fill="#FBBF24" stroke="#FBBF24" />
-            <span className="text-xs font-medium text-gray-700">{commerce.rating}</span>
+      <div className="px-2.5 pt-6 pb-2.5">
+        <p className="font-bold text-gray-900 text-sm truncate">{commerce.name}</p>
+        <p className="text-[10px] text-gray-400 truncate mt-0.5">{commerce.tags.slice(0, 2).join(" · ")}</p>
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-1 text-[11px] text-gray-500">
+            <Clock size={10} />
+            <span>{commerce.deliveryMin}–{commerce.deliveryMax} min</span>
+          </div>
+          <div className="flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded-full">
+            <Star size={9} fill="#FBBF24" stroke="#FBBF24" />
+            <span className="text-[11px] font-bold text-amber-700">{commerce.rating}</span>
           </div>
         </div>
+        <p className={`text-[11px] mt-1.5 font-medium ${commerce.deliveryFee === 0 ? "text-emerald-600" : "text-gray-400"}`}>
+          {commerce.deliveryFee === 0 ? "🎉 Livraison offerte" : `Livraison ${commerce.deliveryFee.toFixed(2)}€`}
+        </p>
       </div>
     </div>
   );
@@ -361,100 +372,123 @@ function EstablishmentCard({
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
 }) {
-  const tagNodes = commerce.tags.reduce<React.ReactNode[]>((acc, tag, i) => {
-    if (i > 0) acc.push(<span key={`sep-${i}`} className="text-gray-300">·</span>);
-    acc.push(<span key={tag}>{tag}</span>);
-    return acc;
-  }, []);
-
   return (
     <div
-      className="bg-white rounded-2xl overflow-hidden"
-      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}
+      className="bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.99] transition-transform"
+      style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.10)" }}
     >
-      {/* Banner */}
-      <div className="relative h-36" style={{ backgroundColor: commerce.bgColor }}>
-        <div className="absolute inset-0 flex items-center justify-center text-7xl select-none">
-          {commerce.emoji}
+      {/* ── Cover Image (16:9-ish, ~180px) ── */}
+      <div className="relative rounded-t-2xl overflow-hidden" style={{ height: 180 }}>
+        {/* Gradient background */}
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: commerce.bgColor }}
+        />
+        {/* Large emoji watermark texture */}
+        <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
+          <span style={{ fontSize: 110, opacity: 0.18, filter: "blur(1.5px)" }}>
+            {commerce.emoji}
+          </span>
         </div>
+        {/* Bottom gradient overlay for depth */}
+        <div
+          className="absolute bottom-0 left-0 right-0"
+          style={{ height: 72, background: "linear-gradient(to top, rgba(0,0,0,0.48) 0%, transparent 100%)" }}
+        />
 
-        {/* Promo badge */}
-        {commerce.promo && (
-          <div
-            className="absolute bottom-3 left-3 text-white text-xs font-bold px-2.5 py-1 rounded-full"
-            style={{ backgroundColor: YASSALA_PINK }}
-          >
-            {commerce.promo}
-          </div>
-        )}
-
-        {/* Tags: Nouveau / Populaire */}
+        {/* Top-left: status badges */}
         <div className="absolute top-3 left-3 flex gap-1.5">
           {commerce.isNew && (
-            <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
               Nouveau
             </span>
           )}
           {commerce.isPopular && (
             <span
-              className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full"
+              className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow"
               style={{ backgroundColor: "#f59e0b" }}
             >
-              Populaire
+              🔥 Populaire
             </span>
           )}
         </div>
 
-        {/* Favorite button */}
+        {/* Promo badge – bottom-left on cover */}
+        {commerce.promo && (
+          <div
+            className="absolute bottom-3 left-3 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow"
+            style={{ backgroundColor: YASSALA_PINK }}
+          >
+            🎁 {commerce.promo}
+          </div>
+        )}
+
+        {/* Favorite button – top-right */}
         <button
-          className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm"
+          className="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow"
           onClick={() => onToggleFavorite(commerce.id)}
           aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
         >
           <Heart
-            size={16}
+            size={15}
             fill={isFavorite ? YASSALA_PINK : "none"}
             stroke={isFavorite ? YASSALA_PINK : "#9CA3AF"}
           />
         </button>
 
+        {/* Logo badge – overlapping cover/body boundary */}
+        <div
+          className="absolute left-4 bg-white rounded-xl flex items-center justify-center text-2xl"
+          style={{
+            width: 48,
+            height: 48,
+            bottom: -22,
+            border: "2.5px solid #fff",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.14)",
+          }}
+        >
+          {commerce.emoji}
+        </div>
+
         {/* Closed overlay */}
         {!commerce.isOpen && (
-          <div className="absolute inset-0 bg-black/40 flex items-end p-3">
-            <span className="text-white text-sm font-semibold bg-black/60 px-3 py-1.5 rounded-full">
+          <div className="absolute inset-0 bg-black/50 flex items-end p-3">
+            <span className="text-white text-sm font-semibold bg-black/70 px-3 py-1.5 rounded-full">
               Disponible à {commerce.opensAt}
             </span>
           </div>
         )}
       </div>
 
-      {/* Body */}
-      <div className="p-3">
+      {/* ── Card Body ── */}
+      <div className="px-4 pt-8 pb-3.5">
+        {/* Name + Rating */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 text-base truncate">{commerce.name}</p>
-            <div className="flex items-center flex-wrap gap-1 mt-0.5 text-gray-500 text-xs">
-              {tagNodes}
-            </div>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Star size={12} fill="#FBBF24" stroke="#FBBF24" />
-            <span className="text-sm font-semibold text-gray-800">{commerce.rating}</span>
-            <span className="text-xs text-gray-400">({commerce.reviewCount})</span>
+          <p className="font-bold text-gray-900 text-[15px] leading-snug flex-1 min-w-0 truncate">
+            {commerce.name}
+          </p>
+          <div className="flex items-center gap-1 flex-shrink-0 bg-amber-50 px-2 py-0.5 rounded-full">
+            <Star size={11} fill="#FBBF24" stroke="#FBBF24" />
+            <span className="text-xs font-bold text-amber-700">{commerce.rating}</span>
+            <span className="text-[10px] text-gray-400">({commerce.reviewCount})</span>
           </div>
         </div>
 
-        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2 text-sm text-gray-500">
+        {/* Tags */}
+        <p className="text-xs text-gray-400 mt-0.5 truncate">{commerce.tags.join(" · ")}</p>
+
+        {/* Info row */}
+        <div className="flex items-center gap-2 mt-2.5 text-xs text-gray-500 flex-wrap">
           <div className="flex items-center gap-1">
-            <Clock size={13} />
-            <span>
-              {commerce.deliveryMin}–{commerce.deliveryMax} min
-            </span>
+            <Clock size={11} />
+            <span>{commerce.deliveryMin}–{commerce.deliveryMax} min</span>
           </div>
+          <span className="text-gray-200">|</span>
           <div className="flex items-center gap-1">
-            <Navigation size={13} />
+            <Navigation size={11} />
             <span>{formatDistance(commerce.distanceKm)}</span>
           </div>
+          <span className="text-gray-200">|</span>
           <span
             className={
               commerce.deliveryFee === 0
@@ -463,7 +497,7 @@ function EstablishmentCard({
             }
           >
             {commerce.deliveryFee === 0
-              ? "Livraison 0€"
+              ? "Livraison offerte"
               : `Livraison ${commerce.deliveryFee.toFixed(2)}€`}
           </span>
         </div>
@@ -555,11 +589,11 @@ export default function MarketplaceHome() {
     DELIVERY_FEE_OPTIONS.find((o) => o.id === deliveryFeeFilter)?.label ?? "Livraison";
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans max-w-md mx-auto relative">
+    <div className="min-h-screen font-sans max-w-md mx-auto relative" style={{ backgroundColor: "#F6F7F9" }}>
       {/* ── HEADER ──────────────────────────────────────────────────────── */}
       <header
         className="bg-white px-4 pt-12 pb-3 sticky top-0 z-30"
-        style={{ boxShadow: "0 1px 0 #F3F4F6" }}
+        style={{ boxShadow: "0 1px 0 #EAECF0" }}
       >
         {/* Zone + Actions */}
         <div className="flex items-center justify-between mb-3">
@@ -580,7 +614,7 @@ export default function MarketplaceHome() {
 
           <div className="flex items-center gap-1.5">
             {/* Bell */}
-            <button className="relative w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+            <button className="relative w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: "#F1F3F6" }}>
               <Bell size={18} className="text-gray-700" />
               <span
                 className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
@@ -588,14 +622,14 @@ export default function MarketplaceHome() {
               />
             </button>
             {/* Filters */}
-            <button className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+            <button className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: "#F1F3F6" }}>
               <SlidersHorizontal size={17} className="text-gray-700" />
             </button>
           </div>
         </div>
 
         {/* Search bar */}
-        <div className="flex items-center gap-2 bg-gray-100 rounded-2xl px-3 py-2.5">
+        <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5" style={{ backgroundColor: "#F1F3F6" }}>
           <Search size={15} className="text-gray-400 flex-shrink-0" />
           <input
             type="text"
@@ -615,7 +649,7 @@ export default function MarketplaceHome() {
       {/* ── FILTER CHIPS ────────────────────────────────────────────────── */}
       <div
         className="bg-white sticky top-[116px] z-20"
-        style={{ boxShadow: "0 1px 0 #F3F4F6" }}
+        style={{ boxShadow: "0 1px 0 #EAECF0" }}
       >
         {/* Primary chips */}
         <div className="flex gap-2 px-4 pt-3 pb-1 overflow-x-auto no-scrollbar">
@@ -630,7 +664,7 @@ export default function MarketplaceHome() {
               style={
                 activeFilter === f.id
                   ? { backgroundColor: YASSALA_PINK, color: "#fff" }
-                  : { backgroundColor: "#F3F4F6", color: "#374151" }
+                  : { backgroundColor: "#F1F3F6", color: "#374151" }
               }
             >
               {f.label}
@@ -656,7 +690,7 @@ export default function MarketplaceHome() {
                         backgroundColor: "#FFE4ED",
                         border: `2px solid ${YASSALA_PINK}`,
                       }
-                    : { backgroundColor: "#F3F4F6" }
+                    : { backgroundColor: "#F1F3F6" }
                 }
               >
                 {cat.emoji}
@@ -716,7 +750,7 @@ export default function MarketplaceHome() {
                 {DELIVERY_FEE_OPTIONS.map((opt) => (
                   <button
                     key={opt.id}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[#F6F7F9]"
                     style={
                       deliveryFeeFilter === opt.id
                         ? { color: YASSALA_PINK, fontWeight: 600 }
@@ -793,7 +827,8 @@ export default function MarketplaceHome() {
 
       {/* ── BOTTOM NAV ──────────────────────────────────────────────────── */}
       <nav
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 z-30"
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white z-30"
+        style={{ borderTop: "1px solid #EAECF0" }}
         style={{ boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" }}
       >
         <div className="flex items-center justify-around py-2 px-2">
