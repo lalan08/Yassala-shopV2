@@ -810,18 +810,18 @@ export default function YassalaDayView() {
 
   // ── DAY COLORS ──
   const D = {
-    bg:       "#EEEDF4",
-    card:     "#F7F5FB",
-    cardDark: "#E8E6F0",
+    bg:       "#F6F7F9",
+    card:     "#FFFFFF",
+    cardDark: "#F1F3F6",
     text:     "#1a0033",
     muted:    "#7a6a8a",
     pink:     "#ff2d78",
     cyan:     "#0099cc",
     lime:     "#b8ff00",
-    border:   "#DDDBE8",
+    border:   "#E6E8EC",
     borderPink:"rgba(255,45,120,.25)",
-    overlay:  "rgba(238,237,244,.97)",
-    navBg:    "rgba(238,237,244,.95)",
+    overlay:  "rgba(246,247,249,.97)",
+    navBg:    "rgba(246,247,249,.95)",
   };
 
   return (
@@ -1012,12 +1012,14 @@ export default function YassalaDayView() {
             )}
           </div>
         </div>
-        {/* Horloge */}
+        {/* Logo + Horloge */}
         <div className="clock-hero" style={{position:"absolute",right:28,top:"50%",transform:"translateY(-50%)",zIndex:3,textAlign:"center"}}>
-          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"5rem",color:D.cyan,letterSpacing:".05em",lineHeight:1}}>
+          <img src="/logo.png" alt="Yassala" style={{width:240,height:"auto",maxWidth:"30vw",display:"block",margin:"0 auto",
+            filter:"drop-shadow(0 0 28px rgba(255,45,120,.45)) drop-shadow(0 0 56px rgba(0,153,204,.2))"}} />
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"2.8rem",color:D.cyan,letterSpacing:".05em",lineHeight:1,marginTop:16}}>
             {clock}
           </div>
-          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,letterSpacing:".2em",textTransform:"uppercase",marginTop:6}}>
+          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,letterSpacing:".2em",textTransform:"uppercase",marginTop:4}}>
             heure locale
           </div>
         </div>
@@ -1150,75 +1152,101 @@ export default function YassalaDayView() {
         </section>
       )}
 
-      {/* ── HEADER ÉTABLISSEMENT SÉLECTIONNÉ (Uber Eats style) ── */}
+      {/* ── HEADER ÉTABLISSEMENT SÉLECTIONNÉ (Allo Apéro style) ── */}
       {selectedEtab && (
-        <div style={{position:"sticky",top:0,zIndex:90,background:"#fff",borderBottom:"1px solid rgba(0,0,0,.08)",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
-          {/* Cover de l'établissement */}
-          {selectedEtab.coverUrl && (
-            <div style={{height:200,overflow:"hidden",position:"relative"}}>
-              <img src={selectedEtab.coverUrl} alt={selectedEtab.name} style={{width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.85)"}} />
-              <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,transparent 40%,rgba(0,0,0,.5))"}} />
-            </div>
-          )}
-          <div style={{padding:"0 20px",maxWidth:960,margin:"0 auto"}}>
-            <div style={{display:"flex",alignItems:"flex-end",gap:16,paddingTop:selectedEtab.coverUrl?0:16,paddingBottom:16,
-              marginTop:selectedEtab.coverUrl?-40:0}}>
-              {/* Logo */}
+        <div style={{position:"sticky",top:0,zIndex:90}}>
+          {/* ── Cover hero ── */}
+          <div style={{position:"relative",height:230,overflow:"hidden",
+            background:"linear-gradient(135deg,#1a0033 0%,#3d0066 100%)"}}>
+            {selectedEtab.coverUrl ? (
+              <img src={selectedEtab.coverUrl} alt={selectedEtab.name}
+                style={{width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.65)"}} />
+            ) : (
+              <div style={{position:"absolute",inset:0,
+                background:"linear-gradient(135deg,rgba(255,45,120,.35) 0%,rgba(0,153,204,.25) 100%)"}} />
+            )}
+            {/* Gradient overlay bottom */}
+            <div style={{position:"absolute",inset:0,
+              background:"linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.62) 100%)"}} />
+
+            {/* Bouton ✕ retour */}
+            <button
+              onClick={() => { setSelectedEtab(null); setActiveCat("all"); window.scrollTo({top:0,behavior:"smooth"}); }}
+              style={{position:"absolute",top:14,left:14,zIndex:3,
+                width:36,height:36,borderRadius:"50%",
+                background:"rgba(0,0,0,.45)",backdropFilter:"blur(8px)",
+                border:"none",color:"#fff",fontSize:"1.1rem",cursor:"pointer",
+                display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+
+            {/* Contenu centré sur la cover */}
+            <div style={{position:"absolute",inset:0,zIndex:2,
+              display:"flex",flexDirection:"column",alignItems:"center",
+              justifyContent:"flex-end",padding:"0 20px 16px",textAlign:"center"}}>
+
+              {/* Logo circulaire */}
               {selectedEtab.logoUrl && (
-                <div style={{width:72,height:72,borderRadius:16,border:"3px solid #fff",overflow:"hidden",
-                  background:"#fff",flexShrink:0,boxShadow:"0 2px 14px rgba(0,0,0,.15)"}}>
-                  <img src={selectedEtab.logoUrl} alt={selectedEtab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                <div style={{width:68,height:68,borderRadius:"50%",border:"3px solid #fff",
+                  overflow:"hidden",background:"#fff",flexShrink:0,
+                  boxShadow:"0 4px 20px rgba(0,0,0,.35)",marginBottom:10}}>
+                  <img src={selectedEtab.logoUrl} alt={selectedEtab.name}
+                    style={{width:"100%",height:"100%",objectFit:"cover"}} />
                 </div>
               )}
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                  <h1 style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.3rem",margin:0,
-                    textShadow:selectedEtab.coverUrl?"0 1px 4px rgba(0,0,0,.3)":undefined,
-                    color:selectedEtab.coverUrl?"#fff":"#1a1a2e"}}>
-                    {selectedEtab.name}
-                  </h1>
-                  <button onClick={() => { setSelectedEtab(null); setActiveCat("all"); window.scrollTo({top:0,behavior:"smooth"}); }}
-                    style={{background:"rgba(255,255,255,.15)",backdropFilter:"blur(4px)",border:"1px solid rgba(255,255,255,.3)",
-                      color:selectedEtab.coverUrl?"#fff":"#666",padding:"5px 12px",borderRadius:20,
-                      fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".75rem",cursor:"pointer",letterSpacing:".04em",whiteSpace:"nowrap"}}>
-                    ← Retour
-                  </button>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:14,marginTop:6,flexWrap:"wrap"}}>
-                  {selectedEtab.openHours && (
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
-                      color:selectedEtab.coverUrl?"rgba(255,255,255,.8)":"#6b7280"}}>
-                      🕐 {selectedEtab.openHours}
-                    </span>
-                  )}
-                  {selectedEtab.address && (
-                    <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",
-                      color:selectedEtab.coverUrl?"rgba(255,255,255,.75)":"#6b7280"}}>
-                      📍 {selectedEtab.address}
-                    </span>
-                  )}
-                  {selectedEtab.phone && (
-                    <a href={`tel:${selectedEtab.phone}`} style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",
-                      color:D.pink,textDecoration:"none",fontWeight:600}}>
-                      📞 {selectedEtab.phone}
-                    </a>
-                  )}
-                </div>
+
+              {/* Nom de l'établissement */}
+              <h1 style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.4rem",
+                margin:"0 0 8px",color:"#fff",textShadow:"0 2px 8px rgba(0,0,0,.5)"}}>
+                {selectedEtab.name}
+              </h1>
+
+              {/* Infos: horaires • adresse • téléphone • statut */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",
+                gap:10,flexWrap:"wrap",marginBottom:4}}>
+                {selectedEtab.openHours && (
+                  <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",
+                    color:"rgba(255,255,255,.88)"}}>
+                    🕐 {selectedEtab.openHours}
+                  </span>
+                )}
+                {selectedEtab.address && (
+                  <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",
+                    color:"rgba(255,255,255,.82)"}}>
+                    📍 {selectedEtab.address}
+                  </span>
+                )}
+                {selectedEtab.phone && (
+                  <a href={`tel:${selectedEtab.phone}`}
+                    style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",
+                      color:"rgba(255,255,255,.92)",textDecoration:"none",fontWeight:600}}>
+                    📞 {selectedEtab.phone}
+                  </a>
+                )}
+                <span style={{display:"inline-flex",alignItems:"center",gap:5,
+                  background: settings.shopOpen ? "rgba(34,197,94,.82)" : "rgba(120,120,120,.75)",
+                  color:"#fff",fontSize:".68rem",fontFamily:"'Nunito',sans-serif",
+                  fontWeight:700,padding:"3px 10px",borderRadius:20}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background:"#fff",display:"inline-block"}} />
+                  {settings.shopOpen ? "OUVERT" : "FERMÉ"}
+                </span>
               </div>
             </div>
-            {/* Barre de recherche dans l'établissement */}
-            <div style={{paddingBottom:14}}>
-              <div style={{position:"relative",maxWidth:420}}>
-                <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:"1rem",pointerEvents:"none"}}>🔍</span>
-                <input
-                  value={etabSearch}
-                  onChange={e => setEtabSearch(e.target.value)}
-                  placeholder={`Rechercher dans ${selectedEtab.name}`}
-                  style={{width:"100%",background:"#f5f5f7",border:"1px solid #e5e7eb",borderRadius:24,
-                    padding:"10px 16px 10px 38px",fontFamily:"'Nunito',sans-serif",fontSize:".88rem",
-                    color:"#1a1a2e",outline:"none",boxSizing:"border-box"}}
-                />
-              </div>
+          </div>
+
+          {/* ── Barre de recherche ── */}
+          <div style={{padding:"12px 16px 10px",background:"#fff",
+            borderBottom:"1px solid #E6E8EC",boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",
+                fontSize:".95rem",pointerEvents:"none",color:"#9ca3af"}}>🔍</span>
+              <input
+                value={etabSearch}
+                onChange={e => setEtabSearch(e.target.value)}
+                placeholder={`Rechercher dans ${selectedEtab.name}`}
+                style={{width:"100%",background:"#F6F7F9",border:"1px solid #E6E8EC",
+                  borderRadius:28,padding:"11px 16px 11px 42px",
+                  fontFamily:"'Nunito',sans-serif",fontSize:".9rem",
+                  color:"#1a1a2e",outline:"none",boxSizing:"border-box"}}
+              />
             </div>
           </div>
         </div>
