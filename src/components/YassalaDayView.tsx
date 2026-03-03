@@ -839,6 +839,8 @@ export default function YassalaDayView() {
         @keyframes bannerIn{from{opacity:0;transform:translateX(22px);}to{opacity:1;transform:translateX(0);}}
         @keyframes flashPulse{0%,100%{box-shadow:0 0 10px rgba(255,45,120,.4);}50%{box-shadow:0 0 20px rgba(255,45,120,.7),0 0 30px rgba(255,100,0,.3);}}
         @keyframes bgShift{from{opacity:.8;}to{opacity:1;}}
+        @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+        @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
         .flicker{animation:flicker 6s infinite;}
         .fade1{animation:fadeUp .5s .0s both;}.fade2{animation:fadeUp .5s .1s both;}.fade3{animation:fadeUp .5s .2s both;}
         .fade4{animation:fadeUp .5s .3s both;}.fade5{animation:fadeUp .5s .4s both;}
@@ -1056,305 +1058,380 @@ export default function YassalaDayView() {
         ))}
       </div>
 
-      {/* ── LISTE DES ÉTABLISSEMENTS (si aucun sélectionné) ── */}
-      {!selectedEtab && (
-        <section style={{padding:"44px 20px 56px",position:"relative",zIndex:1,background:"#F6F7F9"}}>
-          <div style={{maxWidth:960,margin:"0 auto"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:28}}>
-              <div>
-                <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.7rem",color:"#1a1a2e",margin:0,letterSpacing:".02em"}}>
-                  ☀️ <span style={{color:D.pink}}>NOS ÉTABLISSEMENTS</span>
-                </h2>
-                <p style={{fontFamily:"'Nunito',sans-serif",fontSize:".82rem",color:D.muted,margin:"4px 0 0"}}>
-                  Choisissez un établissement pour voir son menu
-                </p>
-              </div>
-              {etablissements.length > 0 && (
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,background:"#f0f0f4",padding:"4px 12px",borderRadius:20}}>
-                  {etablissements.length} partenaire{etablissements.length>1?"s":""}
-                </span>
-              )}
+      {/* ── LISTE DES ÉTABLISSEMENTS (style Uber Eats) ── */}
+      <section style={{padding:"44px 0 56px",position:"relative",zIndex:1,background:"#F6F7F9"}}>
+        <div style={{maxWidth:960,margin:"0 auto"}}>
+          {/* Header */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,padding:"0 20px"}}>
+            <div>
+              <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",color:"#1a1a2e",margin:0,letterSpacing:".02em"}}>
+                ☀️ <span style={{color:D.pink}}>NOS ÉTABLISSEMENTS</span>
+              </h2>
+              <p style={{fontFamily:"'Nunito',sans-serif",fontSize:".82rem",color:D.muted,margin:"4px 0 0"}}>
+                Appuie sur un commerce pour voir son menu
+              </p>
             </div>
-            {etablissements.length === 0 ? (
-              <div style={{textAlign:"center",padding:"72px 0",border:"1px dashed rgba(255,45,120,.2)",borderRadius:20}}>
-                <div style={{fontSize:"3.5rem",marginBottom:16}}>🏪</div>
-                <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",color:D.muted}}>
-                  Aucun établissement disponible pour le moment.
-                </div>
-                <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".85rem",color:"#bbb",marginTop:8}}>
-                  Revenez bientôt !
-                </div>
+            {etablissements.length > 0 && (
+              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,background:"#f0f0f4",padding:"4px 12px",borderRadius:20,flexShrink:0}}>
+                {etablissements.length} partenaire{etablissements.length>1?"s":""}
+              </span>
+            )}
+          </div>
+
+          {etablissements.length === 0 ? (
+            <div style={{textAlign:"center",padding:"72px 20px",border:"1px dashed rgba(255,45,120,.2)",borderRadius:20,margin:"0 20px"}}>
+              <div style={{fontSize:"3.5rem",marginBottom:16}}>🏪</div>
+              <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",color:D.muted}}>
+                Aucun établissement disponible pour le moment.
               </div>
-            ) : (
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:20}}>
+              <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".85rem",color:"#bbb",marginTop:8}}>
+                Revenez bientôt !
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Scroll horizontal — style Uber Eats */}
+              <div style={{display:"flex",gap:14,overflowX:"auto",padding:"4px 20px 12px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
                 {etablissements.map(etab => (
                   <div key={etab.id}
-                    onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); window.scrollTo({top:0,behavior:"smooth"}); }}
-                    style={{background:"#fff",borderRadius:18,overflow:"hidden",cursor:"pointer",
-                      boxShadow:"0 2px 14px rgba(0,0,0,.08)",transition:"transform .18s,box-shadow .18s"}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLDivElement).style.boxShadow="0 8px 28px rgba(0,0,0,.13)";}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="";(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 14px rgba(0,0,0,.08)";}}>
+                    onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
+                    style={{flexShrink:0,width:208,background:"#fff",borderRadius:20,overflow:"hidden",cursor:"pointer",
+                      boxShadow:"0 2px 12px rgba(0,0,0,.08)",transition:"transform .15s,box-shadow .15s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLDivElement).style.boxShadow="0 8px 24px rgba(0,0,0,.13)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="";(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 12px rgba(0,0,0,.08)";}}>
                     {/* Cover image */}
-                    <div style={{height:140,position:"relative",
-                      background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.18) 0%,rgba(0,153,204,.12) 100%)"}}>
-                      {/* Clip only the image, not the floating logo */}
-                      <div style={{position:"absolute",inset:0,overflow:"hidden"}}>
-                        {etab.coverUrl && (
-                          <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
-                        )}
-                        {!etab.coverUrl && (
-                          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",opacity:.18}}>🏪</div>
-                        )}
+                    <div style={{height:120,position:"relative",
+                      background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.2) 0%,rgba(0,153,204,.14) 100%)"}}>
+                      {etab.coverUrl ? (
+                        <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                      ) : (
+                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3.5rem",opacity:.2}}>🏪</div>
+                      )}
+                      {/* Badge statut */}
+                      <div style={{position:"absolute",top:8,right:8,
+                        background: etab.isActive ? "rgba(34,197,94,.9)" : "rgba(120,120,120,.8)",
+                        color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 9px",borderRadius:20,
+                        fontFamily:"'Nunito',sans-serif",backdropFilter:"blur(4px)"}}>
+                        {etab.isActive ? "OUVERT" : "FERMÉ"}
                       </div>
                       {/* Logo flottant */}
                       {etab.logoUrl && (
-                        <div style={{position:"absolute",bottom:-22,left:18,width:52,height:52,zIndex:2,
-                          borderRadius:14,background:"#fff",border:"2.5px solid #fff",overflow:"hidden",
-                          boxShadow:"0 3px 12px rgba(0,0,0,.18)"}}>
+                        <div style={{position:"absolute",bottom:-18,left:14,width:44,height:44,zIndex:2,
+                          borderRadius:12,background:"#fff",border:"2.5px solid #fff",overflow:"hidden",
+                          boxShadow:"0 3px 10px rgba(0,0,0,.16)"}}>
                           <img src={etab.logoUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
                         </div>
                       )}
                     </div>
                     {/* Infos */}
-                    <div style={{padding:etab.logoUrl?"28px 18px 18px 82px":"18px",paddingTop:etab.logoUrl?10:18}}>
-                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:"#1a1a2e",marginBottom:3}}>
+                    <div style={{padding:"14px 12px 12px",paddingTop:etab.logoUrl?24:12}}>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".95rem",color:"#1a1a2e",
+                        overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",marginBottom:3}}>
                         {etab.name}
                       </div>
                       {etab.description && (
-                        <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".82rem",color:D.muted,marginBottom:8,lineHeight:1.45,
-                          overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>
+                        <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,
+                          overflow:"hidden",display:"-webkit-box",WebkitLineClamp:1,WebkitBoxOrient:"vertical",marginBottom:4}}>
                           {etab.description}
                         </div>
                       )}
-                      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                         {etab.openHours && (
-                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.muted}}>🕐 {etab.openHours}</span>
+                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".7rem",color:D.muted}}>🕐 {etab.openHours}</span>
                         )}
                         {etab.address && (
-                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:160}}>📍 {etab.address}</span>
+                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".7rem",color:D.muted,
+                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:130}}>📍 {etab.address}</span>
                         )}
                       </div>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                        <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color:D.pink}}>
-                          Voir le menu →
-                        </span>
-                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",
-                          color:"#22c55e",background:"rgba(34,197,94,.1)",padding:"3px 9px",borderRadius:20,letterSpacing:".06em"}}>
-                          OUVERT
-                        </span>
+                      <div style={{marginTop:8,fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".78rem",color:D.pink}}>
+                        Voir le menu →
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
-        </section>
-      )}
 
-      {/* ── HEADER ÉTABLISSEMENT SÉLECTIONNÉ (Allo Apéro style) ── */}
-      {selectedEtab && (
-        <div style={{position:"sticky",top:0,zIndex:90}}>
-          {/* ── Cover hero ── */}
-          <div style={{position:"relative",height:230,overflow:"hidden",
-            background:"linear-gradient(135deg,#1a0033 0%,#3d0066 100%)"}}>
-            {selectedEtab.coverUrl ? (
-              <img src={selectedEtab.coverUrl} alt={selectedEtab.name}
-                style={{width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.65)"}} />
-            ) : (
-              <div style={{position:"absolute",inset:0,
-                background:"linear-gradient(135deg,rgba(255,45,120,.35) 0%,rgba(0,153,204,.25) 100%)"}} />
-            )}
-            {/* Gradient overlay bottom */}
-            <div style={{position:"absolute",inset:0,
-              background:"linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.62) 100%)"}} />
-
-            {/* Bouton ✕ retour */}
-            <button
-              onClick={() => { setSelectedEtab(null); setActiveCat("all"); window.scrollTo({top:0,behavior:"smooth"}); }}
-              style={{position:"absolute",top:14,left:14,zIndex:3,
-                width:36,height:36,borderRadius:"50%",
-                background:"rgba(0,0,0,.45)",backdropFilter:"blur(8px)",
-                border:"none",color:"#fff",fontSize:"1.1rem",cursor:"pointer",
-                display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-
-            {/* Contenu centré sur la cover */}
-            <div style={{position:"absolute",inset:0,zIndex:2,
-              display:"flex",flexDirection:"column",alignItems:"center",
-              justifyContent:"flex-end",padding:"0 20px 16px",textAlign:"center"}}>
-
-              {/* Logo circulaire */}
-              {selectedEtab.logoUrl && (
-                <div style={{width:68,height:68,borderRadius:"50%",border:"3px solid #fff",
-                  overflow:"hidden",background:"#fff",flexShrink:0,
-                  boxShadow:"0 4px 20px rgba(0,0,0,.35)",marginBottom:10}}>
-                  <img src={selectedEtab.logoUrl} alt={selectedEtab.name}
-                    style={{width:"100%",height:"100%",objectFit:"cover"}} />
+              {/* Grille complète en dessous */}
+              {etablissements.length > 3 && (
+                <div style={{padding:"8px 20px 0"}}>
+                  <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color:D.muted,marginBottom:14}}>
+                    Tous les établissements
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:16}}>
+                    {etablissements.map(etab => (
+                      <div key={`grid-${etab.id}`}
+                        onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
+                        style={{background:"#fff",borderRadius:18,overflow:"hidden",cursor:"pointer",
+                          boxShadow:"0 2px 10px rgba(0,0,0,.07)",display:"flex",alignItems:"center",gap:14,padding:14,
+                          transition:"box-shadow .15s"}}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow="0 6px 20px rgba(0,0,0,.12)";}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 10px rgba(0,0,0,.07)";}}>
+                        {/* Logo / image miniature */}
+                        <div style={{width:56,height:56,flexShrink:0,borderRadius:14,overflow:"hidden",
+                          background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.15) 0%,rgba(0,153,204,.1) 100%)"}}>
+                          {etab.logoUrl ? (
+                            <img src={etab.logoUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                          ) : etab.coverUrl ? (
+                            <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                          ) : (
+                            <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.6rem",opacity:.3}}>🏪</div>
+                          )}
+                        </div>
+                        {/* Infos */}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".95rem",color:"#1a1a2e",
+                            overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
+                            {etab.name}
+                          </div>
+                          {etab.description && (
+                            <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:D.muted,
+                              overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis",marginTop:2}}>
+                              {etab.description}
+                            </div>
+                          )}
+                          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
+                            {etab.openHours && (
+                              <span style={{fontSize:".68rem",color:D.muted,fontFamily:"'Nunito',sans-serif"}}>🕐 {etab.openHours}</span>
+                            )}
+                            <span style={{fontSize:".65rem",fontWeight:700,fontFamily:"'Nunito',sans-serif",
+                              color: etab.isActive ? "#22c55e" : "#9ca3af",
+                              background: etab.isActive ? "rgba(34,197,94,.1)" : "rgba(156,163,175,.1)",
+                              padding:"2px 8px",borderRadius:20}}>
+                              {etab.isActive ? "OUVERT" : "FERMÉ"}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{color:D.pink,fontSize:"1rem",flexShrink:0}}>›</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-
-              {/* Nom de l'établissement */}
-              <h1 style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.4rem",
-                margin:"0 0 8px",color:"#fff",textShadow:"0 2px 8px rgba(0,0,0,.5)"}}>
-                {selectedEtab.name}
-              </h1>
-
-              {/* Infos: horaires • adresse • téléphone • statut */}
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",
-                gap:10,flexWrap:"wrap",marginBottom:4}}>
-                {selectedEtab.openHours && (
-                  <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",
-                    color:"rgba(255,255,255,.88)"}}>
-                    🕐 {selectedEtab.openHours}
-                  </span>
-                )}
-                {selectedEtab.address && (
-                  <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",
-                    color:"rgba(255,255,255,.82)"}}>
-                    📍 {selectedEtab.address}
-                  </span>
-                )}
-                {selectedEtab.phone && (
-                  <a href={`tel:${selectedEtab.phone}`}
-                    style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",
-                      color:"rgba(255,255,255,.92)",textDecoration:"none",fontWeight:600}}>
-                    📞 {selectedEtab.phone}
-                  </a>
-                )}
-                <span style={{display:"inline-flex",alignItems:"center",gap:5,
-                  background: settings.shopOpen ? "rgba(34,197,94,.82)" : "rgba(120,120,120,.75)",
-                  color:"#fff",fontSize:".68rem",fontFamily:"'Nunito',sans-serif",
-                  fontWeight:700,padding:"3px 10px",borderRadius:20}}>
-                  <span style={{width:6,height:6,borderRadius:"50%",background:"#fff",display:"inline-block"}} />
-                  {settings.shopOpen ? "OUVERT" : "FERMÉ"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Barre de recherche ── */}
-          <div style={{padding:"12px 16px 10px",background:"#fff",
-            borderBottom:"1px solid #E6E8EC",boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
-            <div style={{position:"relative"}}>
-              <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",
-                fontSize:".95rem",pointerEvents:"none",color:"#9ca3af"}}>🔍</span>
-              <input
-                value={etabSearch}
-                onChange={e => setEtabSearch(e.target.value)}
-                placeholder={`Rechercher dans ${selectedEtab.name}`}
-                style={{width:"100%",background:"#F6F7F9",border:"1px solid #E6E8EC",
-                  borderRadius:28,padding:"11px 16px 11px 42px",
-                  fontFamily:"'Nunito',sans-serif",fontSize:".9rem",
-                  color:"#1a1a2e",outline:"none",boxSizing:"border-box"}}
-              />
-            </div>
-          </div>
+            </>
+          )}
         </div>
-      )}
+      </section>
 
-      {/* ── CATALOGUE ── */}
-      {selectedEtab && <section id="catalogue" style={{padding:"48px 16px 48px 16px",position:"relative",zIndex:1}}>
-        {activePromo && (
-          <div style={{padding:"0 12px",marginBottom:8}}>
-            <FlashDealBanner promo={activePromo} products={products} source="home" onAddToCart={addToCart} />
-          </div>
-        )}
+      {/* ── BOTTOM SHEET — ÉTABLISSEMENT SÉLECTIONNÉ ── */}
+      {selectedEtab && (
+        <>
+          {/* Backdrop — clic pour fermer */}
+          <div
+            onClick={() => { setSelectedEtab(null); setActiveCat("all"); }}
+            style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:100,animation:"fadeIn .2s both"}}
+          />
 
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px",flexWrap:"wrap",gap:10}}>
-          <div className="section-title" style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.4rem",color:D.text,letterSpacing:".01em"}}>
-            {selectedEtab ? "Menu" : "Notre menu"}
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-            {settings.aiVoiceEnabled !== false && (
-              <VoiceOrderButton products={etabProds} onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))} />
-            )}
-            {!loading && (
-              <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:600,fontSize:".78rem",color:D.muted,background:"#f5f5f7",borderRadius:20,padding:"4px 12px"}}>
-                {etabProds.filter(p => p.stock > 0).length} articles
-              </span>
-            )}
-          </div>
-        </div>
+          {/* Fiche établissement — slide depuis le bas */}
+          <div style={{position:"fixed",bottom:0,left:0,right:0,height:"93vh",background:"#F6F7F9",
+            borderRadius:"24px 24px 0 0",zIndex:101,overflow:"hidden",
+            display:"flex",flexDirection:"column",
+            animation:"slideUp .35s cubic-bezier(.32,.72,0,1) both",
+            boxShadow:"0 -8px 40px rgba(0,0,0,.2)"}}>
 
-        {/* À la une — Populaire */}
-        {(() => {
-          const featured = etabProds.filter(p => (p.badge === "HOT" || p.badge === "BEST") && p.stock > 0);
-          if (!featured.length) return null;
-          return (
-            <div style={{marginBottom:28}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 12px",marginBottom:14}}>
-                <span style={{fontSize:"1.2rem"}}>🔥</span>
-                <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>Populaire</div>
-              </div>
-              <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 12px 8px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
-                {featured.map(p => (
-                  <div key={p.id} onClick={() => openProductModal(p)}
-                    style={{flexShrink:0,width:150,background:"#fff",borderRadius:14,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
-                    {p.image ? (
-                      <img src={p.image} alt={p.name} style={{width:"100%",height:100,objectFit:"cover",display:"block"}} />
-                    ) : (
-                      <div style={{width:"100%",height:100,display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f5f7",fontSize:"2.5rem",opacity:.3}}>🍽️</div>
-                    )}
-                    <div style={{padding:"8px 10px 10px"}}>
-                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".9rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
-                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".88rem",color:D.pink,marginTop:3}}>{p.price.toFixed(2)}€</div>
+            {/* Barre de poignée */}
+            <div style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
+              padding:"10px 0 4px",background:"#F6F7F9"}}>
+              <div style={{width:40,height:4,background:"#D1D5DB",borderRadius:2}} />
+            </div>
+
+            {/* Zone scrollable */}
+            <div style={{flex:1,overflowY:"auto",scrollbarWidth:"none"}}>
+
+              {/* ── Cover hero ── */}
+              <div style={{position:"relative",height:200,overflow:"hidden",
+                background:"linear-gradient(135deg,#1a0033 0%,#3d0066 100%)"}}>
+                {selectedEtab.coverUrl ? (
+                  <img src={selectedEtab.coverUrl} alt={selectedEtab.name}
+                    style={{width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.65)"}} />
+                ) : (
+                  <div style={{position:"absolute",inset:0,
+                    background:"linear-gradient(135deg,rgba(255,45,120,.35) 0%,rgba(0,153,204,.25) 100%)"}} />
+                )}
+                <div style={{position:"absolute",inset:0,
+                  background:"linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.62) 100%)"}} />
+
+                {/* Bouton ✕ fermer */}
+                <button
+                  onClick={() => { setSelectedEtab(null); setActiveCat("all"); }}
+                  style={{position:"absolute",top:14,right:14,zIndex:3,
+                    width:36,height:36,borderRadius:"50%",
+                    background:"rgba(0,0,0,.45)",backdropFilter:"blur(8px)",
+                    border:"none",color:"#fff",fontSize:"1.1rem",cursor:"pointer",
+                    display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+
+                {/* Infos établissement */}
+                <div style={{position:"absolute",inset:0,zIndex:2,
+                  display:"flex",flexDirection:"column",alignItems:"center",
+                  justifyContent:"flex-end",padding:"0 20px 16px",textAlign:"center"}}>
+                  {selectedEtab.logoUrl && (
+                    <div style={{width:68,height:68,borderRadius:"50%",border:"3px solid #fff",
+                      overflow:"hidden",background:"#fff",flexShrink:0,
+                      boxShadow:"0 4px 20px rgba(0,0,0,.35)",marginBottom:10}}>
+                      <img src={selectedEtab.logoUrl} alt={selectedEtab.name}
+                        style={{width:"100%",height:"100%",objectFit:"cover"}} />
                     </div>
-                    <span style={{position:"absolute",top:8,left:8,background: p.badge==="HOT" ? D.pink : "#ffb400",color:"#fff",fontSize:".6rem",fontFamily:"'Nunito',sans-serif",fontWeight:700,padding:"2px 8px",borderRadius:20}}>
-                      {p.badge==="HOT" ? "🔥" : "⭐"}
+                  )}
+                  <h1 style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.4rem",
+                    margin:"0 0 8px",color:"#fff",textShadow:"0 2px 8px rgba(0,0,0,.5)"}}>
+                    {selectedEtab.name}
+                  </h1>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",
+                    gap:10,flexWrap:"wrap",marginBottom:4}}>
+                    {selectedEtab.openHours && (
+                      <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:"rgba(255,255,255,.88)"}}>
+                        🕐 {selectedEtab.openHours}
+                      </span>
+                    )}
+                    {selectedEtab.address && (
+                      <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",color:"rgba(255,255,255,.82)"}}>
+                        📍 {selectedEtab.address}
+                      </span>
+                    )}
+                    {selectedEtab.phone && (
+                      <a href={`tel:${selectedEtab.phone}`}
+                        style={{fontFamily:"'Nunito',sans-serif",fontSize:".75rem",
+                          color:"rgba(255,255,255,.92)",textDecoration:"none",fontWeight:600}}>
+                        📞 {selectedEtab.phone}
+                      </a>
+                    )}
+                    <span style={{display:"inline-flex",alignItems:"center",gap:5,
+                      background: settings.shopOpen ? "rgba(34,197,94,.82)" : "rgba(120,120,120,.75)",
+                      color:"#fff",fontSize:".68rem",fontFamily:"'Nunito',sans-serif",
+                      fontWeight:700,padding:"3px 10px",borderRadius:20}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background:"#fff",display:"inline-block"}} />
+                      {settings.shopOpen ? "OUVERT" : "FERMÉ"}
                     </span>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          );
-        })()}
 
-        {/* Filtres catégories */}
-        <div className="cat-bar" style={{display:"flex",gap:10,marginBottom:20,padding:"0 12px 10px"}}>
-          {cats.map(c => (
-            <button key={c.key} className="cat-btn" onClick={() => setActiveCat(c.key)}
-              style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,
-                padding:"10px 14px",minWidth:72,cursor:"pointer",borderRadius:16,transition:"all .2s",border:"none",
-                background: activeCat===c.key ? D.pink : "#f5f5f7",
-                color: activeCat===c.key ? "#fff" : D.muted,
-                boxShadow: activeCat===c.key ? "0 4px 14px rgba(255,45,120,.28)" : "0 1px 3px rgba(0,0,0,.07)"}}>
-              <span style={{fontSize:"1.5rem",lineHeight:1}}>{c.emoji || "🛍️"}</span>
-              <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".65rem",letterSpacing:".05em",textTransform:"uppercase",lineHeight:1.2,textAlign:"center"}}>
-                {c.emoji ? c.label.replace(c.emoji,"").trim() : c.label}
-              </span>
-            </button>
-          ))}
-        </div>
+              {/* ── Barre de recherche (sticky dans le scroll) ── */}
+              <div style={{position:"sticky",top:0,zIndex:10,padding:"12px 16px 10px",background:"#fff",
+                borderBottom:"1px solid #E6E8EC",boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
+                <div style={{position:"relative"}}>
+                  <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",
+                    fontSize:".95rem",pointerEvents:"none",color:"#9ca3af"}}>🔍</span>
+                  <input
+                    value={etabSearch}
+                    onChange={e => setEtabSearch(e.target.value)}
+                    placeholder={`Rechercher dans ${selectedEtab.name}`}
+                    style={{width:"100%",background:"#F6F7F9",border:"1px solid #E6E8EC",
+                      borderRadius:28,padding:"11px 16px 11px 42px",
+                      fontFamily:"'Nunito',sans-serif",fontSize:".9rem",
+                      color:"#1a1a2e",outline:"none",boxSizing:"border-box"}}
+                  />
+                </div>
+              </div>
 
-        {loading ? (
-          <div style={{textAlign:"center",color:D.muted,fontFamily:"'Nunito',sans-serif",padding:"60px",fontSize:".9rem"}}>Chargement des produits...</div>
-        ) : filtered.length === 0 ? (
-          <div style={{textAlign:"center",color:D.muted,fontFamily:"'Nunito',sans-serif",padding:"60px",fontSize:".9rem",background:"#f9f9f9",borderRadius:12}}>Aucun produit disponible pour le moment.</div>
-        ) : activeCat !== "all" ? (
-          <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
-            {filtered.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
-          </div>
-        ) : (
-          <div style={{display:"grid",gap:32}}>
-            {cats.filter(c => c.key !== "all").map(cat => {
-              const catProds = filtered.filter(p => p.cat === cat.key);
-              if (catProds.length === 0) return null;
-              return (
-                <div key={cat.key}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:10,borderBottom:`1px solid rgba(0,0,0,.08)`}}>
-                    <span style={{fontSize:"1.3rem"}}>{cat.emoji}</span>
-                    <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>{cat.emoji ? cat.label.replace(cat.emoji,"").trim() : cat.label}</span>
-                    <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",color:D.muted,marginLeft:2}}>{catProds.length} produit{catProds.length > 1 ? "s" : ""}</span>
+              {/* ── CATALOGUE ── */}
+              <section id="catalogue" style={{padding:"32px 16px 80px 16px",position:"relative",zIndex:1}}>
+                {activePromo && (
+                  <div style={{padding:"0 12px",marginBottom:8}}>
+                    <FlashDealBanner promo={activePromo} products={products} source="home" onAddToCart={addToCart} />
                   </div>
-                  <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
-                    {catProds.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
+                )}
+
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px",flexWrap:"wrap",gap:10}}>
+                  <div className="section-title" style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.4rem",color:D.text,letterSpacing:".01em"}}>
+                    Menu
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    {settings.aiVoiceEnabled !== false && (
+                      <VoiceOrderButton products={etabProds} onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))} />
+                    )}
+                    {!loading && (
+                      <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:600,fontSize:".78rem",color:D.muted,background:"#f5f5f7",borderRadius:20,padding:"4px 12px"}}>
+                        {etabProds.filter(p => p.stock > 0).length} articles
+                      </span>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </section>}
+
+                {/* À la une — Populaire */}
+                {(() => {
+                  const featured = etabProds.filter(p => (p.badge === "HOT" || p.badge === "BEST") && p.stock > 0);
+                  if (!featured.length) return null;
+                  return (
+                    <div style={{marginBottom:28}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 12px",marginBottom:14}}>
+                        <span style={{fontSize:"1.2rem"}}>🔥</span>
+                        <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>Populaire</div>
+                      </div>
+                      <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 12px 8px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+                        {featured.map(p => (
+                          <div key={p.id} onClick={() => openProductModal(p)}
+                            style={{flexShrink:0,width:150,background:"#fff",borderRadius:14,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
+                            {p.image ? (
+                              <img src={p.image} alt={p.name} style={{width:"100%",height:100,objectFit:"cover",display:"block"}} />
+                            ) : (
+                              <div style={{width:"100%",height:100,display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f5f7",fontSize:"2.5rem",opacity:.3}}>🍽️</div>
+                            )}
+                            <div style={{padding:"8px 10px 10px"}}>
+                              <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".9rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+                              <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".88rem",color:D.pink,marginTop:3}}>{p.price.toFixed(2)}€</div>
+                            </div>
+                            <span style={{position:"absolute",top:8,left:8,background: p.badge==="HOT" ? D.pink : "#ffb400",color:"#fff",fontSize:".6rem",fontFamily:"'Nunito',sans-serif",fontWeight:700,padding:"2px 8px",borderRadius:20}}>
+                              {p.badge==="HOT" ? "🔥" : "⭐"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Filtres catégories */}
+                <div className="cat-bar" style={{display:"flex",gap:10,marginBottom:20,padding:"0 12px 10px"}}>
+                  {cats.map(c => (
+                    <button key={c.key} className="cat-btn" onClick={() => setActiveCat(c.key)}
+                      style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,
+                        padding:"10px 14px",minWidth:72,cursor:"pointer",borderRadius:16,transition:"all .2s",border:"none",
+                        background: activeCat===c.key ? D.pink : "#f5f5f7",
+                        color: activeCat===c.key ? "#fff" : D.muted,
+                        boxShadow: activeCat===c.key ? "0 4px 14px rgba(255,45,120,.28)" : "0 1px 3px rgba(0,0,0,.07)"}}>
+                      <span style={{fontSize:"1.5rem",lineHeight:1}}>{c.emoji || "🛍️"}</span>
+                      <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".65rem",letterSpacing:".05em",textTransform:"uppercase",lineHeight:1.2,textAlign:"center"}}>
+                        {c.emoji ? c.label.replace(c.emoji,"").trim() : c.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {loading ? (
+                  <div style={{textAlign:"center",color:D.muted,fontFamily:"'Nunito',sans-serif",padding:"60px",fontSize:".9rem"}}>Chargement des produits...</div>
+                ) : filtered.length === 0 ? (
+                  <div style={{textAlign:"center",color:D.muted,fontFamily:"'Nunito',sans-serif",padding:"60px",fontSize:".9rem",background:"#f9f9f9",borderRadius:12}}>Aucun produit disponible pour le moment.</div>
+                ) : activeCat !== "all" ? (
+                  <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
+                    {filtered.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
+                  </div>
+                ) : (
+                  <div style={{display:"grid",gap:32}}>
+                    {cats.filter(c => c.key !== "all").map(cat => {
+                      const catProds = filtered.filter(p => p.cat === cat.key);
+                      if (catProds.length === 0) return null;
+                      return (
+                        <div key={cat.key}>
+                          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:10,borderBottom:`1px solid rgba(0,0,0,.08)`}}>
+                            <span style={{fontSize:"1.3rem"}}>{cat.emoji}</span>
+                            <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>{cat.emoji ? cat.label.replace(cat.emoji,"").trim() : cat.label}</span>
+                            <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",color:D.muted,marginLeft:2}}>{catProds.length} produit{catProds.length > 1 ? "s" : ""}</span>
+                          </div>
+                          <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
+                            {catProds.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+            </div>{/* fin zone scrollable */}
+          </div>{/* fin bottom sheet */}
+        </>
+      )}
 
       {/* LIVRAISON GRATUITE BANNER */}
       <div style={{margin:"0 28px 44px",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,flexWrap:"wrap",background:"linear-gradient(135deg,rgba(255,45,120,.04),rgba(0,153,204,.03))",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
