@@ -9,6 +9,11 @@ import {
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+async function sha256(str: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
   authDomain: "yassala-shop.firebaseapp.com",
@@ -168,6 +173,8 @@ export default function EtablissementDetailPage() {
   const [prodCatFilter, setProdCatFilter] = useState("all");
 
   const [toast, setToast] = useState({ msg: "", show: false, ok: true });
+  const [newCode, setNewCode] = useState("");
+  const [codeSaving, setCodeSaving] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") setAuth(!!localStorage.getItem("yassala_admin_auth"));
@@ -210,6 +217,17 @@ export default function EtablissementDetailPage() {
     await updateDoc(doc(db, "day_etablissements", etabId), { ...etab, updatedAt: new Date().toISOString() });
     setSaving(false);
     showMsg("Profil sauvegardé ✓");
+  };
+
+  const saveAccessCode = async () => {
+    if (!newCode.trim()) { showMsg("Code requis", false); return; }
+    if (newCode.trim().length < 4) { showMsg("Le code doit faire au moins 4 caractères", false); return; }
+    setCodeSaving(true);
+    const hashed = await sha256(newCode.trim());
+    await updateDoc(doc(db, "day_etablissements", etabId), { accessCode: hashed });
+    setNewCode("");
+    setCodeSaving(false);
+    showMsg("Code d'accès défini ✓");
   };
 
   const uploadLogo = async (file: File) => {
@@ -457,6 +475,63 @@ export default function EtablissementDetailPage() {
                   <button onClick={saveProfile} disabled={saving} style={S.btnPrimary}>
                     {saving ? "⏳ SAUVEGARDE..." : "☀️ SAUVEGARDER LE PROFIL"}
                   </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Accès établissement ── */}
+            <div style={{ ...S.card, marginTop: 20, border: "1px solid rgba(255,45,120,.2)" }}>
+              <div style={{ ...mono, fontSize: ".72rem", color: "#ff2d78", letterSpacing: ".12em", marginBottom: 16 }}>
+                // ACCÈS PORTAIL ÉTABLISSEMENT
+              </div>
+              <div style={{ display: "grid", gap: 14 }}>
+                {/* Portal URL */}
+                <div>
+                  <label style={S.label}>LIEN DU PORTAIL</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <input
+                      readOnly
+                      value={typeof window !== "undefined" ? `${window.location.origin}/etablissement/${etabId}` : `/etablissement/${etabId}`}
+                      style={{ ...S.input, color: "#ff2d78", ...mono, fontSize: ".8rem", cursor: "text" }}
+                      onFocus={e => e.target.select()}
+                    />
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}/etablissement/${etabId}`;
+                        navigator.clipboard.writeText(url).then(() => showMsg("Lien copié ✓")).catch(() => {});
+                      }}
+                      style={{ ...S.btnGhost, padding: "9px 14px", fontSize: ".75rem", flexShrink: 0 }}>
+                      📋 COPIER
+                    </button>
+                  </div>
+                  <div style={{ ...mono, fontSize: ".65rem", color: "#4a4060", marginTop: 6 }}>
+                    Partagez ce lien avec le gérant de l'établissement.
+                    L'identifiant (slug) est : <span style={{ color: "#7a6490" }}>{etab.slug || "— (slug non défini)"}</span>
+                  </div>
+                </div>
+
+                {/* Set access code */}
+                <div>
+                  <label style={S.label}>DÉFINIR / CHANGER LE CODE D'ACCÈS</label>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                      type="password"
+                      value={newCode}
+                      onChange={e => setNewCode(e.target.value)}
+                      placeholder="Nouveau code (min. 4 caractères)"
+                      style={{ ...S.input, flex: 1 }}
+                      onKeyDown={e => e.key === "Enter" && saveAccessCode()}
+                    />
+                    <button
+                      onClick={saveAccessCode}
+                      disabled={codeSaving}
+                      style={{ ...S.btnPrimary, padding: "10px 18px", flexShrink: 0 }}>
+                      {codeSaving ? "⏳" : "✓ DÉFINIR"}
+                    </button>
+                  </div>
+                  <div style={{ ...mono, fontSize: ".65rem", color: "#4a4060", marginTop: 6 }}>
+                    Le code est stocké sous forme chiffrée. Sans code défini, le gérant ne peut pas se connecter.
+                  </div>
                 </div>
               </div>
             </div>
