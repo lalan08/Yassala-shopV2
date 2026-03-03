@@ -1448,28 +1448,78 @@ function NightHome() {
         )}
       </section>
 
-      <div className="info-bar" style={{display:"flex",borderTop:"1px solid rgba(255,45,120,.25)",
-        borderBottom:"1px solid rgba(0,245,255,.2)",position:"relative",zIndex:1}}>
-        {[
-          {icon:"⚡",title:"Ultra rapide",     sub:"– 30 minutes"},
-          {icon:"🔥",title:"Livraison offerte",sub:`dès ${deliveryConfig.free_delivery_threshold}€`},
-          {icon:"📡",title:settings.zone,      sub:"couverture totale"},
-          {icon:"🌙",title:settings.hours,     sub:"7j/7"},
-        ].map((item,i) => (
-          <div key={i} className="info-bar-item" style={{flex:1,padding:"14px 18px",display:"flex",alignItems:"center",
-            gap:10,borderRight:"1px solid rgba(255,255,255,.04)",background:"#080514"}}>
-            <span style={{fontSize:"1.2rem"}}>{item.icon}</span>
-            <div>
-              <strong style={{display:"block",fontWeight:700,fontSize:".82rem",
-                letterSpacing:".06em",color:"#f0eeff",textTransform:"uppercase"}}>
-                {item.title}
-              </strong>
-              <small style={{fontSize:".72rem",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace"}}>
-                {item.sub}
-              </small>
+      {/* ── INFO BAR ── */}
+      <div className="info-bar" style={{
+        position:"relative",zIndex:1,
+        background:"linear-gradient(180deg,#0a0620 0%,#060412 100%)",
+        borderTop:"1px solid rgba(255,45,120,.35)",
+        borderBottom:"1px solid rgba(0,245,255,.25)",
+        overflow:"hidden",
+      }}>
+        {/* fond ambient glow */}
+        <div style={{
+          position:"absolute",inset:0,
+          background:"radial-gradient(ellipse 60% 100% at 20% 50%,rgba(255,45,120,.06) 0%,transparent 70%)," +
+                     "radial-gradient(ellipse 60% 100% at 80% 50%,rgba(0,245,255,.05) 0%,transparent 70%)",
+          pointerEvents:"none",
+        }}/>
+        <div style={{display:"flex",position:"relative"}}>
+          {[
+            {icon:"⚡", color:"#ffe44d", glow:"rgba(255,228,77,.35)",  title:"Ultra rapide",     sub:"– 30 min"},
+            {icon:"🎁", color:"#ff2d78", glow:"rgba(255,45,120,.35)",  title:"Livraison offerte",sub:`dès ${deliveryConfig.free_delivery_threshold}€`},
+            {icon:"📡", color:"#00c3ff", glow:"rgba(0,195,255,.35)",   title:settings.zone,      sub:"couverture totale"},
+            {icon:"🌙", color:"#a78bfa", glow:"rgba(167,139,250,.35)", title:settings.hours,     sub:"7j/7"},
+          ].map((item,i,arr) => (
+            <div key={i} style={{
+              flex:1,
+              padding:"16px 10px",
+              display:"flex",
+              flexDirection:"column",
+              alignItems:"center",
+              gap:8,
+              borderRight: i < arr.length-1 ? "1px solid rgba(255,255,255,.05)" : "none",
+              position:"relative",
+            }}>
+              {/* icône avec halo */}
+              <div style={{
+                width:42,height:42,
+                borderRadius:"50%",
+                background:`radial-gradient(circle,${item.glow} 0%,rgba(0,0,0,0) 70%)`,
+                border:`1px solid ${item.color}33`,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:"1.3rem",
+                boxShadow:`0 0 14px ${item.glow}, inset 0 0 8px ${item.color}22`,
+              }}>
+                {item.icon}
+              </div>
+              {/* texte */}
+              <div style={{textAlign:"center"}}>
+                <strong style={{
+                  display:"block",
+                  fontWeight:800,
+                  fontSize:".75rem",
+                  letterSpacing:".08em",
+                  color:"#f0eeff",
+                  textTransform:"uppercase",
+                  lineHeight:1.2,
+                }}>
+                  {item.title}
+                </strong>
+                <small style={{
+                  display:"block",
+                  marginTop:3,
+                  fontSize:".68rem",
+                  fontFamily:"'Share Tech Mono',monospace",
+                  color:item.color,
+                  opacity:.85,
+                  letterSpacing:".04em",
+                }}>
+                  {item.sub}
+                </small>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <section id="catalogue" style={{padding:"48px 16px 48px 16px",position:"relative",zIndex:1}}>
