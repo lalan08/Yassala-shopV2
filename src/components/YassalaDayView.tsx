@@ -952,13 +952,9 @@ export default function YassalaDayView() {
       <section style={{position:"relative",minHeight:420,overflow:"hidden",zIndex:1,display:"flex",alignItems:"center"}}
         onMouseEnter={() => banners.length > 1 && setBannerPaused(true)}
         onMouseLeave={() => banners.length > 1 && setBannerPaused(false)}>
-        {/* Grille animée claire */}
-        <div style={{position:"absolute",inset:0,
-          backgroundImage:"linear-gradient(rgba(255,45,120,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,120,.06) 1px,transparent 1px)",
-          backgroundSize:"50px 50px",animation:"gridScroll 20s linear infinite"}} />
-        {banners.length > 0 && (
+        {banners.length > 0 && banners[bannerIdx]?.gradient && (
           <div key={`grad-${bannerIdx}`} style={{position:"absolute",inset:0,
-            background: banners[bannerIdx]?.gradient || "linear-gradient(135deg,rgba(255,45,120,.25) 0%,rgba(250,247,255,.7) 100%)",
+            background: banners[bannerIdx].gradient,
             animation:"bannerIn .7s both",zIndex:1}} />
         )}
         {banners.length > 0 && banners[bannerIdx]?.image && (
