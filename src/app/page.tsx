@@ -1413,8 +1413,6 @@ function NightHome() {
         {/* Logo + Horloge */}
         <div className={`clock-hero${banners.length === 0 ? " fade5" : ""}`}
           style={{position:"absolute",right:28,top:"50%",transform:"translateY(-50%)",zIndex:3,textAlign:"center"}}>
-          <img src="/logo.png" alt="Yassala" style={{width:240,height:"auto",maxWidth:"30vw",display:"block",margin:"0 auto",
-            filter:"drop-shadow(0 0 32px rgba(255,45,120,.55)) drop-shadow(0 0 64px rgba(0,245,255,.2))"}} />
           <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"2.8rem",
             color:"#00f5ff",textShadow:"0 0 20px rgba(0,245,255,.6)",letterSpacing:".05em",lineHeight:1,marginTop:18}}>
             {clock}
