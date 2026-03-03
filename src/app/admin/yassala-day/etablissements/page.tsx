@@ -62,6 +62,9 @@ export default function EtablissementsPage() {
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState({ msg: "", show: false, ok: true });
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const quickLogoRef = useRef<HTMLInputElement>(null);
+  const [quickLogoEtabId, setQuickLogoEtabId] = useState<string | null>(null);
+  const [quickLogoLoading, setQuickLogoLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") setAuth(!!localStorage.getItem("yassala_admin_auth"));
@@ -95,6 +98,18 @@ export default function EtablissementsPage() {
       showMsg("Logo uploadé ✓");
     } catch { showMsg("Erreur upload logo", false); }
     finally { setUploading(false); }
+  };
+
+  const handleQuickLogo = async (file: File, etabId: string) => {
+    setQuickLogoLoading(etabId);
+    try {
+      const r = ref(storage, `day_etablissements/${Date.now()}_${file.name}`);
+      await uploadBytes(r, file);
+      const url = await getDownloadURL(r);
+      await updateDoc(doc(db, "day_etablissements", etabId), { logoUrl: url });
+      showMsg("Logo mis à jour ✓");
+    } catch { showMsg("Erreur upload logo", false); }
+    finally { setQuickLogoLoading(null); setQuickLogoEtabId(null); }
   };
 
   const save = async () => {
@@ -148,6 +163,14 @@ export default function EtablissementsPage() {
 
   return (
     <div style={S.page}>
+      {/* Input caché pour changement rapide de logo depuis la liste */}
+      <input ref={quickLogoRef} type="file" accept="image/*" style={{ display: "none" }}
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file && quickLogoEtabId) handleQuickLogo(file, quickLogoEtabId);
+          e.target.value = "";
+        }} />
+
       {/* Toast */}
       {toast.show && (
         <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, background: toast.ok ? "#0f5132" : "#5c0a1f", border: `1px solid ${toast.ok ? "rgba(184,255,0,.3)" : "rgba(255,45,120,.3)"}`, color: toast.ok ? "#b8ff00" : "#ff2d78", padding: "12px 20px", borderRadius: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: ".82rem", letterSpacing: ".08em" }}>
@@ -209,28 +232,36 @@ export default function EtablissementsPage() {
                   <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+594 XXX XXX" style={S.input} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <div>
-                  <label style={S.label}>HORAIRES D'OUVERTURE</label>
-                  <input value={form.openHours} onChange={e => setForm(f => ({ ...f, openHours: e.target.value }))} placeholder="08:00–21:00" style={S.input} />
+              {/* Logo upload — visuel prominent */}
+              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 20, alignItems: "start", padding: "16px 18px", background: "rgba(251,191,36,.04)", border: "1px solid rgba(251,191,36,.12)", borderRadius: 10 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  <label style={S.label}>LOGO</label>
+                  <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }}
+                    onChange={e => { if (e.target.files?.[0]) handleLogoUpload(e.target.files[0]); e.target.value = ""; }} />
+                  <div onClick={() => !uploading && logoInputRef.current?.click()}
+                    style={{ width: 88, height: 88, borderRadius: 14, border: `2px dashed ${form.logoUrl ? "rgba(251,191,36,.45)" : "rgba(255,255,255,.18)"}`, background: form.logoUrl ? "#000" : "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", transition: "border-color .2s, opacity .2s", opacity: uploading ? 0.6 : 1, position: "relative" }}>
+                    {uploading ? (
+                      <span style={{ fontSize: "1.5rem" }}>⏳</span>
+                    ) : form.logoUrl ? (
+                      <img src={form.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: "2.2rem" }}>🏪</span>
+                    )}
+                  </div>
+                  <span onClick={() => !uploading && logoInputRef.current?.click()} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".62rem", color: "#5a5470", cursor: "pointer", textAlign: "center" }}>
+                    {uploading ? "UPLOAD..." : form.logoUrl ? "CHANGER LE LOGO" : "AJOUTER UN LOGO"}
+                  </span>
                 </div>
-                <div>
-                  <label style={S.label}>URL LOGO (ou uploader ci-dessous)</label>
-                  <input value={form.logoUrl} onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))} placeholder="https://..." style={S.input} />
+                <div style={{ display: "grid", gap: 12 }}>
+                  <div>
+                    <label style={S.label}>HORAIRES D'OUVERTURE</label>
+                    <input value={form.openHours} onChange={e => setForm(f => ({ ...f, openHours: e.target.value }))} placeholder="08:00–21:00" style={S.input} />
+                  </div>
+                  <div>
+                    <label style={S.label}>URL LOGO</label>
+                    <input value={form.logoUrl} onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))} placeholder="https://... (ou cliquez sur l'image à gauche)" style={S.input} />
+                  </div>
                 </div>
-              </div>
-
-              {/* Upload logo */}
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }}
-                  onChange={e => { if (e.target.files?.[0]) handleLogoUpload(e.target.files[0]); }} />
-                <button onClick={() => logoInputRef.current?.click()} disabled={uploading}
-                  style={{ ...S.btnGhost, fontSize: ".78rem", padding: "8px 16px" }}>
-                  {uploading ? "⏳ UPLOAD..." : "📷 UPLOADER LOGO"}
-                </button>
-                {form.logoUrl && (
-                  <img src={form.logoUrl} alt="Logo" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(251,191,36,.2)" }} />
-                )}
               </div>
 
               {/* Statut */}
@@ -272,9 +303,14 @@ export default function EtablissementsPage() {
           <div style={{ display: "grid", gap: 12 }}>
             {etablissements.map(etab => (
               <div key={etab.id} style={{ background: "rgba(255,255,255,.02)", border: `1px solid ${etab.isActive ? "rgba(251,191,36,.18)" : "rgba(255,255,255,.05)"}`, borderRadius: 12, padding: "16px 22px", display: "flex", alignItems: "center", gap: 18, opacity: etab.isActive ? 1 : 0.65, transition: "all .15s" }}>
-                {/* Logo */}
-                <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem", flexShrink: 0, overflow: "hidden" }}>
-                  {etab.logoUrl ? <img src={etab.logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🏪"}
+                {/* Logo — cliquable pour changer */}
+                <div title="Cliquer pour changer le logo" onClick={() => { setQuickLogoEtabId(etab.id!); setTimeout(() => quickLogoRef.current?.click(), 10); }}
+                  style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem", flexShrink: 0, overflow: "hidden", cursor: "pointer", position: "relative" }}>
+                  {quickLogoLoading === etab.id ? (
+                    <span style={{ fontSize: "1.2rem" }}>⏳</span>
+                  ) : etab.logoUrl ? (
+                    <img src={etab.logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : "🏪"}
                 </div>
 
                 {/* Infos */}
