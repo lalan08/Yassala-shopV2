@@ -1016,8 +1016,6 @@ export default function YassalaDayView() {
         </div>
         {/* Logo + Horloge */}
         <div className="clock-hero" style={{position:"absolute",right:28,top:"50%",transform:"translateY(-50%)",zIndex:3,textAlign:"center"}}>
-          <img src="/logo.png" alt="Yassala" style={{width:240,height:"auto",maxWidth:"30vw",display:"block",margin:"0 auto",
-            filter:"drop-shadow(0 0 28px rgba(255,45,120,.45)) drop-shadow(0 0 56px rgba(0,153,204,.2))"}} />
           <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"2.8rem",color:D.cyan,letterSpacing:".05em",lineHeight:1,marginTop:16}}>
             {clock}
           </div>
