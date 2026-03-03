@@ -32,9 +32,14 @@
   border-color: var(--border);
 }
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 20% 10%, #eaf2ff 0%, transparent 40%),
+    radial-gradient(circle at 80% 90%, #ffeaf4 0%, transparent 40%),
+    linear-gradient(180deg, #f9fbff 0%, #ffffff 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: system-ui, -apple-system, sans-serif;
+  /* Le fond ne doit pas voler l'attention des cartes produits. Il doit juste adoucir l'interface. */
 }
 
 /* Modern Scrollbar */
