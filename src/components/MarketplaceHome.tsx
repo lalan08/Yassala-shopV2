@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   MapPin,
   ChevronDown,
@@ -18,6 +18,19 @@ import {
   Home,
   X,
 } from "lucide-react";
+import { initializeApp, getApps } from "firebase/app";
+import { getFirestore, collection, onSnapshot } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBct9CXbZigDElOsCsLHmOE4pB1lmfa2VI",
+  authDomain: "yassala-shop.firebaseapp.com",
+  projectId: "yassala-shop",
+  storageBucket: "yassala-shop.firebasestorage.app",
+  messagingSenderId: "871772438691",
+  appId: "1:871772438691:web:403d6672c34e9529eaff16",
+};
+const _app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const _db = getFirestore(_app);
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const YASSALA_PINK = "#ff2d78";
@@ -37,10 +50,15 @@ interface Commerce {
   promo?: string;
   isOpen: boolean;
   opensAt?: string;
+  closeTime?: string;
   isNew?: boolean;
   isPopular?: boolean;
+  isComingSoon?: boolean;
   emoji: string;
   bgColor: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  slug?: string;
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────
@@ -377,26 +395,31 @@ function EstablishmentCard({
       className="bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.99] transition-transform"
       style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.10)" }}
     >
-      {/* ── Cover Image (16:9-ish, ~180px) ── */}
+      {/* ── Cover (180px) ── */}
       <div className="relative rounded-t-2xl overflow-hidden" style={{ height: 180 }}>
-        {/* Gradient background */}
-        <div
-          className="absolute inset-0"
-          style={{ backgroundColor: commerce.bgColor }}
-        />
-        {/* Large emoji watermark texture */}
-        <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
-          <span style={{ fontSize: 110, opacity: 0.18, filter: "blur(1.5px)" }}>
-            {commerce.emoji}
-          </span>
-        </div>
-        {/* Bottom gradient overlay for depth */}
+        {/* Fond : vraie image ou couleur + emoji watermark */}
+        {commerce.coverUrl ? (
+          <img
+            src={commerce.coverUrl}
+            alt={commerce.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0" style={{ backgroundColor: commerce.bgColor }} />
+            <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
+              <span style={{ fontSize: 110, opacity: 0.18, filter: "blur(1.5px)" }}>{commerce.emoji}</span>
+            </div>
+          </>
+        )}
+
+        {/* Dégradé sombre en bas pour la lisibilité */}
         <div
           className="absolute bottom-0 left-0 right-0"
-          style={{ height: 72, background: "linear-gradient(to top, rgba(0,0,0,0.48) 0%, transparent 100%)" }}
+          style={{ height: 72, background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)" }}
         />
 
-        {/* Top-left: status badges */}
+        {/* Top-left : badges Nouveau / Populaire */}
         <div className="absolute top-3 left-3 flex gap-1.5">
           {commerce.isNew && (
             <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
@@ -404,16 +427,13 @@ function EstablishmentCard({
             </span>
           )}
           {commerce.isPopular && (
-            <span
-              className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow"
-              style={{ backgroundColor: "#f59e0b" }}
-            >
+            <span className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow" style={{ backgroundColor: "#f59e0b" }}>
               🔥 Populaire
             </span>
           )}
         </div>
 
-        {/* Promo badge – bottom-left on cover */}
+        {/* Badge promo – bas-gauche sur la cover */}
         {commerce.promo && (
           <div
             className="absolute bottom-3 left-3 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow"
@@ -423,83 +443,105 @@ function EstablishmentCard({
           </div>
         )}
 
-        {/* Favorite button – top-right */}
+        {/* Bouton favori – haut-droit */}
         <button
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow"
-          onClick={() => onToggleFavorite(commerce.id)}
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(commerce.id); }}
           aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
         >
-          <Heart
-            size={15}
-            fill={isFavorite ? YASSALA_PINK : "none"}
-            stroke={isFavorite ? YASSALA_PINK : "#9CA3AF"}
-          />
+          <Heart size={15} fill={isFavorite ? YASSALA_PINK : "none"} stroke={isFavorite ? YASSALA_PINK : "#9CA3AF"} />
         </button>
 
-        {/* Logo badge – overlapping cover/body boundary */}
+        {/* Logo – chevauche la frontière cover/body */}
         <div
-          className="absolute left-4 bg-white rounded-xl flex items-center justify-center text-2xl"
-          style={{
-            width: 48,
-            height: 48,
-            bottom: -22,
-            border: "2.5px solid #fff",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.14)",
-          }}
+          className="absolute left-4 bg-white rounded-xl flex items-center justify-center overflow-hidden"
+          style={{ width: 52, height: 52, bottom: -24, border: "2.5px solid #fff", boxShadow: "0 2px 10px rgba(0,0,0,0.14)" }}
         >
-          {commerce.emoji}
+          {commerce.logoUrl ? (
+            <img src={commerce.logoUrl} alt={commerce.name} className="w-full h-full object-cover" />
+          ) : (
+            <span style={{ fontSize: "1.6rem" }}>{commerce.emoji}</span>
+          )}
         </div>
 
-        {/* Closed overlay */}
+        {/* Overlay fermé */}
         {!commerce.isOpen && (
           <div className="absolute inset-0 bg-black/50 flex items-end p-3">
             <span className="text-white text-sm font-semibold bg-black/70 px-3 py-1.5 rounded-full">
-              Disponible à {commerce.opensAt}
+              {commerce.closeTime ? `Fermé à ${commerce.closeTime}` : `Ouvre à ${commerce.opensAt || "–"}`}
             </span>
           </div>
         )}
       </div>
 
-      {/* ── Card Body ── */}
-      <div className="px-4 pt-8 pb-3.5">
-        {/* Name + Rating */}
+      {/* ── Corps de la carte ── */}
+      <div className="px-4 pt-9 pb-3.5">
+        {/* Nom + Badge statut + Note */}
         <div className="flex items-start justify-between gap-2">
-          <p className="font-bold text-gray-900 text-[15px] leading-snug flex-1 min-w-0 truncate">
-            {commerce.name}
-          </p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-bold text-gray-900 text-[15px] leading-snug truncate">{commerce.name}</p>
+              {/* Badge ouvert/fermé */}
+              {commerce.isOpen ? (
+                <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#DCFCE7", color: "#16A34A" }}>
+                  OUVERT
+                </span>
+              ) : (
+                <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
+                  {commerce.closeTime ? `FERMÉ À ${commerce.closeTime}` : "FERMÉ"}
+                </span>
+              )}
+            </div>
+            {/* Tags */}
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{commerce.tags.join(" · ")}</p>
+          </div>
+          {/* Note */}
           <div className="flex items-center gap-1 flex-shrink-0 bg-amber-50 px-2 py-0.5 rounded-full">
             <Star size={11} fill="#FBBF24" stroke="#FBBF24" />
-            <span className="text-xs font-bold text-amber-700">{commerce.rating}</span>
+            <span className="text-xs font-bold text-amber-700">{commerce.rating.toFixed(1)}</span>
             <span className="text-[10px] text-gray-400">({commerce.reviewCount})</span>
           </div>
         </div>
 
-        {/* Tags */}
-        <p className="text-xs text-gray-400 mt-0.5 truncate">{commerce.tags.join(" · ")}</p>
-
-        {/* Info row */}
+        {/* Info : délai, distance, livraison */}
         <div className="flex items-center gap-2 mt-2.5 text-xs text-gray-500 flex-wrap">
           <div className="flex items-center gap-1">
             <Clock size={11} />
             <span>{commerce.deliveryMin}–{commerce.deliveryMax} min</span>
           </div>
+          {commerce.distanceKm > 0 && (
+            <>
+              <span className="text-gray-200">|</span>
+              <div className="flex items-center gap-1">
+                <Navigation size={11} />
+                <span>{formatDistance(commerce.distanceKm)}</span>
+              </div>
+            </>
+          )}
           <span className="text-gray-200">|</span>
-          <div className="flex items-center gap-1">
-            <Navigation size={11} />
-            <span>{formatDistance(commerce.distanceKm)}</span>
-          </div>
-          <span className="text-gray-200">|</span>
-          <span
-            className={
-              commerce.deliveryFee === 0
-                ? "font-semibold text-emerald-600"
-                : "text-gray-500"
-            }
-          >
-            {commerce.deliveryFee === 0
-              ? "Livraison offerte"
-              : `Livraison ${commerce.deliveryFee.toFixed(2)}€`}
+          <span className={commerce.deliveryFee === 0 ? "font-semibold text-emerald-600" : "text-gray-500"}>
+            {commerce.deliveryFee === 0 ? "Livraison offerte" : `Livraison ${commerce.deliveryFee.toFixed(2)}€`}
           </span>
+        </div>
+
+        {/* CTA : Voir le menu / Prochainement */}
+        <div className="mt-3">
+          {commerce.isComingSoon ? (
+            <button
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-gray-400 border border-gray-200"
+              style={{ backgroundColor: "#F9FAFB" }}
+              disabled
+            >
+              Prochainement
+            </button>
+          ) : (
+            <button
+              className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-opacity active:opacity-80"
+              style={{ backgroundColor: YASSALA_PINK }}
+            >
+              Voir le menu
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -516,7 +558,51 @@ export default function MarketplaceHome() {
   const [showDeliveryDropdown, setShowDeliveryDropdown] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [activeNavTab, setActiveNavTab] = useState("home");
+  const [firebaseCommerces, setFirebaseCommerces] = useState<Commerce[] | null>(null);
   const cartCount = 0;
+
+  // Chargement Firebase des établissements actifs
+  useEffect(() => {
+    const unsub = onSnapshot(collection(_db, "day_etablissements"), (snap) => {
+      const data: Commerce[] = snap.docs
+        .map((d) => {
+          const raw = d.data();
+          if (!raw.isActive) return null;
+          return {
+            id: d.id,
+            name: raw.name || "",
+            category: raw.category || "restauration",
+            tags: raw.tags ? (raw.tags as string).split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+            distanceKm: raw.distanceKm || 0,
+            deliveryMin: raw.deliveryMin ?? 20,
+            deliveryMax: raw.deliveryMax ?? 35,
+            deliveryFee: raw.deliveryFee ?? 2,
+            rating: raw.rating ?? 4.5,
+            reviewCount: raw.reviewCount ?? 0,
+            promo: raw.promo || undefined,
+            isOpen: raw.isOpen !== undefined ? raw.isOpen : true,
+            opensAt: raw.opensAt,
+            closeTime: raw.closeTime,
+            isComingSoon: raw.isComingSoon || false,
+            isNew: raw.isNew || false,
+            isPopular: raw.isPopular || false,
+            emoji: raw.emoji || "🏪",
+            bgColor: raw.bgColor || "#FEF3C7",
+            logoUrl: raw.logoUrl || undefined,
+            coverUrl: raw.coverUrl || undefined,
+            slug: raw.slug || undefined,
+          } as Commerce;
+        })
+        .filter(Boolean) as Commerce[];
+      setFirebaseCommerces(data);
+    });
+    return () => unsub();
+  }, []);
+
+  // Utilise les données Firebase si disponibles, sinon les mock data
+  const COMMERCES_DATA = firebaseCommerces !== null && firebaseCommerces.length > 0
+    ? firebaseCommerces
+    : COMMERCES;
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
@@ -535,18 +621,18 @@ export default function MarketplaceHome() {
   // Section A: max 6, sorted by open first then distance
   const proximityCommerces = useMemo(
     () =>
-      [...COMMERCES]
+      [...COMMERCES_DATA]
         .sort((a, b) => {
           if (a.isOpen !== b.isOpen) return a.isOpen ? -1 : 1;
           return a.distanceKm - b.distanceKm;
         })
         .slice(0, 6),
-    []
+    [COMMERCES_DATA]
   );
 
   // Section B: all, filtered by search + active chips
   const allCommerces = useMemo(() => {
-    let filtered = [...COMMERCES];
+    let filtered = [...COMMERCES_DATA];
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -583,7 +669,7 @@ export default function MarketplaceHome() {
     else if (deliveryFeeFilter === "lt5") filtered = filtered.filter((c) => c.deliveryFee < 5);
 
     return filtered.sort((a, b) => a.distanceKm - b.distanceKm);
-  }, [search, activeFilter, activeCategoryIcon, activeSecondary, deliveryFeeFilter]);
+  }, [search, activeFilter, activeCategoryIcon, activeSecondary, deliveryFeeFilter, COMMERCES_DATA]);
 
   const currentDeliveryLabel =
     DELIVERY_FEE_OPTIONS.find((o) => o.id === deliveryFeeFilter)?.label ?? "Livraison";
@@ -828,8 +914,7 @@ export default function MarketplaceHome() {
       {/* ── BOTTOM NAV ──────────────────────────────────────────────────── */}
       <nav
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white z-30"
-        style={{ borderTop: "1px solid #EAECF0" }}
-        style={{ boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" }}
+        style={{ borderTop: "1px solid #EAECF0", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" }}
       >
         <div className="flex items-center justify-around py-2 px-2">
           {(

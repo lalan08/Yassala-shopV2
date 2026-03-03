@@ -33,11 +33,29 @@ type Etablissement = {
   openHours?: string;
   isActive: boolean;
   createdAt?: string;
+  // Champs d'affichage carte
+  category?: string;
+  tags?: string;
+  emoji?: string;
+  bgColor?: string;
+  promo?: string;
+  isOpen?: boolean;
+  closeTime?: string;
+  isComingSoon?: boolean;
+  deliveryMin?: number;
+  deliveryMax?: number;
+  deliveryFee?: number;
+  rating?: number;
+  reviewCount?: number;
 };
 
 const blankForm: Omit<Etablissement, "id"> = {
   name: "", slug: "", description: "", address: "", phone: "",
   logoUrl: "", coverUrl: "", openHours: "08:00–21:00", isActive: true,
+  category: "", tags: "", emoji: "🏪", bgColor: "#FEF3C7",
+  promo: "", isOpen: true, closeTime: "", isComingSoon: false,
+  deliveryMin: 20, deliveryMax: 35, deliveryFee: 2,
+  rating: 4.5, reviewCount: 0,
 };
 
 const S = {
@@ -62,9 +80,11 @@ export default function EtablissementsPage() {
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState({ msg: "", show: false, ok: true });
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const quickLogoRef = useRef<HTMLInputElement>(null);
   const [quickLogoEtabId, setQuickLogoEtabId] = useState<string | null>(null);
   const [quickLogoLoading, setQuickLogoLoading] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") setAuth(!!localStorage.getItem("yassala_admin_auth"));
@@ -98,6 +118,18 @@ export default function EtablissementsPage() {
       showMsg("Logo uploadé ✓");
     } catch { showMsg("Erreur upload logo", false); }
     finally { setUploading(false); }
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    setUploadingCover(true);
+    try {
+      const r = ref(storage, `day_etablissements/covers/${Date.now()}_${file.name}`);
+      await uploadBytes(r, file);
+      const url = await getDownloadURL(r);
+      setForm(f => ({ ...f, coverUrl: url }));
+      showMsg("Cover uploadée ✓");
+    } catch { showMsg("Erreur upload cover", false); }
+    finally { setUploadingCover(false); }
   };
 
   const handleQuickLogo = async (file: File, etabId: string) => {
@@ -170,6 +202,9 @@ export default function EtablissementsPage() {
           if (file && quickLogoEtabId) handleQuickLogo(file, quickLogoEtabId);
           e.target.value = "";
         }} />
+      {/* Input caché pour upload de la cover */}
+      <input ref={coverInputRef} type="file" accept="image/*" style={{ display: "none" }}
+        onChange={e => { if (e.target.files?.[0]) handleCoverUpload(e.target.files[0]); e.target.value = ""; }} />
 
       {/* Toast */}
       {toast.show && (
@@ -232,48 +267,145 @@ export default function EtablissementsPage() {
                   <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+594 XXX XXX" style={S.input} />
                 </div>
               </div>
-              {/* Logo upload — visuel prominent */}
-              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 20, alignItems: "start", padding: "16px 18px", background: "rgba(251,191,36,.04)", border: "1px solid rgba(251,191,36,.12)", borderRadius: 10 }}>
+              {/* ── IMAGES : Logo + Cover ── */}
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem", color: "#fbbf24", letterSpacing: ".1em", marginBottom: -4 }}>// IMAGES</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: "16px 18px", background: "rgba(251,191,36,.04)", border: "1px solid rgba(251,191,36,.12)", borderRadius: 10 }}>
+                {/* Logo */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                   <label style={S.label}>LOGO</label>
                   <input ref={logoInputRef} type="file" accept="image/*" style={{ display: "none" }}
                     onChange={e => { if (e.target.files?.[0]) handleLogoUpload(e.target.files[0]); e.target.value = ""; }} />
                   <div onClick={() => !uploading && logoInputRef.current?.click()}
-                    style={{ width: 88, height: 88, borderRadius: 14, border: `2px dashed ${form.logoUrl ? "rgba(251,191,36,.45)" : "rgba(255,255,255,.18)"}`, background: form.logoUrl ? "#000" : "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", transition: "border-color .2s, opacity .2s", opacity: uploading ? 0.6 : 1, position: "relative" }}>
-                    {uploading ? (
-                      <span style={{ fontSize: "1.5rem" }}>⏳</span>
-                    ) : form.logoUrl ? (
-                      <img src={form.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    ) : (
-                      <span style={{ fontSize: "2.2rem" }}>🏪</span>
-                    )}
+                    style={{ width: 80, height: 80, borderRadius: 14, border: `2px dashed ${form.logoUrl ? "rgba(251,191,36,.45)" : "rgba(255,255,255,.18)"}`, background: form.logoUrl ? "#000" : "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", opacity: uploading ? 0.6 : 1 }}>
+                    {uploading ? <span style={{ fontSize: "1.5rem" }}>⏳</span> : form.logoUrl ? <img src={form.logoUrl} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "2rem" }}>{form.emoji || "🏪"}</span>}
                   </div>
-                  <span onClick={() => !uploading && logoInputRef.current?.click()} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".62rem", color: "#5a5470", cursor: "pointer", textAlign: "center" }}>
-                    {uploading ? "UPLOAD..." : form.logoUrl ? "CHANGER LE LOGO" : "AJOUTER UN LOGO"}
+                  <span onClick={() => !uploading && logoInputRef.current?.click()} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".62rem", color: "#5a5470", cursor: "pointer", textAlign: "center" as const }}>
+                    {uploading ? "UPLOAD..." : form.logoUrl ? "CHANGER" : "AJOUTER LOGO"}
                   </span>
+                  <input value={form.logoUrl} onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))} placeholder="URL logo..." style={{ ...S.input, fontSize: ".72rem", marginTop: 4 }} />
                 </div>
-                <div style={{ display: "grid", gap: 12 }}>
-                  <div>
-                    <label style={S.label}>HORAIRES D'OUVERTURE</label>
-                    <input value={form.openHours} onChange={e => setForm(f => ({ ...f, openHours: e.target.value }))} placeholder="08:00–21:00" style={S.input} />
+                {/* Cover */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                  <label style={S.label}>COVER (BANNIÈRE)</label>
+                  <div onClick={() => !uploadingCover && coverInputRef.current?.click()}
+                    style={{ width: "100%", height: 80, borderRadius: 10, border: `2px dashed ${form.coverUrl ? "rgba(251,191,36,.45)" : "rgba(255,255,255,.18)"}`, background: form.coverUrl ? "#000" : form.bgColor || "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", opacity: uploadingCover ? 0.6 : 1, position: "relative" as const }}>
+                    {uploadingCover ? <span style={{ fontSize: "1.5rem" }}>⏳</span> : form.coverUrl ? <img src={form.coverUrl} alt="Cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: "2rem", opacity: 0.4 }}>{form.emoji || "🖼️"}</span>}
                   </div>
-                  <div>
-                    <label style={S.label}>URL LOGO</label>
-                    <input value={form.logoUrl} onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))} placeholder="https://... (ou cliquez sur l'image à gauche)" style={S.input} />
-                  </div>
+                  <span onClick={() => !uploadingCover && coverInputRef.current?.click()} style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".62rem", color: "#5a5470", cursor: "pointer", textAlign: "center" as const }}>
+                    {uploadingCover ? "UPLOAD..." : form.coverUrl ? "CHANGER" : "AJOUTER COVER"}
+                  </span>
+                  <input value={form.coverUrl} onChange={e => setForm(f => ({ ...f, coverUrl: e.target.value }))} placeholder="URL cover..." style={{ ...S.input, fontSize: ".72rem", marginTop: 4 }} />
                 </div>
               </div>
 
-              {/* Statut */}
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <label style={{ ...S.label, margin: 0 }}>STATUT</label>
-                <div onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
-                  style={{ width: 44, height: 24, borderRadius: 12, position: "relative", cursor: "pointer", background: form.isActive ? "#fbbf24" : "rgba(255,255,255,.1)", transition: "background .2s" }}>
-                  <div style={{ position: "absolute", top: 3, left: form.isActive ? 22 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
+              {/* ── AFFICHAGE CARTE ── */}
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem", color: "#fbbf24", letterSpacing: ".1em", marginBottom: -4 }}>// AFFICHAGE CARTE</div>
+              <div style={{ display: "grid", gap: 14, padding: "16px 18px", background: "rgba(255,45,120,.03)", border: "1px solid rgba(255,45,120,.12)", borderRadius: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  <div>
+                    <label style={S.label}>CATÉGORIE</label>
+                    <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Ex: restauration, epicerie" style={S.input} />
+                  </div>
+                  <div>
+                    <label style={S.label}>TAGS (séparés par virgule)</label>
+                    <input value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} placeholder="Ex: Créole, Fait maison" style={S.input} />
+                  </div>
                 </div>
-                <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".78rem", color: form.isActive ? "#fbbf24" : "#5a5470" }}>
-                  {form.isActive ? "ACTIF" : "INACTIF"}
-                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 14 }}>
+                  <div>
+                    <label style={S.label}>EMOJI</label>
+                    <input value={form.emoji} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))} placeholder="🍲" style={{ ...S.input, fontSize: "1.2rem", textAlign: "center" as const }} />
+                  </div>
+                  <div>
+                    <label style={S.label}>COULEUR FOND (si pas de cover)</label>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <input type="color" value={form.bgColor || "#FEF3C7"} onChange={e => setForm(f => ({ ...f, bgColor: e.target.value }))} style={{ width: 40, height: 38, borderRadius: 6, border: "1px solid rgba(255,255,255,.12)", cursor: "pointer", padding: 2, background: "transparent" }} />
+                      <input value={form.bgColor} onChange={e => setForm(f => ({ ...f, bgColor: e.target.value }))} placeholder="#FEF3C7" style={{ ...S.input, flex: 1 }} />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label style={S.label}>BADGE PROMO (affiché sur la carte)</label>
+                  <input value={form.promo} onChange={e => setForm(f => ({ ...f, promo: e.target.value }))} placeholder="Ex: -10€ dès 35€ · 1 acheté = 1 offert · Livraison 0€" style={S.input} />
+                </div>
+              </div>
+
+              {/* ── LIVRAISON & NOTE ── */}
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem", color: "#fbbf24", letterSpacing: ".1em", marginBottom: -4 }}>// LIVRAISON & NOTE</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 14 }}>
+                <div>
+                  <label style={S.label}>DÉLAI MIN (min)</label>
+                  <input type="number" value={form.deliveryMin ?? ""} onChange={e => setForm(f => ({ ...f, deliveryMin: Number(e.target.value) }))} placeholder="20" style={S.input} />
+                </div>
+                <div>
+                  <label style={S.label}>DÉLAI MAX (min)</label>
+                  <input type="number" value={form.deliveryMax ?? ""} onChange={e => setForm(f => ({ ...f, deliveryMax: Number(e.target.value) }))} placeholder="35" style={S.input} />
+                </div>
+                <div>
+                  <label style={S.label}>FRAIS LIVRAISON (€)</label>
+                  <input type="number" step="0.5" value={form.deliveryFee ?? ""} onChange={e => setForm(f => ({ ...f, deliveryFee: Number(e.target.value) }))} placeholder="2" style={S.input} />
+                </div>
+                <div>
+                  <label style={S.label}>NOTE (/5)</label>
+                  <input type="number" step="0.1" min="0" max="5" value={form.rating ?? ""} onChange={e => setForm(f => ({ ...f, rating: Number(e.target.value) }))} placeholder="4.5" style={S.input} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div>
+                  <label style={S.label}>NB AVIS</label>
+                  <input type="number" value={form.reviewCount ?? ""} onChange={e => setForm(f => ({ ...f, reviewCount: Number(e.target.value) }))} placeholder="0" style={S.input} />
+                </div>
+                <div>
+                  <label style={S.label}>HORAIRES D'OUVERTURE</label>
+                  <input value={form.openHours} onChange={e => setForm(f => ({ ...f, openHours: e.target.value }))} placeholder="08:00–21:00" style={S.input} />
+                </div>
+              </div>
+
+              {/* ── STATUTS ── */}
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem", color: "#fbbf24", letterSpacing: ".1em", marginBottom: -4 }}>// STATUTS</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, padding: "16px 18px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.07)", borderRadius: 10 }}>
+                {/* isActive */}
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                  <label style={{ ...S.label, margin: 0 }}>VISIBLE (actif)</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
+                      style={{ width: 44, height: 24, borderRadius: 12, position: "relative" as const, cursor: "pointer", background: form.isActive ? "#fbbf24" : "rgba(255,255,255,.1)", transition: "background .2s", flexShrink: 0 }}>
+                      <div style={{ position: "absolute" as const, top: 3, left: form.isActive ? 22 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
+                    </div>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".78rem", color: form.isActive ? "#fbbf24" : "#5a5470" }}>
+                      {form.isActive ? "ACTIF" : "INACTIF"}
+                    </span>
+                  </div>
+                </div>
+                {/* isOpen */}
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                  <label style={{ ...S.label, margin: 0 }}>OUVERT MAINTENANT</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div onClick={() => setForm(f => ({ ...f, isOpen: !f.isOpen }))}
+                      style={{ width: 44, height: 24, borderRadius: 12, position: "relative" as const, cursor: "pointer", background: form.isOpen ? "#22c55e" : "rgba(255,255,255,.1)", transition: "background .2s", flexShrink: 0 }}>
+                      <div style={{ position: "absolute" as const, top: 3, left: form.isOpen ? 22 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
+                    </div>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".78rem", color: form.isOpen ? "#22c55e" : "#5a5470" }}>
+                      {form.isOpen ? "OUVERT" : "FERMÉ"}
+                    </span>
+                  </div>
+                  {!form.isOpen && (
+                    <input value={form.closeTime} onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))} placeholder="Fermé à... (ex: 23:00)" style={{ ...S.input, fontSize: ".8rem" }} />
+                  )}
+                </div>
+                {/* isComingSoon */}
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                  <label style={{ ...S.label, margin: 0 }}>PROCHAINEMENT</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div onClick={() => setForm(f => ({ ...f, isComingSoon: !f.isComingSoon }))}
+                      style={{ width: 44, height: 24, borderRadius: 12, position: "relative" as const, cursor: "pointer", background: form.isComingSoon ? "#a855f7" : "rgba(255,255,255,.1)", transition: "background .2s", flexShrink: 0 }}>
+                      <div style={{ position: "absolute" as const, top: 3, left: form.isComingSoon ? 22 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
+                    </div>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".78rem", color: form.isComingSoon ? "#a855f7" : "#5a5470" }}>
+                      {form.isComingSoon ? "BIENTÔT" : "NORMAL"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
