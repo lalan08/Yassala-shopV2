@@ -1551,12 +1551,12 @@ function NightHome() {
             <div>
               <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".58rem",
                 color:"rgba(245,158,11,.55)",letterSpacing:".18em",textTransform:"uppercase"}}>
-                MODE ACTUEL
+                PROCHAINEMENT
               </div>
               <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
                 color:"#00f5ff",letterSpacing:".08em",lineHeight:1.1,
                 textShadow:"0 0 12px rgba(0,245,255,.4)"}}>
-                YASSALA NIGHT
+                YASSALA DAY
               </div>
               <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".52rem",
                 color:"rgba(245,158,11,.45)",letterSpacing:".12em",marginTop:2}}>
