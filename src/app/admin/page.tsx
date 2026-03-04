@@ -26,7 +26,6 @@ const storage = getStorage(app);
 type Product = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; isActive?: boolean; };
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; isRush?: boolean; rushFee?: number; };
-type PickupLocation = { id?: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; themeOverride: "auto" | "day" | "night"; nightBannerText: string; dayBannerText: string; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
@@ -80,7 +79,7 @@ export default function AdminPage() {
   });
   const [pwd, setPwd]             = useState("");
   const [pwdError, setPwdError]   = useState(false);
-  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"pickup_locations"|"yassala_day_config"|"yassala_day_offres"|"yassala_day_cats"|"yassala_day_products"|"yassala_day_packs">("dashboard");
+  const [tab, setTab]             = useState<"dashboard"|"products"|"categories"|"packs"|"orders"|"settings"|"banners"|"coupons"|"users"|"drivers"|"dispatch"|"online_drivers"|"yassala_day_config"|"yassala_day_offres"|"yassala_day_cats"|"yassala_day_products"|"yassala_day_packs">("dashboard");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dispatchFilter, setDispatchFilter] = useState<"available"|"mine"|"delivered">("available");
   const [driverLocations, setDriverLocations] = useState<any[]>([]);
@@ -112,9 +111,6 @@ export default function AdminPage() {
   const [fulfillmentFilter, setFulfillmentFilter] = useState<"all"|"delivery"|"pickup">("all");
   const [orderSubTab, setOrderSubTab] = useState<"active"|"archived">("active");
   const [archiveSearch, setArchiveSearch] = useState({ date: "", client: "", phone: "" });
-  const [pickupLocations, setPickupLocations] = useState<PickupLocation[]>([]);
-  const [editPickupLoc, setEditPickupLoc] = useState<PickupLocation|null>(null);
-  const [pickupLocForm, setPickupLocForm] = useState<PickupLocation>({name:"",address:"",city:"Cayenne",instructions:"",isActive:true});
   const defaultDayConfig: YassalaDayConfig = { active: true, startHour: 7, endHour: 21, welcomeMessage: "Bienvenue sur YASSALA DAY !", phone: "+594 XXX XXX" };
   const [dayConfig, setDayConfig] = useState<YassalaDayConfig>(defaultDayConfig);
   const [dayOffers, setDayOffers] = useState<DayOffer[]>([]);
@@ -420,10 +416,6 @@ export default function AdminPage() {
       setOnlineDrivers(active);
     });
 
-    const unsubPickupLocs = onSnapshot(collection(db, "pickup_locations_v1"), snap => {
-      setPickupLocations(snap.docs.map(d => ({ id: d.id, ...d.data() } as PickupLocation))
-        .sort((a: any, b: any) => (a.name || "").localeCompare(b.name || "")));
-    });
     const unsubDayConfig = onSnapshot(doc(db, "yassala_day", "config"), snap => {
       if (snap.exists()) setDayConfig(snap.data() as YassalaDayConfig);
     });
@@ -442,7 +434,7 @@ export default function AdminPage() {
     const unsubDayPacks = onSnapshot(collection(db, "day_packs"), snap => {
       setDayPacks(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayPack)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubPickupLocs(); unsubDayConfig(); unsubDayOffers(); unsubDayCats(); unsubDayProducts(); unsubDayPacks(); };
+    return () => { unsubProducts(); unsubPacks(); unsubOrders(); unsubSettings(); unsubDelivery(); unsubBanners(); unsubCoupons(); unsubUsers(); unsubCats(); unsubDrivers(); unsubDriverLocs(); unsubOnlineDrivers(); unsubDayConfig(); unsubDayOffers(); unsubDayCats(); unsubDayProducts(); unsubDayPacks(); };
   }, [auth]);
 
   // Auto best seller : badge BEST sur le produit le plus commandé
@@ -1205,11 +1197,9 @@ export default function AdminPage() {
             ]},
             { section:"CONFIGURATION", items:[
               { key:"settings",          label:"PARAMÈTRES",      icon:"⚙️" },
-              { key:"pickup_locations",  label:"POINTS RELAIS",   icon:"🏪" },
             ]},
             { section:"YASSALA DAY", items:[
               { key:"yassala_day_config",          label:"CONFIG JOUR",     icon:"☀️" },
-              { key:"yassala_day_etablissements",  label:"ÉTABLISSEMENTS",  icon:"🏪" },
               { key:"yassala_day_products",        label:"PRODUITS JOUR",   icon:"🛍️" },
               { key:"yassala_day_cats",            label:"CATÉGORIES JOUR", icon:"🗂️" },
               { key:"yassala_day_packs",           label:"PACKS JOUR",      icon:"📦" },
@@ -1231,7 +1221,7 @@ export default function AdminPage() {
               {!collapsedSections[group.section] && group.items.map(item => (
                 <button key={item.key}
                   className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
-                  onClick={() => { if (item.key === "yassala_day_etablissements") { window.location.href = "/admin/yassala-day/etablissements"; return; } setTab(item.key as any); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
+                  onClick={() => { setTab(item.key as any); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
                     background: tab===item.key ? "rgba(255,45,120,.08)" : "transparent",
                     border:"none",borderLeft: tab===item.key ? "2px solid #ff2d78" : "2px solid transparent",
@@ -1262,24 +1252,6 @@ export default function AdminPage() {
               ))}
             </div>
           ))}
-
-          {/* ── lien externe : module relais ── */}
-          <div style={{padding:"12px 20px 8px",borderTop:"1px solid rgba(255,255,255,.05)",marginTop:8}}>
-            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".68rem",color:"#4b5563",
-              letterSpacing:".15em",textTransform:"uppercase",marginBottom:8}}>RELAIS</div>
-            <a href="/admin/relais"
-              style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
-                background:"rgba(16,185,129,.06)",border:"none",borderLeft:"2px solid #10b981",
-                color:"#10b981",fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:".88rem",
-                letterSpacing:".06em",textTransform:"uppercase",textDecoration:"none",
-                borderRadius:"0 6px 6px 0",transition:"background .15s"}}
-              onMouseEnter={e=>(e.currentTarget.style.background="rgba(16,185,129,.12)")}
-              onMouseLeave={e=>(e.currentTarget.style.background="rgba(16,185,129,.06)")}>
-              <span style={{fontSize:"1.1rem"}}>📦</span>
-              <span>POINT RELAIS</span>
-              <span style={{marginLeft:"auto",fontSize:".75rem",opacity:.6}}>↗</span>
-            </a>
-          </div>
 
           {/* ── lien externe : module rémunération ── */}
           <div style={{padding:"12px 20px 8px",borderTop:"1px solid rgba(255,255,255,.05)",marginTop:8}}>
@@ -2441,9 +2413,7 @@ export default function AdminPage() {
                           {(o as any).name && <div style={{fontSize:".78rem",color:"#7a7490",fontFamily:"'Share Tech Mono',monospace"}}>{o.phone}</div>}
                           {(o as any).fulfillmentType === 'pickup' ? (
                             <div style={{fontSize:".78rem",color:"#00f5ff",marginTop:3}}>
-                              🏪 {(o as any).pickupType === 'relay' && (o as any).pickupLocationSnapshot
-                                ? `${(o as any).pickupLocationSnapshot.name} — ${(o as any).pickupLocationSnapshot.city}`
-                                : "Stock Yassala"}
+                              🏪 Stock Yassala
                               {(o as any).pickupTime && (o as any).pickupTime !== 'asap' && (
                                 <span style={{color:"#b8ff00",marginLeft:8}}>🕐 {(o as any).pickupTime}</span>
                               )}
@@ -4159,119 +4129,6 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {tab === "pickup_locations" && (
-            <div>
-              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.4rem",letterSpacing:".04em",marginBottom:24}}>
-                🏪 <span style={{color:"#00f5ff"}}>POINTS RELAIS</span>
-              </div>
-
-              {/* Form */}
-              <div style={{background:"#0c0918",border:"1px solid rgba(0,245,255,.1)",borderRadius:8,
-                padding:"20px 24px",marginBottom:24}}>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",
-                  letterSpacing:".1em",marginBottom:14}}>
-                  {editPickupLoc ? "// MODIFIER LE POINT RELAIS" : "// NOUVEAU POINT RELAIS"}
-                </div>
-                <div style={{display:"grid",gap:12}}>
-                  {(["name","address","city","instructions"] as const).map(field => (
-                    <div key={field}>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#7a7490",
-                        letterSpacing:".1em",marginBottom:6,textTransform:"uppercase"}}>{field}</div>
-                      <input value={pickupLocForm[field]} onChange={e => setPickupLocForm(f => ({...f, [field]: e.target.value}))}
-                        placeholder={field === "name" ? "ex: Épicerie Le Marché" : field === "address" ? "ex: 12 Rue de la Liberté" : field === "city" ? "ex: Cayenne" : "ex: Présente ton numéro à l'accueil"}
-                        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
-                          borderRadius:4,padding:"10px 12px",color:"#f0eeff",fontSize:".9rem",
-                          fontFamily:"'Rajdhani',sans-serif"}} />
-                    </div>
-                  ))}
-                  <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
-                    <input type="checkbox" checked={pickupLocForm.isActive}
-                      onChange={e => setPickupLocForm(f => ({...f, isActive: e.target.checked}))}
-                      style={{width:16,height:16,cursor:"pointer"}} />
-                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#7a7490",letterSpacing:".08em"}}>
-                      ACTIF (visible par les clients)
-                    </span>
-                  </label>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={async () => {
-                      if (!pickupLocForm.name || !pickupLocForm.address) { showToast("Nom et adresse requis", "err"); return; }
-                      if (editPickupLoc?.id) {
-                        await updateDoc(doc(db, "pickup_locations_v1", editPickupLoc.id), { ...pickupLocForm });
-                        showToast("Point relais mis à jour ✓");
-                      } else {
-                        await addDoc(collection(db, "pickup_locations_v1"), { ...pickupLocForm });
-                        showToast("Point relais ajouté ✓");
-                      }
-                      setPickupLocForm({name:"",address:"",city:"Cayenne",instructions:"",isActive:true});
-                      setEditPickupLoc(null);
-                    }}
-                      style={{background:"linear-gradient(135deg,#00f5ff,#0090ff)",border:"none",
-                        color:"#000",padding:"10px 20px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
-                        fontSize:".88rem",letterSpacing:".08em",cursor:"pointer",fontWeight:700}}>
-                      {editPickupLoc ? "METTRE À JOUR" : "+ AJOUTER"}
-                    </button>
-                    {editPickupLoc && (
-                      <button onClick={() => { setEditPickupLoc(null); setPickupLocForm({name:"",address:"",city:"Cayenne",instructions:"",isActive:true}); }}
-                        style={{background:"transparent",border:"1px solid rgba(255,255,255,.1)",
-                          color:"#5a5470",padding:"10px 16px",borderRadius:4,
-                          fontFamily:"'Share Tech Mono',monospace",fontSize:".88rem",cursor:"pointer"}}>
-                        ANNULER
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* List */}
-              {pickupLocations.length === 0 ? (
-                <div style={{textAlign:"center",color:"#5a5470",fontFamily:"'Share Tech Mono',monospace",
-                  padding:"40px",fontSize:".8rem",border:"1px dashed rgba(255,255,255,.1)",borderRadius:8}}>
-                  // aucun point relais configuré
-                </div>
-              ) : (
-                <div style={{display:"grid",gap:10}}>
-                  {pickupLocations.map(loc => (
-                    <div key={loc.id} style={{background:"rgba(255,255,255,.02)",
-                      border:`1px solid ${loc.isActive ? "rgba(0,245,255,.15)" : "rgba(255,255,255,.06)"}`,
-                      borderRadius:8,padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-                          <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:"1rem",color:"#f0eeff"}}>{loc.name}</span>
-                          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
-                            padding:"2px 6px",borderRadius:3,
-                            background: loc.isActive ? "rgba(0,245,255,.12)" : "rgba(255,255,255,.06)",
-                            color: loc.isActive ? "#00f5ff" : "#5a5470"}}>
-                            {loc.isActive ? "ACTIF" : "INACTIF"}
-                          </span>
-                        </div>
-                        <div style={{fontSize:".78rem",color:"#7a7490"}}>📍 {loc.address}, {loc.city}</div>
-                        {loc.instructions && <div style={{fontSize:".72rem",color:"#5a5470",marginTop:2}}>ℹ️ {loc.instructions}</div>}
-                      </div>
-                      <div style={{display:"flex",gap:6,flexShrink:0}}>
-                        <button onClick={() => { setEditPickupLoc(loc); setPickupLocForm({name:loc.name,address:loc.address,city:loc.city,instructions:loc.instructions,isActive:loc.isActive}); }}
-                          style={{background:"transparent",border:"1px solid rgba(0,245,255,.3)",color:"#00f5ff",
-                            padding:"6px 12px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
-                            fontSize:".78rem",cursor:"pointer"}}>
-                          ✎ MODIFIER
-                        </button>
-                        <button onClick={async () => {
-                          if (!confirm(`Supprimer "${loc.name}" ?`)) return;
-                          await deleteDoc(doc(db, "pickup_locations_v1", loc.id!));
-                          showToast("Point relais supprimé");
-                        }}
-                          style={{background:"transparent",border:"1px solid rgba(255,45,120,.2)",color:"#5a5470",
-                            padding:"6px 10px",borderRadius:4,fontFamily:"'Share Tech Mono',monospace",
-                            fontSize:".78rem",cursor:"pointer"}}>
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 

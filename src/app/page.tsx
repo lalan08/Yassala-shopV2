@@ -182,7 +182,6 @@ type Pack = { id: string; name: string; tag: string; emoji: string; items: strin
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
-type PickupLocation = { id: string; name: string; address: string; city: string; instructions: string; isActive: boolean; };
 
 // Catégories par défaut si Firestore est vide
 const DEFAULT_CATS: Category[] = [
@@ -281,12 +280,9 @@ function NightHome() {
   const [driverSuccess, setDriverSuccess]       = useState(false);
   // ── CLICK & COLLECT ──
   const [fulfillmentType, setFulfillmentType]   = useState<'delivery'|'pickup'>('delivery');
-  const [pickupType, setPickupType]             = useState<'stock'|'relay'>('stock');
-  const [pickupLocationId, setPickupLocationId] = useState<string>('');
   const [pickupTimeMode, setPickupTimeMode]     = useState<'asap'|'scheduled'>('asap');
   const [pickupTimeValue, setPickupTimeValue]   = useState<string>('');
-  const [pickupLocations, setPickupLocations]   = useState<PickupLocation[]>([]);
-  const [lastConfirmPickup, setLastConfirmPickup] = useState<{type:'stock'|'relay';snapshot:any;time:string|undefined}|null>(null);
+  const [lastConfirmPickup, setLastConfirmPickup] = useState<{snapshot:any;time:string|undefined}|null>(null);
   // ── DYNAMIC DELIVERY PRICING ──
   const [distanceKm, setDistanceKm]       = useState(0);
   const [deliveryStats, setDeliveryStats] = useState({ activeOrders: 0, availableDrivers: 1 });
@@ -408,16 +404,10 @@ function NightHome() {
         } catch {}
       }
     });
-    const unsubPickupLocs = onSnapshot(collection(db, "pickup_locations_v1"), snap => {
-      setPickupLocations(
-        snap.docs.map(d => ({ id: d.id, ...d.data() } as PickupLocation))
-          .filter(l => l.isActive)
-      );
-    });
     const unsubPromos = onSnapshot(collection(db, "promotions"), snap => {
       setPromotions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Promotion)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPickupLocs(); unsubPromos(); };
+    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPromos(); };
   }, []);
 
   // ── GOOGLE REDIRECT RESULT (mobile flow) ──
@@ -669,12 +659,6 @@ function NightHome() {
       if (!orderForm.address) { showToast("Remplis l'adresse de livraison !"); return; }
       if (!orderForm.lat || !orderForm.lng) { showToast("Sélectionne une adresse dans la liste 📍"); return; }
     }
-    // Validation spécifique click & collect
-    if (fulfillmentType === 'pickup' && pickupType === 'relay' && !pickupLocationId) {
-      showToast("Choisis un point relais !");
-      return;
-    }
-
     if (cartTotal < deliveryConfig.minimum_order_amount) {
       showToast(`Commande minimum : ${deliveryConfig.minimum_order_amount}€`);
       return;
@@ -698,12 +682,7 @@ function NightHome() {
       const STOCK_LOCATION = { name: "Yassala Stock", address: "Retrait chez Yassala", city: "Cayenne", instructions: "Présente ton numéro de commande à l'accueil." };
       let pickupSnapshot: any = null;
       if (fulfillmentType === 'pickup') {
-        if (pickupType === 'relay') {
-          const loc = pickupLocations.find(l => l.id === pickupLocationId);
-          pickupSnapshot = loc ? { name: loc.name, address: loc.address, city: loc.city, instructions: loc.instructions } : STOCK_LOCATION;
-        } else {
-          pickupSnapshot = STOCK_LOCATION;
-        }
+        pickupSnapshot = STOCK_LOCATION;
       }
       const resolvedPickupTime = fulfillmentType === 'pickup' ? (pickupTimeMode === 'asap' ? 'asap' : pickupTimeValue || 'asap') : null;
 
@@ -761,8 +740,8 @@ function NightHome() {
           deliverySupplements: fulfillmentType === 'delivery' && feeResult ? feeResult.supplements : null,
           driverPay: fulfillmentType === 'delivery' && feeResult ? feeResult.driverPay : null,
           fulfillmentType,
-          pickupType: fulfillmentType === 'pickup' ? pickupType : null,
-          pickupLocationId: fulfillmentType === 'pickup' ? (pickupType === 'relay' ? pickupLocationId : 'stock_default') : null,
+          pickupType: fulfillmentType === 'pickup' ? 'stock' : null,
+          pickupLocationId: fulfillmentType === 'pickup' ? 'stock_default' : null,
           pickupLocationSnapshot: pickupSnapshot,
           pickupTime: resolvedPickupTime,
           status: paymentMethod === 'cash' ? "pending_confirmation" : "pending_payment",
@@ -913,8 +892,7 @@ function NightHome() {
       lng:     f.lng,
     }));
     setCoupon(null); setCouponInput("");
-    setFulfillmentType('delivery'); setPickupType('stock');
-    setPickupLocationId(''); setPickupTimeMode('asap'); setPickupTimeValue('');
+    setFulfillmentType('delivery'); setPickupTimeMode('asap'); setPickupTimeValue('');
     setShowCart(false);
     window.location.href = '/succes';
   }, []);
@@ -2050,7 +2028,7 @@ function NightHome() {
                 borderRadius:8,padding:"14px 16px",marginBottom:16,textAlign:"left"}}>
                 <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
                   color:"#00f5ff",letterSpacing:".1em",marginBottom:8}}>
-                  {lastConfirmPickup.type === 'relay' ? "📍 POINT RELAIS" : "🏠 RETRAIT STOCK"}
+                  🏠 RETRAIT STOCK
                 </div>
                 <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem",
                   color:"#f0eeff",marginBottom:2}}>
@@ -2409,71 +2387,6 @@ function NightHome() {
                   {/* Pickup: location + time options */}
                   {fulfillmentType === 'pickup' && (
                     <div style={{display:"grid",gap:10}}>
-                      {/* Pickup type */}
-                      <div>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
-                          color:"#5a5470",letterSpacing:".1em",marginBottom:8}}>// LIEU DE RETRAIT</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                          <div onClick={() => setPickupType('stock')}
-                            style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",
-                              border: pickupType === 'stock' ? "2px solid #00f5ff" : "1px solid rgba(255,255,255,.08)",
-                              background: pickupType === 'stock' ? "rgba(0,245,255,.06)" : "#080514",
-                              transition:"all .2s"}}>
-                            <div style={{fontSize:"1.2rem",marginBottom:2}}>🏠</div>
-                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".78rem",
-                              color: pickupType === 'stock' ? "#00f5ff" : "#7a7490"}}>
-                              STOCK YASSALA
-                            </div>
-                          </div>
-                          <div onClick={() => setPickupType('relay')}
-                            style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",
-                              border: pickupType === 'relay' ? "2px solid #b8ff00" : "1px solid rgba(255,255,255,.08)",
-                              background: pickupType === 'relay' ? "rgba(184,255,0,.06)" : "#080514",
-                              transition:"all .2s"}}>
-                            <div style={{fontSize:"1.2rem",marginBottom:2}}>🏪</div>
-                            <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".78rem",
-                              color: pickupType === 'relay' ? "#b8ff00" : "#7a7490"}}>
-                              POINT RELAIS
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Relay location dropdown */}
-                      {pickupType === 'relay' && (
-                        <select value={pickupLocationId} onChange={e => setPickupLocationId(e.target.value)}
-                          style={{width:"100%",background:"#080514",
-                            border: pickupLocationId ? "1px solid rgba(184,255,0,.4)" : "1px solid rgba(255,255,255,.1)",
-                            borderRadius:4,padding:"12px",color: pickupLocationId ? "#f0eeff" : "#5a5470",
-                            fontSize:".88rem",fontFamily:"'Rajdhani',sans-serif",cursor:"pointer"}}>
-                          <option value="">— Choisir un point relais —</option>
-                          {pickupLocations.map(loc => (
-                            <option key={loc.id} value={loc.id}>{loc.name} — {loc.city}</option>
-                          ))}
-                          {pickupLocations.length === 0 && (
-                            <option disabled>Aucun point relais disponible</option>
-                          )}
-                        </select>
-                      )}
-                      {pickupType === 'relay' && pickupLocationId && (
-                        <div style={{background:"rgba(184,255,0,.04)",border:"1px solid rgba(184,255,0,.15)",
-                          borderRadius:6,padding:"10px 12px"}}>
-                          {(() => {
-                            const loc = pickupLocations.find(l => l.id === pickupLocationId);
-                            return loc ? (
-                              <div>
-                                <div style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".88rem",
-                                  color:"#f0eeff",marginBottom:2}}>{loc.address}, {loc.city}</div>
-                                {loc.instructions && (
-                                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
-                                    color:"#b8ff00"}}>ℹ️ {loc.instructions}</div>
-                                )}
-                              </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      )}
-
                       {/* Pickup time */}
                       <div>
                         <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
@@ -2962,7 +2875,7 @@ function NightHome() {
               </div>
             )}
 
-            {/* 3. ESPACE PROFESSIONNEL — livreur + point relay */}
+            {/* 3. ESPACE PROFESSIONNEL — livreur + gérants */}
             <div style={{margin:"22px 24px 28px",
               background:"rgba(0,180,255,.04)",
               border:"1px solid rgba(0,180,255,.2)",
@@ -2983,17 +2896,17 @@ function NightHome() {
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
                   color:"rgba(0,180,255,.5)",marginLeft:4}}>→</span>
               </a>
-              <a href="/relais"
+              <a href="/etablissement"
                 style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
-                  background:"linear-gradient(135deg,rgba(16,185,129,.18) 0%,rgba(5,150,105,.12) 100%)",
-                  border:"1px solid rgba(16,185,129,.35)",
+                  background:"linear-gradient(135deg,rgba(255,165,0,.18) 0%,rgba(200,100,0,.12) 100%)",
+                  border:"1px solid rgba(255,165,0,.35)",
                   borderRadius:10,padding:"14px",textDecoration:"none",marginTop:8,
-                  color:"#10b981",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  color:"#ffa500",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
                   fontSize:"1rem",letterSpacing:".06em"}}>
-                <span style={{fontSize:"1.3rem"}}>📦</span>
-                ESPACE POINT RELAY
+                <span style={{fontSize:"1.3rem"}}>🏪</span>
+                ESPACE PRO
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
-                  color:"rgba(16,185,129,.5)",marginLeft:4}}>→</span>
+                  color:"rgba(255,165,0,.5)",marginLeft:4}}>→</span>
               </a>
             </div>
           </div>

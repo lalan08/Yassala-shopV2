@@ -55,12 +55,32 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Liens rapides */}
+          {/* Connexions */}
           <div>
             <h4 className="font-bold text-white mb-5 flex items-center gap-2">
               <span className="w-8 h-0.5 bg-gradient-to-r from-emerald-500 to-orange-500 rounded-full" />
-              Navigation
+              Connexions
             </h4>
+
+            {/* Espace Pro — accès chef d'établissement */}
+            <Link
+              href="/etablissement/login"
+              className="group flex items-center gap-3 mb-5 rounded-xl border border-orange-500/40 bg-gradient-to-r from-orange-500/10 to-yellow-500/10 px-4 py-3 hover:from-orange-500/20 hover:to-yellow-500/20 hover:border-orange-400/70 transition-all"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-yellow-400 text-lg shadow-lg shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-shadow">
+                🏫
+              </span>
+              <div>
+                <div className="text-sm font-bold text-orange-300 group-hover:text-orange-200 leading-tight transition-colors">
+                  Espace Pro
+                </div>
+                <div className="text-xs text-slate-500 group-hover:text-slate-400 transition-colors">
+                  Chef d&apos;établissement
+                </div>
+              </div>
+              <ExternalLink className="ml-auto h-3.5 w-3.5 text-orange-500/50 group-hover:text-orange-400 transition-colors" />
+            </Link>
+
             <ul className="space-y-3">
               {[
                 { href: '/', label: 'Accueil' },
@@ -69,7 +89,7 @@ export function Footer() {
                 { href: '/panier', label: 'Mon panier' },
               ].map((link) => (
                 <li key={link.href}>
-                  <Link 
+                  <Link
                     href={link.href}
                     className="text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-2 group"
                   >
