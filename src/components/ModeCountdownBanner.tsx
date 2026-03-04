@@ -72,8 +72,6 @@ export default function ModeCountdownBanner() {
 
   if (pathname?.startsWith("/admin")) return null;
   if (pathname?.startsWith("/livreur")) return null;
-  if (pathname?.startsWith("/relais")) return null;
-
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;

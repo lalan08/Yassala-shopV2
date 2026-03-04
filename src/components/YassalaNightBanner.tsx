@@ -55,7 +55,6 @@ export default function YassalaNightBanner() {
 
   if (pathname?.startsWith("/admin")) return null;
   if (pathname?.startsWith("/livreur")) return null;
-  if (pathname?.startsWith("/relais")) return null;
   if (!text) return null;
 
   return (
