@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import ChatWidgetLoader from "@/components/ChatWidgetLoader";
-import YassalaNightBanner from "@/components/YassalaNightBanner";
-import ModeCountdownBanner from "@/components/ModeCountdownBanner";
 
 export const viewport: Viewport = {
   themeColor: "#ff2d78",
@@ -59,8 +57,6 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
       </head>
       <body>
-        <YassalaNightBanner />
-        <ModeCountdownBanner />
         {children}
         <ChatWidgetLoader />
         <SpeedInsights />

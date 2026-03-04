@@ -202,7 +202,34 @@ const defaultSettings: Settings = {
   aiCouponEnabled: true, aiRouteEnabled: true,
 };
 
+function useCountdownToDay() {
+  const getSecondsLeft = () => {
+    const now = new Date();
+    const target = new Date();
+    target.setHours(7, 0, 0, 0);
+    if (now.getHours() >= 7 && now.getHours() < 21) return 0;
+    if (now.getHours() >= 21) target.setDate(target.getDate() + 1);
+    return Math.max(0, Math.floor((target.getTime() - now.getTime()) / 1000));
+  };
+  const [seconds, setSeconds] = useState(getSecondsLeft);
+  useEffect(() => {
+    const id = setInterval(() => setSeconds(getSecondsLeft()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return {
+    h: String(h).padStart(2,"0"),
+    m: String(m).padStart(2,"0"),
+    s: String(s).padStart(2,"0"),
+    totalSeconds: seconds,
+    done: seconds === 0,
+  };
+}
+
 function NightHome() {
+  const countdownToDay = useCountdownToDay();
   const [clock, setClock]         = useState("--:--");
   const [cart, setCart]           = useState<CartItem[]>([]);
   const [activeCat, setActiveCat] = useState("all");
@@ -1499,6 +1526,84 @@ function NightHome() {
           ))}
         </div>
       </div>
+
+      {/* ── Countdown vers Day — bloc voyant ── */}
+      {!countdownToDay.done && (
+        <div style={{
+          background:"linear-gradient(135deg,#1a0800 0%,#3d1a00 40%,#1a0800 100%)",
+          padding:"14px 20px",
+          display:"flex",alignItems:"center",justifyContent:"space-between",
+          boxShadow:"0 4px 24px rgba(245,158,11,.2),inset 0 1px 0 rgba(255,255,255,.05)",
+          position:"relative",overflow:"hidden",zIndex:1,
+          borderTop:"1px solid rgba(245,158,11,.2)",
+          borderBottom:"1px solid rgba(245,158,11,.2)",
+        }}>
+          {/* Shimmer */}
+          <div style={{position:"absolute",inset:0,pointerEvents:"none",
+            background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.03) 50%,transparent 60%)",
+            backgroundSize:"200% 100%",animation:"shimmer 3s linear infinite"}} />
+
+          {/* Gauche : label */}
+          <div style={{display:"flex",alignItems:"center",gap:10,zIndex:1}}>
+            <span style={{fontSize:"1.8rem",lineHeight:1,filter:"drop-shadow(0 0 8px rgba(245,158,11,.7))"}}>☀️</span>
+            <div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".58rem",
+                color:"rgba(245,158,11,.55)",letterSpacing:".18em",textTransform:"uppercase"}}>
+                MODE ACTUEL
+              </div>
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
+                color:"#00f5ff",letterSpacing:".08em",lineHeight:1.1,
+                textShadow:"0 0 12px rgba(0,245,255,.4)"}}>
+                YASSALA NIGHT
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".52rem",
+                color:"rgba(245,158,11,.45)",letterSpacing:".12em",marginTop:2}}>
+                → DAY DANS
+              </div>
+            </div>
+          </div>
+
+          {/* Droite : digits */}
+          <div style={{
+            background:"rgba(0,0,0,.5)",
+            border:"1px solid rgba(245,158,11,.25)",
+            borderRadius:12,
+            padding:"10px 16px",
+            display:"flex",alignItems:"center",gap:6,
+            backdropFilter:"blur(8px)",
+            boxShadow:"0 0 20px rgba(245,158,11,.15)",
+            zIndex:1,
+          }}>
+            {[
+              {val: countdownToDay.h, unit:"heure"},
+              {val: countdownToDay.m, unit:"min"},
+              {val: countdownToDay.s, unit:"sec"},
+            ].map(({val,unit},i) => (
+              <div key={i} style={{display:"flex",alignItems:"baseline",gap:2}}>
+                {i > 0 && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1.4rem",
+                  color:"rgba(245,158,11,.35)",marginRight:4,marginLeft:-2}}>:</span>}
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1.9rem",fontWeight:900,
+                    color:"#fbbf24",lineHeight:1,letterSpacing:".02em",
+                    textShadow:"0 0 16px rgba(245,158,11,.8)"}}>
+                    {val}
+                  </div>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".45rem",
+                    color:"rgba(245,158,11,.4)",letterSpacing:".15em",textTransform:"uppercase",marginTop:2}}>
+                    {unit}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Barre de progression */}
+          <div style={{position:"absolute",bottom:0,left:0,height:3,
+            width:`${Math.min(100,(1 - countdownToDay.totalSeconds / 36000) * 100)}%`,
+            background:"linear-gradient(90deg,#f59e0b,#ef4444)",
+            borderRadius:"0 3px 0 0",transition:"width 1s linear"}} />
+        </div>
+      )}
 
       <section id="catalogue" style={{padding:"48px 16px 48px 16px",position:"relative",zIndex:1}}>
         {/* ── Header titre + compteur ── */}

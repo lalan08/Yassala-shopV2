@@ -883,27 +883,80 @@ export default function YassalaDayView() {
           : "SHOP FERMÉ · REVENEZ PLUS TARD"}
       </div>
 
-      {/* Pastille flottante countdown Night — discrète mais visible */}
+      {/* ── Countdown vers Night — bloc voyant ── */}
       {!countdown.done && (
-        <div style={{position:"fixed",bottom:24,right:20,zIndex:200,
-          background:"linear-gradient(135deg,#0d0d1a 0%,#1a0a2e 100%)",
-          border:"1px solid rgba(130,80,255,.4)",
-          borderRadius:16,padding:"10px 16px",
-          boxShadow:"0 4px 20px rgba(0,0,0,.35),0 0 18px rgba(100,60,255,.15)",
-          backdropFilter:"blur(10px)",
-          display:"flex",alignItems:"center",gap:10,
-          cursor:"default",userSelect:"none"}}>
-          <span style={{fontSize:"1.2rem",lineHeight:1}}>🌙</span>
-          <div>
-            <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".7rem",
-              color:"rgba(180,140,255,.7)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:1}}>
-              Night dans
-            </div>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1rem",
-              color:"#c8a8ff",letterSpacing:".06em",lineHeight:1}}>
-              {countdown.label}
+        <div style={{
+          background:"linear-gradient(135deg,#1a0a2e 0%,#2d1060 50%,#0d0d1a 100%)",
+          padding:"14px 20px",
+          display:"flex",alignItems:"center",justifyContent:"space-between",
+          boxShadow:"0 4px 24px rgba(100,60,255,.3),inset 0 1px 0 rgba(255,255,255,.07)",
+          position:"relative",overflow:"hidden",
+          borderBottom:"1px solid rgba(130,80,255,.25)",
+        }}>
+          {/* Shimmer */}
+          <div style={{position:"absolute",inset:0,pointerEvents:"none",
+            background:"linear-gradient(105deg,transparent 40%,rgba(255,255,255,.04) 50%,transparent 60%)",
+            backgroundSize:"200% 100%",animation:"shimmer 3s linear infinite"}} />
+
+          {/* Gauche : label */}
+          <div style={{display:"flex",alignItems:"center",gap:10,zIndex:1}}>
+            <span style={{fontSize:"1.8rem",lineHeight:1,filter:"drop-shadow(0 0 8px rgba(180,100,255,.6))"}}>🌙</span>
+            <div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".58rem",
+                color:"rgba(180,140,255,.6)",letterSpacing:".18em",textTransform:"uppercase"}}>
+                MODE ACTUEL
+              </div>
+              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
+                color:"#ff2d78",letterSpacing:".08em",lineHeight:1.1,
+                textShadow:"0 0 12px rgba(255,45,120,.5)"}}>
+                YASSALA DAY
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".52rem",
+                color:"rgba(180,140,255,.5)",letterSpacing:".12em",marginTop:2}}>
+                → NIGHT DANS
+              </div>
             </div>
           </div>
+
+          {/* Droite : digits */}
+          <div style={{
+            background:"rgba(0,0,0,.45)",
+            border:"1px solid rgba(180,100,255,.3)",
+            borderRadius:12,
+            padding:"10px 16px",
+            display:"flex",alignItems:"center",gap:6,
+            backdropFilter:"blur(8px)",
+            boxShadow:"0 0 20px rgba(150,80,255,.2)",
+            zIndex:1,
+          }}>
+            {countdown.label.split(/(?=[hms])/).map((part, i) => {
+              const val = part.slice(0,-1);
+              const unit = part.slice(-1);
+              return (
+                <div key={i} style={{display:"flex",alignItems:"baseline",gap:2}}>
+                  {i > 0 && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1.4rem",
+                    color:"rgba(180,140,255,.4)",marginRight:4,marginLeft:-2,animation:"dotBlink 1s infinite"}}>:</span>}
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1.9rem",fontWeight:900,
+                      color:"#d4aaff",lineHeight:1,letterSpacing:".02em",
+                      textShadow:"0 0 16px rgba(180,100,255,.8)"}}>
+                      {val}
+                    </div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".45rem",
+                      color:"rgba(180,140,255,.45)",letterSpacing:".15em",textTransform:"uppercase",marginTop:2}}>
+                      {unit === "h" ? "heure" : unit === "m" ? "min" : "sec"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Barre de progression */}
+          <div style={{position:"absolute",bottom:0,left:0,height:3,
+            width:`${Math.min(100,(1 - (()=>{const [hh,mm,ss]=countdown.label.split(/[hms]/).filter(Boolean).map(Number);return hh*3600+mm*60+ss;})() / 50400) * 100)}%`,
+            background:"linear-gradient(90deg,#7c3aed,#db2777)",
+            borderRadius:"0 3px 0 0",transition:"width 1s linear"}} />
         </div>
       )}
 
