@@ -366,6 +366,19 @@ body {
   display: none;
 }
 
+/* Horizontal swipe scroll — Uber Eats style */
+.h-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-x;
+}
+.h-scroll::-webkit-scrollbar { display: none; }
+.h-scroll > * { scroll-snap-align: start; }
+
 /* Yassala Day theme overrides */
 .yassala-day {
   --yd-pink: #ff2d78;
