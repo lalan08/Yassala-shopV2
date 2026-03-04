@@ -2904,7 +2904,7 @@ function NightHome() {
                   color:"#ffa500",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
                   fontSize:"1rem",letterSpacing:".06em"}}>
                 <span style={{fontSize:"1.3rem"}}>🏪</span>
-                ESPACE PRO
+                ESPACE PRO — ÉTABLISSEMENTS
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
                   color:"rgba(255,165,0,.5)",marginLeft:4}}>→</span>
               </a>
