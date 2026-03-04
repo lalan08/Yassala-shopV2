@@ -1170,13 +1170,13 @@ export default function YassalaDayView() {
       )}
 
       {/* ── LISTE DES ÉTABLISSEMENTS (style Uber Eats) ── */}
-      <section style={{padding:"44px 0 56px",position:"relative",zIndex:1,background:D.bg}}>
+      <section style={{padding:"24px 0 32px",position:"relative",zIndex:1,background:D.bg}}>
         <div style={{maxWidth:960,margin:"0 auto"}}>
           {/* Header */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,padding:"0 20px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 20px"}}>
             <div>
-              <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",color:D.text,margin:0,letterSpacing:".02em"}}>
-                ☀️ <span style={{color:D.pink}}>NOS ÉTABLISSEMENTS</span>
+              <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:D.text,margin:0,letterSpacing:".02em"}}>
+                📍 <span style={{color:D.pink}}>DISPONIBLE PRÈS DE CHEZ TOI</span>
               </h2>
               <p style={{fontFamily:"'Inter',sans-serif",fontSize:".82rem",color:D.muted,margin:"4px 0 0"}}>
                 Appuie sur un commerce pour voir son menu
