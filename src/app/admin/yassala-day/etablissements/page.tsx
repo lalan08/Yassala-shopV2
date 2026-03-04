@@ -77,6 +77,7 @@ export default function EtablissementsPage() {
   const [form, setForm] = useState<Omit<Etablissement, "id">>(blankForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [accessCodeInput, setAccessCodeInput] = useState("");
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState({ msg: "", show: false, ok: true });
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -107,6 +108,11 @@ export default function EtablissementsPage() {
 
   const slugify = (s: string) =>
     s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  async function sha256(str: string): Promise<string> {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
 
   const handleLogoUpload = async (file: File) => {
     setUploading(true);
@@ -146,11 +152,14 @@ export default function EtablissementsPage() {
 
   const save = async () => {
     if (!form.name.trim()) { showMsg("Nom requis", false); return; }
-    const data = {
+    const data: Record<string, unknown> = {
       ...form,
       slug: form.slug?.trim() || slugify(form.name),
       updatedAt: new Date().toISOString(),
     };
+    if (accessCodeInput.trim()) {
+      data.accessCode = await sha256(accessCodeInput.trim());
+    }
     if (editId) {
       await updateDoc(doc(db, "day_etablissements", editId), data);
       showMsg("Établissement mis à jour ✓");
@@ -159,6 +168,7 @@ export default function EtablissementsPage() {
       showMsg("Établissement créé ✓");
     }
     setForm(blankForm);
+    setAccessCodeInput("");
     setEditId(null);
     setShowForm(false);
   };
@@ -177,7 +187,20 @@ export default function EtablissementsPage() {
   };
 
   const startEdit = (etab: Etablissement) => {
-    setForm({ name: etab.name, slug: etab.slug || "", description: etab.description || "", address: etab.address || "", phone: etab.phone || "", logoUrl: etab.logoUrl || "", coverUrl: etab.coverUrl || "", openHours: etab.openHours || "08:00–21:00", isActive: etab.isActive });
+    setForm({
+      name: etab.name, slug: etab.slug || "", description: etab.description || "",
+      address: etab.address || "", phone: etab.phone || "",
+      logoUrl: etab.logoUrl || "", coverUrl: etab.coverUrl || "",
+      openHours: etab.openHours || "08:00–21:00", isActive: etab.isActive,
+      category: etab.category || "", tags: etab.tags || "",
+      emoji: etab.emoji || "🏪", bgColor: etab.bgColor || "#FEF3C7",
+      promo: etab.promo || "", isOpen: etab.isOpen ?? true,
+      closeTime: etab.closeTime || "", isComingSoon: etab.isComingSoon ?? false,
+      deliveryMin: etab.deliveryMin ?? 20, deliveryMax: etab.deliveryMax ?? 35,
+      deliveryFee: etab.deliveryFee ?? 2, rating: etab.rating ?? 4.5,
+      reviewCount: etab.reviewCount ?? 0,
+    });
+    setAccessCodeInput("");
     setEditId(etab.id!);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -408,11 +431,27 @@ export default function EtablissementsPage() {
                 </div>
               </div>
 
+              {/* ── CODE D'ACCÈS ESPACE PRO ── */}
+              <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".7rem", color: "#fbbf24", letterSpacing: ".1em", marginBottom: -4 }}>// ACCÈS ESPACE PRO</div>
+              <div style={{ padding: "16px 18px", background: "rgba(251,191,36,.04)", border: "1px solid rgba(251,191,36,.15)", borderRadius: 10 }}>
+                <label style={S.label}>CODE D'ACCÈS {editId ? "(laisser vide pour ne pas changer)" : "*"}</label>
+                <input
+                  type="password"
+                  value={accessCodeInput}
+                  onChange={e => setAccessCodeInput(e.target.value)}
+                  placeholder={editId ? "Nouveau code (laisser vide = inchangé)" : "Code que l'établissement utilisera pour se connecter"}
+                  style={S.input}
+                />
+                <div style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".62rem", color: "#5a5470", marginTop: 8 }}>
+                  Ce code permet à l'établissement d'accéder à son espace pro sur /etablissement/login
+                </div>
+              </div>
+
               <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
                 <button onClick={save} style={S.btnPrimary}>
                   {editId ? "✓ METTRE À JOUR" : "✓ CRÉER"}
                 </button>
-                <button onClick={() => { setForm(blankForm); setEditId(null); setShowForm(false); }} style={S.btnGhost}>
+                <button onClick={() => { setForm(blankForm); setAccessCodeInput(""); setEditId(null); setShowForm(false); }} style={S.btnGhost}>
                   ANNULER
                 </button>
               </div>
