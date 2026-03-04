@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Heart,
   Clock,
-  Navigation,
   Star,
   ShoppingCart,
   Grid3X3,
@@ -280,8 +279,8 @@ function ProximityCard({
 }) {
   return (
     <div
-      className="flex-shrink-0 w-52 bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.98] transition-transform"
-      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.09)", scrollSnapAlign: "start" }}
+      className="flex-shrink-0 bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.98] transition-transform"
+      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.09)", width: 168 }}
     >
       {/* Cover */}
       <div className="relative rounded-t-2xl overflow-hidden" style={{ height: 120 }}>
@@ -392,11 +391,11 @@ function EstablishmentCard({
 }) {
   return (
     <div
-      className="bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.99] transition-transform"
-      style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.10)" }}
+      className="bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.98] transition-transform"
+      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.09)" }}
     >
-      {/* ── Cover (180px) ── */}
-      <div className="relative rounded-t-2xl overflow-hidden" style={{ height: 180 }}>
+      {/* ── Cover ── */}
+      <div className="relative rounded-t-2xl overflow-hidden" style={{ height: 120 }}>
         {/* Fond : vraie image ou couleur + emoji watermark */}
         {commerce.coverUrl ? (
           <img
@@ -413,136 +412,84 @@ function EstablishmentCard({
           </>
         )}
 
-        {/* Dégradé sombre en bas pour la lisibilité */}
+        {/* Dégradé bas */}
         <div
           className="absolute bottom-0 left-0 right-0"
-          style={{ height: 72, background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)" }}
+          style={{ height: 52, background: "linear-gradient(to top, rgba(0,0,0,0.42) 0%, transparent 100%)" }}
         />
 
-        {/* Top-left : badges Nouveau / Populaire */}
-        <div className="absolute top-3 left-3 flex gap-1.5">
+        {/* Badges top-left */}
+        <div className="absolute top-2 left-2 flex gap-1">
           {commerce.isNew && (
-            <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+            <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
               Nouveau
             </span>
           )}
           {commerce.isPopular && (
-            <span className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow" style={{ backgroundColor: "#f59e0b" }}>
-              🔥 Populaire
+            <span className="text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm" style={{ backgroundColor: "#f59e0b" }}>
+              🔥 Top
             </span>
           )}
         </div>
 
-        {/* Badge promo – bas-gauche sur la cover */}
+        {/* Badge promo */}
         {commerce.promo && (
           <div
-            className="absolute bottom-3 left-3 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow"
+            className="absolute bottom-2.5 left-2.5 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow"
             style={{ backgroundColor: YASSALA_PINK }}
           >
             🎁 {commerce.promo}
           </div>
         )}
 
-        {/* Bouton favori – haut-droit */}
+        {/* Bouton favori */}
         <button
-          className="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center shadow"
+          className="absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow"
           onClick={(e) => { e.stopPropagation(); onToggleFavorite(commerce.id); }}
           aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
         >
-          <Heart size={15} fill={isFavorite ? YASSALA_PINK : "none"} stroke={isFavorite ? YASSALA_PINK : "#9CA3AF"} />
+          <Heart size={11} fill={isFavorite ? YASSALA_PINK : "none"} stroke={isFavorite ? YASSALA_PINK : "#9CA3AF"} />
         </button>
 
-        {/* Logo – chevauche la frontière cover/body */}
+        {/* Logo chevauchant */}
         <div
-          className="absolute left-4 bg-white rounded-xl flex items-center justify-center overflow-hidden"
-          style={{ width: 52, height: 52, bottom: -24, border: "2.5px solid #fff", boxShadow: "0 2px 10px rgba(0,0,0,0.14)" }}
+          className="absolute left-3 bg-white rounded-xl flex items-center justify-center overflow-hidden text-xl shadow"
+          style={{ width: 36, height: 36, bottom: -16, border: "2px solid #fff", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}
         >
           {commerce.logoUrl ? (
             <img src={commerce.logoUrl} alt={commerce.name} className="w-full h-full object-cover" />
           ) : (
-            <span style={{ fontSize: "1.6rem" }}>{commerce.emoji}</span>
+            commerce.emoji
           )}
         </div>
 
         {/* Overlay fermé */}
         {!commerce.isOpen && (
-          <div className="absolute inset-0 bg-black/50 flex items-end p-3">
-            <span className="text-white text-sm font-semibold bg-black/70 px-3 py-1.5 rounded-full">
-              {commerce.closeTime ? `Fermé à ${commerce.closeTime}` : `Ouvre à ${commerce.opensAt || "–"}`}
+          <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+            <span className="text-white text-[11px] font-semibold bg-black/60 px-2 py-1 rounded-full">
+              Ouvre à {commerce.opensAt || "–"}
             </span>
           </div>
         )}
       </div>
 
-      {/* ── Corps de la carte ── */}
-      <div className="px-4 pt-9 pb-3.5">
-        {/* Nom + Badge statut + Note */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-bold text-gray-900 text-[15px] leading-snug truncate">{commerce.name}</p>
-              {/* Badge ouvert/fermé */}
-              {commerce.isOpen ? (
-                <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#DCFCE7", color: "#16A34A" }}>
-                  OUVERT
-                </span>
-              ) : (
-                <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#F3F4F6", color: "#6B7280" }}>
-                  {commerce.closeTime ? `FERMÉ À ${commerce.closeTime}` : "FERMÉ"}
-                </span>
-              )}
-            </div>
-            {/* Tags */}
-            <p className="text-xs text-gray-400 mt-0.5 truncate">{commerce.tags.join(" · ")}</p>
-          </div>
-          {/* Note */}
-          <div className="flex items-center gap-1 flex-shrink-0 bg-amber-50 px-2 py-0.5 rounded-full">
-            <Star size={11} fill="#FBBF24" stroke="#FBBF24" />
-            <span className="text-xs font-bold text-amber-700">{commerce.rating.toFixed(1)}</span>
-            <span className="text-[10px] text-gray-400">({commerce.reviewCount})</span>
-          </div>
-        </div>
-
-        {/* Info : délai, distance, livraison */}
-        <div className="flex items-center gap-2 mt-2.5 text-xs text-gray-500 flex-wrap">
-          <div className="flex items-center gap-1">
-            <Clock size={11} />
+      {/* Corps */}
+      <div className="px-2.5 pt-6 pb-2.5">
+        <p className="font-bold text-gray-900 text-sm truncate">{commerce.name}</p>
+        <p className="text-[10px] text-gray-400 truncate mt-0.5">{commerce.tags.slice(0, 2).join(" · ")}</p>
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-1 text-[11px] text-gray-500">
+            <Clock size={10} />
             <span>{commerce.deliveryMin}–{commerce.deliveryMax} min</span>
           </div>
-          {commerce.distanceKm > 0 && (
-            <>
-              <span className="text-gray-200">|</span>
-              <div className="flex items-center gap-1">
-                <Navigation size={11} />
-                <span>{formatDistance(commerce.distanceKm)}</span>
-              </div>
-            </>
-          )}
-          <span className="text-gray-200">|</span>
-          <span className={commerce.deliveryFee === 0 ? "font-semibold text-emerald-600" : "text-gray-500"}>
-            {commerce.deliveryFee === 0 ? "Livraison offerte" : `Livraison ${commerce.deliveryFee.toFixed(2)}€`}
-          </span>
+          <div className="flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded-full">
+            <Star size={9} fill="#FBBF24" stroke="#FBBF24" />
+            <span className="text-[11px] font-bold text-amber-700">{commerce.rating.toFixed(1)}</span>
+          </div>
         </div>
-
-        {/* CTA : Voir le menu / Prochainement */}
-        <div className="mt-3">
-          {commerce.isComingSoon ? (
-            <button
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-gray-400 border border-gray-200"
-              style={{ backgroundColor: "#F9FAFB" }}
-              disabled
-            >
-              Prochainement
-            </button>
-          ) : (
-            <button
-              className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-opacity active:opacity-80"
-              style={{ backgroundColor: YASSALA_PINK }}
-            >
-              Voir le menu
-            </button>
-          )}
-        </div>
+        <p className={`text-[11px] mt-1.5 font-medium ${commerce.deliveryFee === 0 ? "text-emerald-600" : "text-gray-400"}`}>
+          {commerce.deliveryFee === 0 ? "🎉 Livraison offerte" : `Livraison ${commerce.deliveryFee.toFixed(2)}€`}
+        </p>
       </div>
     </div>
   );
@@ -874,7 +821,6 @@ export default function MarketplaceHome() {
             <div
               className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4"
               style={{
-                scrollSnapType: "x mandatory",
                 WebkitOverflowScrolling: "touch",
                 scrollPaddingLeft: "16px",
               }}
@@ -906,7 +852,7 @@ export default function MarketplaceHome() {
               <p className="text-sm mt-1">Essayez un autre terme ou filtre</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               {allCommerces.map((c) => (
                 <EstablishmentCard
                   key={c.id}
