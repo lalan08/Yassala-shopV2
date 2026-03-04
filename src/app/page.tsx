@@ -2875,7 +2875,7 @@ function NightHome() {
               </div>
             )}
 
-            {/* 3. ESPACE PROFESSIONNEL — livreur */}
+            {/* 3. ESPACE PROFESSIONNEL — livreur + gérants */}
             <div style={{margin:"22px 24px 28px",
               background:"rgba(0,180,255,.04)",
               border:"1px solid rgba(0,180,255,.2)",
@@ -2895,6 +2895,18 @@ function NightHome() {
                 ESPACE LIVREUR
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
                   color:"rgba(0,180,255,.5)",marginLeft:4}}>→</span>
+              </a>
+              <a href="/etablissement"
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                  background:"linear-gradient(135deg,rgba(255,165,0,.18) 0%,rgba(200,100,0,.12) 100%)",
+                  border:"1px solid rgba(255,165,0,.35)",
+                  borderRadius:10,padding:"14px",textDecoration:"none",marginTop:8,
+                  color:"#ffa500",fontFamily:"'Rajdhani',sans-serif",fontWeight:700,
+                  fontSize:"1rem",letterSpacing:".06em"}}>
+                <span style={{fontSize:"1.3rem"}}>🏪</span>
+                ESPACE PRO
+                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",
+                  color:"rgba(255,165,0,.5)",marginLeft:4}}>→</span>
               </a>
             </div>
           </div>

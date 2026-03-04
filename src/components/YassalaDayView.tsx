@@ -1083,57 +1083,57 @@ export default function YassalaDayView() {
               </div>
             </div>
           ) : (
-            <div style={{padding:"4px 20px 20px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
+            <div style={{padding:"4px 16px 20px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
                 {etablissements.map(etab => (
                   <div key={etab.id}
                     onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
-                    style={{background:"#fff",borderRadius:16,overflow:"hidden",cursor:"pointer",
-                      boxShadow:"0 2px 12px rgba(0,0,0,.07)",transition:"transform .15s,box-shadow .15s"}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="translateY(-3px)";(e.currentTarget as HTMLDivElement).style.boxShadow="0 8px 28px rgba(0,0,0,.12)";}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="";(e.currentTarget as HTMLDivElement).style.boxShadow="0 2px 12px rgba(0,0,0,.07)";}}>
-                    {/* Image 16:9 */}
-                    <div style={{position:"relative",aspectRatio:"16/9",
+                    style={{background:"#fff",borderRadius:12,overflow:"hidden",cursor:"pointer",
+                      boxShadow:"0 1px 6px rgba(0,0,0,.08)",transition:"box-shadow .15s"}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow="0 4px 16px rgba(0,0,0,.14)";}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow="0 1px 6px rgba(0,0,0,.08)";}}>
+                    {/* Image carrée */}
+                    <div style={{position:"relative",aspectRatio:"1/1",
                       background:etab.coverUrl?"#eee":"linear-gradient(135deg,rgba(255,45,120,.12) 0%,rgba(0,153,204,.1) 100%)"}}>
                       {etab.coverUrl ? (
                         <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
                       ) : (
-                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"4rem",opacity:.15}}>🏪</div>
+                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",opacity:.15}}>🏪</div>
                       )}
                       {/* Badge statut */}
-                      <div style={{position:"absolute",top:10,left:10,
-                        background:etab.isActive?"rgba(34,197,94,.92)":"rgba(100,100,100,.82)",
-                        color:"#fff",fontSize:".65rem",fontWeight:700,padding:"4px 10px",borderRadius:20,
-                        fontFamily:"'Nunito',sans-serif",backdropFilter:"blur(4px)",letterSpacing:".06em"}}>
+                      <div style={{position:"absolute",top:8,left:8,
+                        background:etab.isActive?"rgba(34,197,94,.95)":"rgba(100,100,100,.85)",
+                        color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 8px",borderRadius:20,
+                        fontFamily:"'Nunito',sans-serif",backdropFilter:"blur(4px)",letterSpacing:".05em"}}>
                         {etab.isActive ? "OUVERT" : "FERMÉ"}
                       </div>
                     </div>
                     {/* Infos */}
-                    <div style={{padding:"14px 16px 16px"}}>
-                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1.08rem",
-                        color:"#1a1a2e",marginBottom:5,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
+                    <div style={{padding:"10px 12px 12px"}}>
+                      <div style={{fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:".92rem",
+                        color:"#1a1a2e",marginBottom:3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
                         {etab.name}
                       </div>
                       {etab.description && (
-                        <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".82rem",color:D.muted,marginBottom:8,
-                          overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>
+                        <div style={{fontFamily:"'Nunito',sans-serif",fontSize:".72rem",color:D.muted,marginBottom:5,
+                          overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
                           {etab.description}
                         </div>
                       )}
-                      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:8}}>
                         {etab.openHours && (
-                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",color:D.muted}}>🕐 {etab.openHours}</span>
+                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".68rem",color:D.muted}}>🕐 {etab.openHours}</span>
                         )}
                         {etab.address && (
-                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".78rem",color:D.muted,
-                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180}}>📍 {etab.address}</span>
+                          <span style={{fontFamily:"'Nunito',sans-serif",fontSize:".68rem",color:D.muted,
+                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%"}}>📍 {etab.address}</span>
                         )}
                       </div>
-                      <div style={{marginTop:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                        <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".82rem",color:D.pink}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <span style={{fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:".75rem",color:D.pink}}>
                           Voir le menu
                         </span>
-                        <span style={{color:D.pink,fontSize:"1.1rem",fontWeight:700}}>›</span>
+                        <span style={{color:D.pink,fontSize:"1rem",fontWeight:700}}>›</span>
                       </div>
                     </div>
                   </div>

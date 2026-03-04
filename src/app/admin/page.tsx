@@ -1200,7 +1200,6 @@ export default function AdminPage() {
             ]},
             { section:"YASSALA DAY", items:[
               { key:"yassala_day_config",          label:"CONFIG JOUR",     icon:"☀️" },
-              { key:"yassala_day_etablissements",  label:"ÉTABLISSEMENTS",  icon:"🏪" },
               { key:"yassala_day_products",        label:"PRODUITS JOUR",   icon:"🛍️" },
               { key:"yassala_day_cats",            label:"CATÉGORIES JOUR", icon:"🗂️" },
               { key:"yassala_day_packs",           label:"PACKS JOUR",      icon:"📦" },
@@ -1222,7 +1221,7 @@ export default function AdminPage() {
               {!collapsedSections[group.section] && group.items.map(item => (
                 <button key={item.key}
                   className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
-                  onClick={() => { if (item.key === "yassala_day_etablissements") { window.location.href = "/admin/yassala-day/etablissements"; return; } setTab(item.key as any); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
+                  onClick={() => { setTab(item.key as any); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
                     background: tab===item.key ? "rgba(255,45,120,.08)" : "transparent",
                     border:"none",borderLeft: tab===item.key ? "2px solid #ff2d78" : "2px solid transparent",
