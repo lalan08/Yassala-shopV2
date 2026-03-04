@@ -1887,7 +1887,7 @@ export default function YassalaDayView() {
                 ESPACE LIVREUR
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"rgba(0,153,204,.5)",marginLeft:4}}>→</span>
               </a>
-              <a href="/etablissement" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"linear-gradient(135deg,rgba(255,165,0,.14) 0%,rgba(200,100,0,.08) 100%)",border:"1px solid rgba(255,165,0,.3)",borderRadius:10,padding:"14px",textDecoration:"none",marginTop:8,color:"#ffa500",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em"}}>
+              <a href="/etablissement/login" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"linear-gradient(135deg,rgba(255,165,0,.14) 0%,rgba(200,100,0,.08) 100%)",border:"1px solid rgba(255,165,0,.3)",borderRadius:10,padding:"14px",textDecoration:"none",marginTop:8,color:"#ffa500",fontFamily:"'Nunito',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em"}}>
                 <span style={{fontSize:"1.3rem"}}>🏪</span>
                 ESPACE PRO
                 <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"rgba(255,165,0,.5)",marginLeft:4}}>→</span>
