@@ -42,7 +42,7 @@ export default function ModeCountdownBanner() {
   const [override, setOverride] = useState<"auto" | "day" | "night">("auto");
   const [dayAuto, setDayAuto] = useState(isDayAuto);
   const [seconds, setSeconds] = useState(0);
-  const [tick, setTick] = useState(false);
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "settings", "main"), snap => {
@@ -63,9 +63,10 @@ export default function ModeCountdownBanner() {
 
   useEffect(() => {
     setSeconds(getSecondsUntilSwitch(isDay));
+    setTick(0);
     const id = setInterval(() => {
       setSeconds(getSecondsUntilSwitch(isDay));
-      setTick(t => !t);
+      setTick(t => t + 1);
     }, 1000);
     return () => clearInterval(id);
   }, [isDay]);
@@ -190,8 +191,8 @@ export default function ModeCountdownBanner() {
             </div>
           </div>
 
-          {/* Countdown digits */}
-          <div style={{
+          {/* Countdown digits — key changes every second to retrigger animation */}
+          <div key={tick} style={{
             display: "flex",
             alignItems: "center",
             gap: 4,
@@ -201,7 +202,7 @@ export default function ModeCountdownBanner() {
             padding: "5px 10px",
             backdropFilter: "blur(4px)",
             flexShrink: 0,
-            animation: tick ? "countPulse .15s ease-out" : "none",
+            animation: "countPulse .15s ease-out",
           }}>
             {/* Heures */}
             <div className="countdown-digit">
@@ -231,7 +232,7 @@ export default function ModeCountdownBanner() {
             position: "absolute",
             bottom: 0, left: 0,
             height: 2,
-            width: `${Math.min(100, (1 - seconds / (isDay ? 50400 : 43200)) * 100)}%`,
+            width: `${Math.min(100, (1 - seconds / (isDay ? 50400 : 36000)) * 100)}%`,
             background: "rgba(255,255,255,.45)",
             borderRadius: "0 2px 0 0",
             transition: "width 1s linear",

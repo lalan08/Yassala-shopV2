@@ -391,8 +391,8 @@ function EstablishmentCard({
 }) {
   return (
     <div
-      className="bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.98] transition-transform"
-      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.09)" }}
+      className="flex-shrink-0 bg-white rounded-2xl overflow-visible cursor-pointer active:scale-[0.98] transition-transform"
+      style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.09)", width: 260, scrollSnapAlign: "start" }}
     >
       {/* ── Cover ── */}
       <div className="relative rounded-t-2xl overflow-hidden" style={{ height: 120 }}>
@@ -852,7 +852,14 @@ export default function MarketplaceHome() {
               <p className="text-sm mt-1">Essayez un autre terme ou filtre</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div
+              className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                scrollSnapType: "x mandatory",
+                scrollPaddingLeft: "16px",
+              }}
+            >
               {allCommerces.map((c) => (
                 <EstablishmentCard
                   key={c.id}
@@ -861,6 +868,7 @@ export default function MarketplaceHome() {
                   onToggleFavorite={toggleFavorite}
                 />
               ))}
+              <div className="flex-shrink-0 w-2" aria-hidden />
             </div>
           )}
         </section>
