@@ -205,10 +205,12 @@ const defaultSettings: Settings = {
 function useCountdownToDay() {
   const getSecondsLeft = () => {
     const now = new Date();
-    const target = new Date();
+    const target = new Date(now);
     target.setHours(7, 0, 0, 0);
-    if (now.getHours() >= 7 && now.getHours() < 21) return 0;
-    if (now.getHours() >= 21) target.setDate(target.getDate() + 1);
+    // If 7 am today has already passed, count to tomorrow's 7 am
+    if (target.getTime() <= now.getTime()) {
+      target.setDate(target.getDate() + 1);
+    }
     return Math.max(0, Math.floor((target.getTime() - now.getTime()) / 1000));
   };
   const [seconds, setSeconds] = useState(getSecondsLeft);
