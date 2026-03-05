@@ -1175,18 +1175,21 @@ export default function YassalaDayView() {
           {/* Header */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 20px"}}>
             <div>
-              <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:D.text,margin:0,letterSpacing:".02em"}}>
-                📍 <span style={{color:D.pink}}>DISPONIBLE PRÈS DE CHEZ TOI</span>
-              </h2>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:D.text,margin:0,letterSpacing:".02em"}}>
+                  📍 <span style={{color:D.pink}}>Autour de toi</span>
+                </h2>
+                {etablissements.filter(e => e.isActive).length > 0 && (
+                  <span style={{fontFamily:"'Inter',sans-serif",fontSize:".72rem",fontWeight:700,color:"#fff",
+                    background:"linear-gradient(90deg,#ff6b35,#ff2d78)",padding:"3px 10px",borderRadius:20,flexShrink:0}}>
+                    🔥 {etablissements.filter(e => e.isActive).length} ouverts
+                  </span>
+                )}
+              </div>
               <p style={{fontFamily:"'Inter',sans-serif",fontSize:".82rem",color:D.muted,margin:"4px 0 0"}}>
-                Appuie sur un commerce pour voir son menu
+                Découvre les commerces disponibles
               </p>
             </div>
-            {etablissements.length > 0 && (
-              <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,background:"#E6EAF2",padding:"4px 12px",borderRadius:20,flexShrink:0}}>
-                {etablissements.length} partenaire{etablissements.length>1?"s":""}
-              </span>
-            )}
           </div>
 
           {etablissements.length === 0 ? (
@@ -1200,62 +1203,61 @@ export default function YassalaDayView() {
               </div>
             </div>
           ) : (
-            <div style={{padding:"4px 16px 20px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                {etablissements.map(etab => (
-                  <div key={etab.id}
-                    onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
-                    style={{background:D.card,borderRadius:16,overflow:"hidden",cursor:"pointer",
-                      boxShadow:D.shadow,transition:"box-shadow .2s",border:`1px solid ${D.border}`}}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow=D.shadowHov;}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.boxShadow=D.shadow;}}>
-                    {/* Image carrée */}
-                    <div style={{position:"relative",aspectRatio:"1/1",
-                      background:etab.coverUrl?`${D.cardDark}`:`linear-gradient(135deg,rgba(255,45,141,.08) 0%,rgba(58,191,248,.06) 100%)`}}>
-                      {etab.coverUrl ? (
-                        <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
-                      ) : (
-                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",opacity:.15}}>🏪</div>
-                      )}
-                      {/* Badge statut */}
-                      <div style={{position:"absolute",top:8,left:8,
-                        background:etab.isActive?"rgba(34,197,94,.95)":"rgba(100,100,100,.85)",
-                        color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 8px",borderRadius:20,
-                        fontFamily:"'Inter',sans-serif",backdropFilter:"blur(4px)",letterSpacing:".05em"}}>
-                        {etab.isActive ? "OUVERT" : "FERMÉ"}
-                      </div>
-                    </div>
-                    {/* Infos */}
-                    <div style={{padding:"10px 12px 12px"}}>
-                      <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".92rem",
-                        color:D.text,marginBottom:3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
-                        {etab.name}
-                      </div>
-                      {etab.description && (
-                        <div style={{fontFamily:"'Inter',sans-serif",fontSize:".72rem",color:D.muted,marginBottom:5,
-                          overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
-                          {etab.description}
-                        </div>
-                      )}
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                        {etab.openHours && (
-                          <span style={{fontFamily:"'Inter',sans-serif",fontSize:".68rem",color:D.muted}}>🕐 {etab.openHours}</span>
-                        )}
-                        {etab.address && (
-                          <span style={{fontFamily:"'Inter',sans-serif",fontSize:".68rem",color:D.muted,
-                            overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%"}}>📍 {etab.address}</span>
-                        )}
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                        <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".75rem",color:D.pink}}>
-                          Voir le menu
-                        </span>
-                        <span style={{color:D.pink,fontSize:"1rem",fontWeight:700}}>›</span>
-                      </div>
+            <div style={{
+              display:"flex",
+              overflowX:"auto",
+              gap:16,
+              paddingLeft:16,
+              paddingRight:16,
+              paddingBottom:20,
+              scrollbarWidth:"none",
+              WebkitOverflowScrolling:"touch" as React.CSSProperties["WebkitOverflowScrolling"],
+            }}>
+              {etablissements.map(etab => (
+                <div key={etab.id}
+                  onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
+                  style={{
+                    minWidth:220,
+                    width:220,
+                    flexShrink:0,
+                    background:D.card,
+                    borderRadius:16,
+                    overflow:"hidden",
+                    cursor:"pointer",
+                    boxShadow:D.shadow,
+                    border:`1px solid ${D.border}`,
+                    transition:"transform .15s",
+                  }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(0.97)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(1)";}}
+                  onMouseDown={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(0.97)";}}
+                  onMouseUp={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(1)";}}
+                >
+                  {/* Image cover */}
+                  <div style={{position:"relative",height:140,overflow:"hidden",
+                    background:etab.coverUrl?D.cardDark:`linear-gradient(135deg,rgba(255,45,141,.08) 0%,rgba(58,191,248,.06) 100%)`}}>
+                    {etab.coverUrl ? (
+                      <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+                    ) : (
+                      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",opacity:.15}}>🏪</div>
+                    )}
+                    {/* Badge OUVERT / FERMÉ */}
+                    <div style={{position:"absolute",top:8,left:8,
+                      background:etab.isActive?"rgba(34,197,94,.95)":"rgba(100,100,100,.85)",
+                      color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 8px",borderRadius:20,
+                      fontFamily:"'Inter',sans-serif",backdropFilter:"blur(4px)",letterSpacing:".05em"}}>
+                      {etab.isActive ? "OUVERT" : "FERMÉ"}
                     </div>
                   </div>
-                ))}
-              </div>
+                  {/* Nom uniquement */}
+                  <div style={{padding:"10px 12px 12px"}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".92rem",
+                      color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
+                      {etab.name}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
