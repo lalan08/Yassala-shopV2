@@ -193,6 +193,8 @@ export default function YassalaDayView() {
   const [orderForm, setOrderForm] = useState({ name:"", phone:"", address:"", email:"", lat:0, lng:0 });
   const [addressSuggestions, setAddressSuggestions] = useState<{display:string;lat:number;lng:number}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const shopsScrollRef     = useRef<HTMLDivElement | null>(null);
+  const [showScrollHint, setShowScrollHint] = useState(true);
   const addressTimerRef    = useRef<NodeJS.Timeout | null>(null);
   const trackedImpressionRef = useRef<string | null>(null);
   const phoneRecaptchaRef  = useRef<any>(null);
@@ -847,6 +849,7 @@ export default function YassalaDayView() {
         @keyframes bgShift{from{opacity:.8;}to{opacity:1;}}
         @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
         @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+        @keyframes scrollHint{0%,100%{transform:translateX(0);}50%{transform:translateX(7px);}}
         .flicker{animation:flicker 6s infinite;}
         .fade1{animation:fadeUp .5s .0s both;}.fade2{animation:fadeUp .5s .1s both;}.fade3{animation:fadeUp .5s .2s both;}
         .fade4{animation:fadeUp .5s .3s both;}.fade5{animation:fadeUp .5s .4s both;}
@@ -1203,7 +1206,14 @@ export default function YassalaDayView() {
               </div>
             </div>
           ) : (
-            <div style={{
+            <div style={{position:"relative"}}>
+            <div
+              ref={shopsScrollRef}
+              onScroll={() => {
+                const el = shopsScrollRef.current;
+                if (el && el.scrollLeft > 20) setShowScrollHint(false);
+              }}
+              style={{
               display:"flex",
               overflowX:"auto",
               gap:16,
@@ -1258,6 +1268,24 @@ export default function YassalaDayView() {
                   </div>
                 </div>
               ))}
+            </div>
+            {showScrollHint && etablissements.length > 1 && (
+              <div style={{
+                position:"absolute",right:0,top:0,bottom:20,
+                display:"flex",alignItems:"center",
+                pointerEvents:"none",
+                background:`linear-gradient(270deg,${D.bg} 50%,transparent)`,
+                paddingRight:14,paddingLeft:40,
+              }}>
+                <div style={{
+                  animation:"scrollHint 1s ease-in-out infinite",
+                  fontSize:"1.8rem",
+                  color:D.pink,
+                  lineHeight:1,
+                  fontWeight:900,
+                }}>›</div>
+              </div>
+            )}
             </div>
           )}
         </div>
