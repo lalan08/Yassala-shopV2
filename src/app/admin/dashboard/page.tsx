@@ -146,6 +146,7 @@ export default function AdminDashboard() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [savingDriver, setSavingDriver] = useState(false);
   const [assigningOrderId, setAssigningOrderId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"day" | "night">("day");
 
   // ── Firebase realtime listeners ──
   useEffect(() => {
