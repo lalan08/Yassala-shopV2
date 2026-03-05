@@ -132,7 +132,7 @@ export default function AdminPage() {
   const [usersSearch, setUsersSearch]         = useState("");
   const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string;password?:string;contractAccepted?:boolean;contractAcceptedAt?:string}[]>([]);
   const [driverFilter, setDriverFilter]       = useState<"all"|"nouveau"|"accepte"|"refuse">("all");
-  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true,"YASSALA DAY":true});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"UTILISATEURS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true,"YASSALA DAY":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
   const [adminWeather, setAdminWeather] = useState<{ condition: string; precipitation: number; isRaining: boolean; isHeavyRain: boolean } | null>(null);
@@ -1106,7 +1106,7 @@ export default function AdminPage() {
       <div className="admin-breadcrumb" style={{padding:"10px 24px",fontFamily:"'Inter',sans-serif",fontSize:".82rem",fontWeight:400,color:"#5a5470",borderBottom:"1px solid rgba(255,255,255,.04)",background:"rgba(10,10,18,.85)"}}>
         <span style={{color:"#5a5470"}}>🏠 Accueil</span>
         <span style={{margin:"0 8px",color:"#3a3450"}}>›</span>
-        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",dispatch:"Dispatch",online_drivers:"Livreur en ligne",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Clients",drivers:"Candidature",settings:"Paramètres"}[tab]}</span>
+        <span style={{color:"#00f5ff"}}>{{dashboard:"Tableau de bord",orders:"Commandes",dispatch:"Dispatch",online_drivers:"Livreur en ligne",products:"Produits",categories:"Catégories",packs:"Packs",coupons:"Coupons",banners:"Bannières",users:"Utilisateurs",drivers:"Candidature",settings:"Paramètres"}[tab]}</span>
       </div>
 
       <div className="admin-shopbar" style={{background: settings.shopOpen ? "rgba(184,255,0,.08)" : "rgba(255,45,120,.08)",
@@ -1182,9 +1182,10 @@ export default function AdminPage() {
               { key:"dashboard",      label:"TABLEAU DE BORD",  icon:"📊" },
               { key:"orders",         label:"COMMANDES",        icon:"📦" },
               { key:"dispatch",       label:"DISPATCH",         icon:"🗺️" },
-              { key:"online_drivers", label:"LIVREUR EN LIGNE", icon:"🟢" },
-              { key:"users",          label:"CLIENTS",          icon:"👥" },
               { key:"drivers",        label:"CANDIDATURE",      icon:"🏍️" },
+            ]},
+            { section:"UTILISATEURS", items:[
+              { key:"users",          label:"UTILISATEURS",     icon:"👥" },
             ]},
             { section:"CATALOGUE", items:[
               { key:"products",   label:"PRODUITS",        icon:"🍺" },
@@ -1475,11 +1476,11 @@ export default function AdminPage() {
                                       })}
                                     </span>
                                     {alert.type === "driver_shortage" && (
-                                      <button onClick={() => setTab("online_drivers" as any)}
+                                      <button onClick={() => setTab("dashboard")}
                                         style={{background:"none",border:"none",cursor:"pointer",
                                           fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
                                           color:"#00f5ff",padding:0,textDecoration:"underline"}}>
-                                        Voir livreurs →
+                                        Voir livreurs ↑
                                       </button>
                                     )}
                                     {(alert.type === "payment_failed" || alert.type === "cash_pending") && (
@@ -1582,24 +1583,112 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Chips de métriques — rangée horizontale scrollable */}
-                <div style={{display:"flex",gap:10,overflowX:"auto",marginBottom:20,paddingBottom:2,
-                  scrollbarWidth:"none" as any}}>
-                  {chip("💰", `${sum(periodOrders).toFixed(0)} €`, `Chiffre d'affaires · ${periodLabel}`, "#b8ff00")}
-                  {chip("🗓️", String(periodOrders.length), `Commandes · ${periodLabel}`, "#00f5ff")}
-                  {chip("🔔", String(pending.length), "En attente", "#ff2d78", pending.length > 0 ? () => setTab("orders") : undefined)}
-                  {chip("🚚", String(inProgress.length), "En cours", "#ff9500", inProgress.length > 0 ? () => { setOrderFilter("en_cours"); setTab("orders"); } : undefined)}
-                  {chip("✅", String(delivered.length), "Livrées / retirées", "#b8ff00")}
-                  {successRate !== null && chip("📊", `${successRate}%`, "Taux de réussite", successRate >= 80 ? "#b8ff00" : successRate >= 60 ? "#ff9500" : "#ff2d78")}
-                  {chip("💶", `${avg(periodOrders).toFixed(2)} €`, "Panier moyen", "#a855f7")}
-                  {chip("👥", String(usersCount), `Clients · ${activeUids.size} actifs`, "#00f5ff")}
-                  {chip("🏍️", String(onlineDrivers.length), "Livreurs en ligne", onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470", onlineDrivers.length > 0 ? () => setTab("online_drivers") : undefined)}
-                  {chip("📅", String(todayOrders.length), `Aujourd'hui · ${todayDelivery}🚚 ${todayPickup}🏪`, "#ff9500")}
-                  {adminWeather && chip(
-                    adminWeather.isHeavyRain ? "⛈" : adminWeather.isRaining ? "🌧" : "☀️",
-                    adminWeather.isHeavyRain ? "+3€" : adminWeather.isRaining ? "+1.50€" : "OK",
-                    `Matoury · ${adminWeather.precipitation.toFixed(1)}mm`,
-                    adminWeather.isHeavyRain ? "#60a5fa" : adminWeather.isRaining ? "#93c5fd" : "#facc15",
+                {/* ── KPI PRINCIPALES — 5 grandes cartes ── */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:14,marginBottom:22}}>
+                  {/* En attente */}
+                  <div
+                    onClick={() => { setOrderFilter("nouveau"); setTab("orders"); }}
+                    style={{background:"rgba(255,45,120,.07)",border:"1px solid rgba(255,45,120,.35)",
+                      borderRadius:12,padding:"20px 16px",cursor:"pointer",transition:"all .15s",textAlign:"center" as const}}
+                    onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,45,120,.14)")}
+                    onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,45,120,.07)")}>
+                    <div style={{fontSize:"1.6rem",marginBottom:6}}>🔔</div>
+                    <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2.4rem",color:"#ff2d78",lineHeight:1}}>{pending.length}</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".72rem",color:"#ff2d78",letterSpacing:".08em",marginTop:6,textTransform:"uppercase" as const}}>En attente</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",marginTop:3}}>nouvelles commandes</div>
+                  </div>
+                  {/* En livraison */}
+                  <div
+                    onClick={() => { setOrderFilter("en_cours"); setTab("orders"); }}
+                    style={{background:"rgba(255,149,0,.07)",border:"1px solid rgba(255,149,0,.35)",
+                      borderRadius:12,padding:"20px 16px",cursor:"pointer",transition:"all .15s",textAlign:"center" as const}}
+                    onMouseEnter={e=>(e.currentTarget.style.background="rgba(255,149,0,.14)")}
+                    onMouseLeave={e=>(e.currentTarget.style.background="rgba(255,149,0,.07)")}>
+                    <div style={{fontSize:"1.6rem",marginBottom:6}}>🚚</div>
+                    <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2.4rem",color:"#ff9500",lineHeight:1}}>{inProgress.length}</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".72rem",color:"#ff9500",letterSpacing:".08em",marginTop:6,textTransform:"uppercase" as const}}>En livraison</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",marginTop:3}}>en cours de route</div>
+                  </div>
+                  {/* Livreurs en ligne */}
+                  <div
+                    style={{background: onlineDrivers.length > 0 ? "rgba(184,255,0,.07)" : "rgba(90,84,112,.07)",
+                      border:`1px solid ${onlineDrivers.length > 0 ? "rgba(184,255,0,.35)" : "rgba(90,84,112,.25)"}`,
+                      borderRadius:12,padding:"20px 16px",textAlign:"center" as const}}>
+                    <div style={{fontSize:"1.6rem",marginBottom:6}}>🏍️</div>
+                    <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2.4rem",
+                      color: onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",lineHeight:1}}>{onlineDrivers.length}</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".72rem",
+                      color: onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",
+                      letterSpacing:".08em",marginTop:6,textTransform:"uppercase" as const}}>Livreurs en ligne</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",marginTop:3}}>
+                      {onlineDrivers.filter(d => d.status === "busy").length} occupé{onlineDrivers.filter(d => d.status === "busy").length !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                  {/* Commandes aujourd'hui */}
+                  <div
+                    style={{background:"rgba(0,245,255,.07)",border:"1px solid rgba(0,245,255,.35)",
+                      borderRadius:12,padding:"20px 16px",textAlign:"center" as const}}>
+                    <div style={{fontSize:"1.6rem",marginBottom:6}}>📅</div>
+                    <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2.4rem",color:"#00f5ff",lineHeight:1}}>{todayOrders.length}</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".72rem",color:"#00f5ff",letterSpacing:".08em",marginTop:6,textTransform:"uppercase" as const}}>Commandes aujourd'hui</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",marginTop:3}}>
+                      {todayDelivery} livraison{todayDelivery !== 1 ? "s" : ""} · {todayPickup} retrait{todayPickup !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                  {/* CA aujourd'hui */}
+                  <div
+                    style={{background:"rgba(184,255,0,.07)",border:"1px solid rgba(184,255,0,.35)",
+                      borderRadius:12,padding:"20px 16px",textAlign:"center" as const}}>
+                    <div style={{fontSize:"1.6rem",marginBottom:6}}>💰</div>
+                    <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2rem",color:"#b8ff00",lineHeight:1}}>{sum(todayOrders).toFixed(0)} €</div>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".72rem",color:"#b8ff00",letterSpacing:".08em",marginTop:6,textTransform:"uppercase" as const}}>CA aujourd'hui</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"#5a5470",marginTop:3}}>
+                      moy. {avg(todayOrders).toFixed(0)} € / cmd
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── LIVREURS EN LIGNE (intégré au dashboard) ── */}
+                <div style={{background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.06)",
+                  borderRadius:10,padding:"16px 20px",marginBottom:18}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".83rem",
+                      letterSpacing:".08em",color:"#5a5470"}}>🟢 LIVREURS EN LIGNE</div>
+                    <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",
+                      color: onlineDrivers.length > 0 ? "#b8ff00" : "#5a5470",
+                      background: onlineDrivers.length > 0 ? "rgba(184,255,0,.08)" : "rgba(90,84,112,.08)",
+                      border:`1px solid ${onlineDrivers.length > 0 ? "rgba(184,255,0,.25)" : "rgba(90,84,112,.25)"}`,
+                      borderRadius:4,padding:"3px 10px"}}>
+                      {onlineDrivers.length} actif{onlineDrivers.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  {onlineDrivers.length === 0 ? (
+                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#3a3450",
+                      textAlign:"center" as const,padding:"16px 0"}}>
+                      Aucun livreur en ligne — en attente de connexion
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexWrap:"wrap" as const,gap:10}}>
+                      {onlineDrivers.map(driver => {
+                        const sc = driver.status === "busy" ? "#ff9500" : "#b8ff00";
+                        const slabel = driver.status === "busy" ? "OCCUPÉ" : "LIBRE";
+                        return (
+                          <div key={driver.uid} style={{
+                            display:"flex",alignItems:"center",gap:10,
+                            background:"#0c0918",border:`1px solid ${sc}25`,
+                            borderRadius:8,padding:"10px 14px",minWidth:160}}>
+                            <div style={{width:8,height:8,borderRadius:"50%",background:sc,
+                              boxShadow:`0 0 6px ${sc}`,flexShrink:0}} />
+                            <div>
+                              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,
+                                fontSize:".82rem",color:"#f0eeff"}}>{driver.name || driver.uid}</div>
+                              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                                color:sc,letterSpacing:".06em"}}>{slabel}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
 
