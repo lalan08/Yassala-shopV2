@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db, type HomeSection, type Mode } from "@/lib/adminFirebase";
+import { useAdminMode, matchesMode, MODE_CONFIG } from "@/lib/adminMode";
 
 const C = {
   bg: "#0a0a14", card: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)",
@@ -96,6 +97,7 @@ const FILTER_OPTIONS = [
 ];
 
 export default function HomeBuilderPage() {
+  const { mode: adminMode } = useAdminMode();
   const [sections, setSections] = useState<HomeSection[]>([]);
   const [form, setForm] = useState<Omit<HomeSection, "id">>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -209,12 +211,17 @@ export default function HomeBuilderPage() {
         {/* Sections list */}
         <div>
           <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Sections actives</h2>
-            <span style={{ fontSize: 12, color: C.muted }}>{sections.filter((s) => s.active).length} actives sur {sections.length}</span>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+              Sections {adminMode !== "all" ? `${MODE_CONFIG[adminMode].icon} ${MODE_CONFIG[adminMode].label}` : ""}
+            </h2>
+            <span style={{ fontSize: 12, color: C.muted }}>
+              {sections.filter((s) => matchesMode(s.mode, adminMode) && s.active).length} actives
+              {adminMode !== "all" ? ` (filtre ${MODE_CONFIG[adminMode].label})` : ` sur ${sections.length}`}
+            </span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {sections.map((s, i) => (
+            {sections.filter((s) => matchesMode(s.mode, adminMode)).map((s, i) => (
               <div
                 key={s.id}
                 style={{

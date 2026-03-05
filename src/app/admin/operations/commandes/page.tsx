@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { db, type Order } from "@/lib/adminFirebase";
+import { MODE_CONFIG } from "@/lib/adminMode";
 
 const C = { bg: "#0a0a14", card: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", text: "#f1f5f9", muted: "#64748b", accent: "#f97316", green: "#22c55e", red: "#ef4444", blue: "#3b82f6" };
 
@@ -31,6 +32,7 @@ export default function CommandesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<"all" | "active" | "archived">("active");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [modeFilter, setModeFilter] = useState<"all" | "day" | "night">("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState("");
@@ -58,6 +60,7 @@ export default function CommandesPage() {
     if (filter === "active" && !isActive) return false;
     if (filter === "archived" && isActive) return false;
     if (statusFilter !== "all" && o.status !== statusFilter) return false;
+    if (modeFilter !== "all" && o.mode && o.mode !== modeFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -108,6 +111,24 @@ export default function CommandesPage() {
             {f === "active" ? "Actives" : f === "archived" ? "Archivées" : "Toutes"}
           </button>
         ))}
+        {/* Mode filter */}
+        {(["all", "day", "night"] as const).map((m) => {
+          const mc = m === "all" ? { icon: "⚡", label: "Tous", color: "#64748b" } : MODE_CONFIG[m];
+          return (
+            <button
+              key={m}
+              onClick={() => { setModeFilter(m); setPage(1); }}
+              style={{
+                padding: "7px 12px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12,
+                fontWeight: modeFilter === m ? 700 : 400,
+                background: modeFilter === m ? `${mc.color}22` : "rgba(255,255,255,0.06)",
+                color: modeFilter === m ? mc.color : C.muted,
+              }}
+            >
+              {mc.icon} {mc.label}
+            </button>
+          );
+        })}
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.05)", color: C.text, fontSize: 13 }}>
           <option value="all">Tous statuts</option>
           {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -120,7 +141,7 @@ export default function CommandesPage() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "rgba(255,255,255,0.04)" }}>
-              {["N°", "Client", "Téléphone", "Montant", "Paiement", "Type", "Statut", "Il y a", "Actions"].map((h) => (
+              {["N°", "Client", "Téléphone", "Montant", "Paiement", "Mode", "Type", "Statut", "Il y a", "Actions"].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", textAlign: "left", color: C.muted, fontWeight: 600, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -142,6 +163,19 @@ export default function CommandesPage() {
                   </td>
                   <td style={{ padding: "10px 14px", fontWeight: 700, color: C.accent }}>{Number(o.total).toFixed(2)} €</td>
                   <td style={{ padding: "10px 14px", color: C.muted }}>{o.paidOnline ? "💳" : "💵"}</td>
+                  <td style={{ padding: "10px 14px" }}>
+                    {o.mode ? (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 99,
+                        background: MODE_CONFIG[o.mode as "day" | "night"]?.bg ?? "rgba(255,255,255,0.06)",
+                        color: MODE_CONFIG[o.mode as "day" | "night"]?.color ?? C.muted,
+                      }}>
+                        {MODE_CONFIG[o.mode as "day" | "night"]?.icon ?? ""} {MODE_CONFIG[o.mode as "day" | "night"]?.label ?? o.mode}
+                      </span>
+                    ) : (
+                      <span style={{ color: C.muted, fontSize: 11 }}>—</span>
+                    )}
+                  </td>
                   <td style={{ padding: "10px 14px", color: C.muted, fontSize: 12 }}>{o.fulfillmentType === "pickup" ? "Retrait" : "Livraison"}</td>
                   <td style={{ padding: "10px 14px" }}>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: st.bg, color: st.color }}>{st.label}</span>
@@ -160,7 +194,7 @@ export default function CommandesPage() {
               );
             })}
             {paged.length === 0 && (
-              <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: C.muted }}>Aucune commande</td></tr>
+              <tr><td colSpan={10} style={{ padding: 32, textAlign: "center", color: C.muted }}>Aucune commande</td></tr>
             )}
           </tbody>
         </table>

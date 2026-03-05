@@ -5,6 +5,7 @@ import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy,
 } from "firebase/firestore";
 import { db, type Product, type Mode, type Category } from "@/lib/adminFirebase";
+import { useAdminMode, matchesMode } from "@/lib/adminMode";
 
 const C = {
   bg: "#0a0a14", card: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)",
@@ -36,6 +37,7 @@ export default function ProduitsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
+  const { mode: adminMode } = useAdminMode();
   const [modeFilter, setModeFilter] = useState<"all" | Mode>("all");
   const [catFilter, setCatFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
@@ -93,6 +95,9 @@ export default function ProduitsPage() {
   const F = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
   const filtered = products.filter((p) => {
+    // Global mode filter (from sidebar switch)
+    if (!matchesMode(p.mode, adminMode)) return false;
+    // Local sub-filter (further refinement within the current mode)
     const matchMode = modeFilter === "all" || p.mode === modeFilter || p.mode === "both";
     const matchCat  = catFilter === "all" || p.cat === catFilter;
     const matchSearch = !search ||

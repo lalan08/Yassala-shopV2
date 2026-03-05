@@ -5,6 +5,7 @@ import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
 } from "firebase/firestore";
 import { db, type Establishment, type Mode, computeRankingScore } from "@/lib/adminFirebase";
+import { useAdminMode, matchesMode } from "@/lib/adminMode";
 
 const C = {
   bg: "#0a0a14",
@@ -72,6 +73,7 @@ function ScoreBadge({ score }: { score: number }) {
 }
 
 export default function CommercesPage() {
+  const { mode: adminMode } = useAdminMode();
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [search, setSearch] = useState("");
   const [modeFilter, setModeFilter] = useState<"all" | Mode>("all");
@@ -152,6 +154,7 @@ export default function CommercesPage() {
   };
 
   const filtered = establishments.filter((e) => {
+    if (!matchesMode(e.mode, adminMode)) return false;
     const matchMode = modeFilter === "all" || e.mode === modeFilter || e.mode === "both";
     const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.address.toLowerCase().includes(search.toLowerCase());
     return matchMode && matchSearch;
