@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db, type Banner } from "@/lib/adminFirebase";
+import { useAdminMode, matchesMode } from "@/lib/adminMode";
 
 const C = { bg: "#0a0a14", card: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", text: "#f1f5f9", muted: "#64748b", accent: "#f97316", green: "#22c55e", red: "#ef4444" };
 const EMPTY: Omit<Banner, "id"> = { title: "", subtitle: "", desc: "", cta: "Commander", link: "/", gradient: "linear-gradient(135deg,#f97316,#dc2626)", image: "", brightness: 70, active: true, order: 0 };
 
 export default function BannièresPage() {
+  const { mode: adminMode } = useAdminMode();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [form, setForm] = useState<Omit<Banner, "id">>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function BannièresPage() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {banners.map((b, i) => (
+        {banners.filter((b) => matchesMode((b as any).mode, adminMode)).map((b, i) => (
           <div key={b.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center" }}>
             {/* Preview */}
             <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 18px" }}>

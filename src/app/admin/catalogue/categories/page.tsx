@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db, type Category, type Mode } from "@/lib/adminFirebase";
+import { useAdminMode, matchesMode } from "@/lib/adminMode";
 
 const C = { bg: "#0a0a14", card: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", text: "#f1f5f9", muted: "#64748b", accent: "#f97316" };
 const EMPTY: Omit<Category, "id"> = { key: "", label: "", emoji: "🍽️", order: 0, mode: "both" };
 
 export default function CategoriesPage() {
+  const { mode: adminMode } = useAdminMode();
   const [cats, setCats] = useState<Category[]>([]);
   const [form, setForm] = useState<Omit<Category, "id">>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export default function CategoriesPage() {
               </tr>
             </thead>
             <tbody>
-              {cats.map((c, i) => (
+              {cats.filter((c) => matchesMode(c.mode, adminMode)).map((c, i) => (
                 <tr key={c.id} style={{ borderTop: `1px solid ${C.border}`, background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
                   <td style={{ padding: "10px 14px", color: C.muted }}>{i + 1}</td>
                   <td style={{ padding: "10px 14px", fontSize: 22 }}>{c.emoji}</td>

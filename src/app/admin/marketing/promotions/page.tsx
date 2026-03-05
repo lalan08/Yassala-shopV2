@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/adminFirebase";
+import { useAdminMode, matchesMode } from "@/lib/adminMode";
 
 const C = { bg: "#0a0a14", card: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", text: "#f1f5f9", muted: "#64748b", accent: "#f97316", green: "#22c55e", red: "#ef4444" };
 
@@ -10,6 +11,7 @@ type Promo = { id?: string; title: string; desc: string; emoji: string; discount
 const EMPTY: Omit<Promo, "id"> = { title: "", desc: "", emoji: "🎯", discount: "", active: true, order: 0, mode: "both", endsAt: "" };
 
 export default function PromotionsPage() {
+  const { mode: adminMode } = useAdminMode();
   const [promos, setPromos] = useState<Promo[]>([]);
   const [form, setForm] = useState<Omit<Promo, "id">>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export default function PromotionsPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 14 }}>
-        {promos.map((p) => (
+        {promos.filter((p) => matchesMode(p.mode, adminMode)).map((p) => (
           <div key={p.id} style={{ background: C.card, border: `1px solid ${p.active ? "rgba(249,115,22,0.3)" : C.border}`, borderRadius: 14, padding: 18, opacity: p.active ? 1 : 0.6 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div style={{ fontSize: 28 }}>{p.emoji}</div>

@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db, type Pack, type Mode } from "@/lib/adminFirebase";
+import { useAdminMode, matchesMode } from "@/lib/adminMode";
 
 const C = { bg: "#0a0a14", card: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.08)", text: "#f1f5f9", muted: "#64748b", accent: "#f97316" };
 const EMPTY: Omit<Pack, "id"> = { name: "", tag: "", emoji: "🎁", items: "", price: 0, real: 0, star: false, mode: "both", active: true };
 
 export default function PacksPage() {
+  const { mode: adminMode } = useAdminMode();
   const [packs, setPacks] = useState<Pack[]>([]);
   const [form, setForm] = useState<Omit<Pack, "id">>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export default function PacksPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 16 }}>
-        {packs.map((p) => (
+        {packs.filter((p) => matchesMode(p.mode, adminMode)).map((p) => (
           <div key={p.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18, position: "relative" }}>
             {p.star && <span style={{ position: "absolute", top: 12, right: 12, fontSize: 18 }}>⭐</span>}
             <div style={{ fontSize: 28, marginBottom: 8 }}>{p.emoji}</div>
