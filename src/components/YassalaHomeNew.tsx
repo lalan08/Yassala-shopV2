@@ -96,19 +96,19 @@ function HeroBanner({ banners }: { banners: Banner[] }) {
 
   return (
     <section className="yn-hero">
+      {/* Bannière : backgroundImage CSS (comme YassalaDayView) pour compatibilité Firebase Storage */}
       <div
         className="yn-hero-bg"
-        style={{ background: current?.gradient || fallbackGradient }}
-      >
-        {current?.image ? (
-          <img
-            src={current.image}
-            alt={current.title || 'Bannière'}
-            className="yn-hero-img"
-            style={{ opacity: ((current.brightness ?? 100) / 100) }}
-          />
-        ) : null}
-      </div>
+        style={{
+          background: current?.gradient || fallbackGradient,
+          ...(current?.image ? {
+            backgroundImage: `url(${current.image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: (current.brightness ?? 100) / 100,
+          } : {}),
+        }}
+      />
 
       {/* Aucun texte / bouton sur la bannière — pleine visibilité */}
 
@@ -191,12 +191,21 @@ function MerchantCard({ merchant, onOpenCart }: { merchant: Etablissement; onOpe
   );
 }
 
+/* ─── Helper : image URL ou emoji ───────────────────────────────────── */
+function isUrl(s: string) {
+  return s && (s.startsWith('http') || s.startsWith('/'));
+}
+
 /* ─── Carte produit promo ────────────────────────────────────────────── */
 function PromoCard({ product, onAdd }: { product: Product; onAdd: () => void }) {
   return (
     <button className="yn-promo-card" onClick={onAdd}>
       <div className="yn-promo-img-wrap">
-        <span className="yn-promo-emoji">{product.image}</span>
+        {isUrl(product.image) ? (
+          <img src={product.image} alt={product.name} className="yn-promo-img-url" />
+        ) : (
+          <span className="yn-promo-emoji">{product.image}</span>
+        )}
         {product.badge && (
           <span className="yn-badge yn-badge-promo">{product.badge}</span>
         )}
@@ -386,76 +395,106 @@ export default function YassalaHomeNew({
         {/* 2 INFO CARDS */}
         <InfoCards settings={settings} />
 
-        {/* SECTION: À proximité */}
-        {displayEtablissements.length > 0 && (
-          <section className="yn-section">
-            <SectionHeader title="À proximité" />
-            <div className="yn-h-scroll">
-              {displayEtablissements.map(e => (
-                <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
-              ))}
-            </div>
-          </section>
+        {/* ── MODE DAY : uniquement les établissements ── */}
+        {resolvedTheme === 'day' && (
+          <>
+            {displayEtablissements.length > 0 ? (
+              <section className="yn-section">
+                <SectionHeader title="Nos établissements" />
+                <div className="yn-etabs-grid">
+                  {displayEtablissements.map(e => (
+                    <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
+                  ))}
+                </div>
+              </section>
+            ) : (
+              <div className="yn-empty">
+                <span>🏪</span>
+                <p>Aucun établissement disponible pour le moment</p>
+              </div>
+            )}
+          </>
         )}
 
-        {/* SECTION: Promos du moment */}
-        {promoProducts.length > 0 && (
-          <section className="yn-section">
-            <SectionHeader title="Promos du moment" onAll={onOpenCart} />
-            <div className="yn-h-scroll">
-              {promoProducts.slice(0, 12).map(p => (
-                <PromoCard key={p.id} product={p} onAdd={() => onAddToCart(p)} />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── MODE NIGHT : articles + établissements ── */}
+        {resolvedTheme === 'night' && (
+          <>
+            {/* Établissements */}
+            {displayEtablissements.length > 0 && (
+              <section className="yn-section">
+                <SectionHeader title="À proximité" />
+                <div className="yn-h-scroll">
+                  {displayEtablissements.map(e => (
+                    <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* SECTION: Catégories */}
-        <section className="yn-section" id="yn-categories">
-          <SectionHeader title="Catégories" />
-          <div className="yn-chips-row">
-            {allCats.map(cat => (
-              <CategoryChip
-                key={cat.key}
-                cat={cat}
-                active={activeCat === cat.key}
-                onClick={() => onSetActiveCat(cat.key)}
-              />
-            ))}
-          </div>
-        </section>
+            {/* Promos du moment */}
+            {promoProducts.length > 0 && (
+              <section className="yn-section">
+                <SectionHeader title="Promos du moment" onAll={onOpenCart} />
+                <div className="yn-h-scroll">
+                  {promoProducts.slice(0, 12).map(p => (
+                    <PromoCard key={p.id} product={p} onAdd={() => onAddToCart(p)} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* SECTION: Produits filtrés */}
-        {filteredProducts.length > 0 && (
-          <section className="yn-section">
-            <SectionHeader
-              title={
-                activeCat === 'all'
-                  ? 'Tous les produits'
-                  : (allCats.find(c => c.key === activeCat)?.label || '')
-              }
-            />
-            <div className="yn-products-grid">
-              {filteredProducts.map(p => (
-                <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
-                  <div className="yn-product-img-wrap">
-                    <span className="yn-product-emoji">{p.image}</span>
-                    {p.badge && (
-                      <span className="yn-badge yn-badge-promo">{p.badge}</span>
-                    )}
-                  </div>
-                  <div className="yn-product-info">
-                    <div className="yn-product-name">{p.name}</div>
-                    <div className="yn-product-desc">{p.desc}</div>
-                    <div className="yn-product-footer">
-                      <span className="yn-product-price">{Number(p.price).toFixed(2)}€</span>
-                      <span className="yn-product-add">+</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
+            {/* Catégories */}
+            <section className="yn-section" id="yn-categories">
+              <SectionHeader title="Catégories" />
+              <div className="yn-chips-row">
+                {allCats.map(cat => (
+                  <CategoryChip
+                    key={cat.key}
+                    cat={cat}
+                    active={activeCat === cat.key}
+                    onClick={() => onSetActiveCat(cat.key)}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* Grille produits */}
+            {filteredProducts.length > 0 && (
+              <section className="yn-section">
+                <SectionHeader
+                  title={
+                    activeCat === 'all'
+                      ? 'Tous les produits'
+                      : (allCats.find(c => c.key === activeCat)?.label || '')
+                  }
+                />
+                <div className="yn-products-grid">
+                  {filteredProducts.map(p => (
+                    <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
+                      <div className="yn-product-img-wrap">
+                        {isUrl(p.image) ? (
+                          <img src={p.image} alt={p.name} className="yn-product-img-url" />
+                        ) : (
+                          <span className="yn-product-emoji">{p.image}</span>
+                        )}
+                        {p.badge && (
+                          <span className="yn-badge yn-badge-promo">{p.badge}</span>
+                        )}
+                      </div>
+                      <div className="yn-product-info">
+                        <div className="yn-product-name">{p.name}</div>
+                        <div className="yn-product-desc">{p.desc}</div>
+                        <div className="yn-product-footer">
+                          <span className="yn-product-price">{Number(p.price).toFixed(2)}€</span>
+                          <span className="yn-product-add">+</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         <div style={{ height: 80 }} />
