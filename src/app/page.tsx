@@ -2083,7 +2083,6 @@ function NightHome() {
       </section>
 
       {/* ── SECTION PARTENAIRES ── */}
-      {nightPartenaires.length > 0 && (
       <section style={{padding:"48px 0 32px",position:"relative",zIndex:1}}>
         <div style={{maxWidth:960,margin:"0 auto"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 28px"}}>
@@ -2105,6 +2104,17 @@ function NightHome() {
             </div>
           </div>
 
+          {nightPartenaires.length === 0 ? (
+            <div style={{textAlign:"center",padding:"40px 20px",border:"1px dashed rgba(255,45,120,.2)",borderRadius:20,margin:"0 20px"}}>
+              <div style={{fontSize:"3rem",marginBottom:12,opacity:.3}}>🌙</div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".95rem",color:"#5a5470"}}>
+                Aucun partenaire disponible pour le moment
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:"#3a3450",marginTop:8}}>
+                Revenez bientôt !
+              </div>
+            </div>
+          ) : (
           <div style={{position:"relative"}}>
             <div
               ref={nightShopsScrollRef}
@@ -2204,9 +2214,9 @@ function NightHome() {
               </div>
             )}
           </div>
+          )}
         </div>
       </section>
-      )}
 
       <footer style={{borderTop:"1px solid rgba(255,45,120,.25)",padding:"28px",
         display:"flex",alignItems:"center",justifyContent:"space-between",
