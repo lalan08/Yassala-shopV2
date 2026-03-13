@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { useServiceMode, type ServiceMode } from '@/hooks/useServiceMode';
 
 export type ThemeMode = 'day' | 'night' | 'auto';
 
@@ -10,13 +11,16 @@ interface ThemeContextType {
   theme: ThemeMode;
   resolvedTheme: 'day' | 'night';
   setTheme: (mode: ThemeMode) => void;
+  serviceMode: ServiceMode;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 function getAutoTheme(): 'day' | 'night' {
-  const h = new Date().getHours();
-  return h >= 7 && h < 21 ? 'day' : 'night';
+  // Utilise l'heure Cayenne (UTC-3) pour la résolution automatique
+  const utcH = new Date().getUTCHours();
+  const cayenneH = ((utcH - 3) % 24 + 24) % 24;
+  return cayenneH >= 7 && cayenneH < 21 ? 'day' : 'night';
 }
 
 function resolveTheme(mode: ThemeMode): 'day' | 'night' {
@@ -47,7 +51,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => unsub();
   }, []);
 
-  // Refresh toutes les minutes pour le mode auto
+  // Refresh toutes les minutes pour le mode auto (thème visuel)
   useEffect(() => {
     const id = setInterval(() => {
       setLocalTheme(prev => prev); // force re-render pour recalculer auto
@@ -62,12 +66,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // L'admin a la priorité sur le choix du client
+  // L'admin a la priorité sur le choix du client (pour le thème visuel)
   const effectiveTheme: ThemeMode = adminOverride ?? localTheme;
   const resolvedTheme = resolveTheme(effectiveTheme);
 
+  // Mode de service : basé sur l'heure Cayenne + override admin
+  const serviceMode = useServiceMode(adminOverride);
+
   return (
-    <ThemeContext.Provider value={{ theme: effectiveTheme, resolvedTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme: effectiveTheme, resolvedTheme, setTheme, serviceMode }}>
       {children}
     </ThemeContext.Provider>
   );
