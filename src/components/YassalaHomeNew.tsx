@@ -149,10 +149,10 @@ function InfoCards({ settings }: { settings: Settings }) {
 /* ─── En-tête de section (style Uber Eats) ──────────────────────────── */
 function SectionHeader({ title, arrow }: { title: string; arrow?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-      <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--yn-text,#111827)' }}>{title}</h2>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', marginBottom: 12 }}>
+      <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--yn-text,#111827)' }}>{title}</h2>
       {arrow && (
-        <button style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '.9rem', color: '#374151' }}>→</button>
+        <button style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'var(--yn-card,#fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '.85rem', color: '#374151', flexShrink: 0 }}>→</button>
       )}
     </div>
   );
@@ -235,15 +235,23 @@ function EtabCardFull({ etab, onClick }: { etab: Etablissement; onClick: () => v
   );
 }
 
-/* ─── Slider horizontal (2 cartes visibles) ─────────────────────────── */
+/* ─── Slider horizontal (2 cartes visibles, scroll gauche→droite) ───── */
 function EtabSlider({ title, etabs, service, onSelect }: { title: string; etabs: Etablissement[]; service: 'day' | 'night'; onSelect: (e: Etablissement) => void }) {
   if (etabs.length === 0) return null;
   return (
     <section className="yn-section">
       <SectionHeader title={title} arrow />
-      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', marginLeft: -2, paddingLeft: 2 }}>
+      <div style={{
+        display: 'flex', gap: 12,
+        overflowX: 'auto', overflowY: 'visible',
+        paddingLeft: 16, paddingRight: 16, paddingBottom: 8,
+        scrollSnapType: 'x mandatory',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      } as React.CSSProperties}>
         {etabs.map(e => (
-          <div key={e.id} style={{ minWidth: 'calc(50% - 6px)', maxWidth: 220, flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+          <div key={e.id} style={{ minWidth: 'calc(50vw - 22px)', maxWidth: 190, flex: '0 0 auto', scrollSnapAlign: 'start' }}>
             <EtabCardSmall etab={e} onClick={() => onSelect(e)} />
           </div>
         ))}
@@ -252,13 +260,13 @@ function EtabSlider({ title, etabs, service, onSelect }: { title: string; etabs:
   );
 }
 
-/* ─── Liste pleine largeur ───────────────────────────────────────────── */
+/* ─── Liste pleine largeur (scroll vertical de la page) ─────────────── */
 function EtabGrid({ title, etabs, service, onSelect }: { title: string; etabs: Etablissement[]; service: 'day' | 'night'; onSelect: (e: Etablissement) => void }) {
   if (etabs.length === 0) return null;
   return (
     <section className="yn-section">
       <SectionHeader title={title} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '0 16px' }}>
         {etabs.map(e => <EtabCardFull key={e.id} etab={e} onClick={() => onSelect(e)} />)}
       </div>
     </section>
