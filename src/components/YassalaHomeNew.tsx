@@ -146,96 +146,109 @@ function InfoCards({ settings }: { settings: Settings }) {
   );
 }
 
-/* ─── En-tête de section ─────────────────────────────────────────────── */
-function SectionHeader({ title }: { title: string }) {
+/* ─── En-tête de section (style Uber Eats) ──────────────────────────── */
+function SectionHeader({ title, arrow }: { title: string; arrow?: boolean }) {
   return (
-    <div className="yn-section-header">
-      <h2 className="yn-section-title">{title}</h2>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+      <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--yn-text,#111827)' }}>{title}</h2>
+      {arrow && (
+        <button style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '.9rem', color: '#374151' }}>→</button>
+      )}
     </div>
   );
 }
 
-/* ─── Carte établissement ────────────────────────────────────────────── */
-function EtabCard({ etab, service, onClick }: { etab: Etablissement; service: 'day' | 'night'; onClick: () => void }) {
+/* ─── Carte établissement — version slider (demi-largeur) ───────────── */
+function EtabCardSmall({ etab, onClick }: { etab: Etablissement; onClick: () => void }) {
   const isOpen = etab.isOpen ?? etab.isActive;
+  const availText = etab.isComingSoon ? 'Bientôt disponible' : isOpen ? 'Disponible maintenant' : etab.openHours ? `Disponible à ${etab.openHours.split('–')[0] || etab.openHours}` : 'Actuellement fermé';
   return (
-    <button onClick={onClick} className="yn-etab-card" style={{ textDecoration: 'none', display: 'block', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+    <button onClick={onClick} style={{ display: 'block', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
       {/* Cover */}
-      <div style={{ position: 'relative', height: 160, overflow: 'hidden', borderRadius: '14px 14px 0 0', background: etab.bgColor || (service === 'night' ? '#1a0a2e' : '#fef3c7'), flexShrink: 0 }}>
-        {etab.coverUrl ? (
-          <img src={etab.coverUrl} alt={etab.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem' }}>
-            {etab.emoji || '🏪'}
-          </div>
-        )}
-        <span style={{
-          position: 'absolute', top: 10, right: 10,
-          background: isOpen ? 'rgba(16,185,129,.92)' : 'rgba(75,85,99,.9)',
-          color: '#fff', fontSize: '.68rem', fontWeight: 700, letterSpacing: '.06em',
-          padding: '4px 10px', borderRadius: 20,
-        }}>
-          {etab.isComingSoon ? '🔜 Bientôt' : isOpen ? '🟢 OUVERT' : '🔴 FERMÉ'}
-        </span>
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '66%', borderRadius: 12, overflow: 'hidden', background: etab.bgColor || '#f3f4f6' }}>
+        <div style={{ position: 'absolute', inset: 0 }}>
+          {etab.coverUrl
+            ? <img src={etab.coverUrl} alt={etab.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>{etab.emoji || '🏪'}</div>
+          }
+          {/* Promo badge */}
+          {etab.deliveryFee === 0 && (
+            <span style={{ position: 'absolute', top: 8, left: 8, background: '#ff2d78', color: '#fff', fontSize: '.65rem', fontWeight: 700, padding: '4px 8px', borderRadius: 4 }}>Livraison à 0 €</span>
+          )}
+          {!isOpen && !etab.isComingSoon && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: '.75rem', background: 'rgba(0,0,0,.5)', padding: '4px 10px', borderRadius: 20 }}>Fermé</span>
+            </div>
+          )}
+        </div>
       </div>
-
       {/* Info */}
-      <div style={{ padding: '12px 14px 14px', background: 'var(--yn-card, #fff)', borderRadius: '0 0 14px 14px', border: '1px solid var(--yn-border, #e5e7eb)', borderTop: 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          {etab.logoUrl ? (
-            <img src={etab.logoUrl} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--yn-border, #e5e7eb)', flexShrink: 0 }} />
-          ) : (
-            <div style={{ width: 40, height: 40, borderRadius: '50%', background: service === 'night' ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'linear-gradient(135deg,#ff2d78,#e11d69)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1rem', flexShrink: 0 }}>
-              {(etab.name || '?')[0].toUpperCase()}
-            </div>
-          )}
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--yn-text, #111827)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {etab.name}
-            </div>
-            {etab.category && (
-              <div style={{ fontSize: '.72rem', color: 'var(--yn-text-muted, #9ca3af)', marginTop: 1 }}>{etab.category}</div>
-            )}
-          </div>
+      <div style={{ padding: '8px 2px 0' }}>
+        <div style={{ fontSize: '.72rem', color: '#6b7280', marginBottom: 2 }}>{availText}</div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 4 }}>
+          <div style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--yn-text,#111827)', lineHeight: 1.3, flex: 1, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{etab.name}</div>
+          <span style={{ color: '#9ca3af', fontSize: '1rem', flexShrink: 0, marginTop: 1 }}>♡</span>
         </div>
-
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-          {etab.deliveryMin != null && etab.deliveryMax != null && (
-            <span style={{ fontSize: '.75rem', color: 'var(--yn-text-muted, #6b7280)' }}>⏱️ {etab.deliveryMin}–{etab.deliveryMax} min</span>
-          )}
-          {etab.deliveryFee != null && (
-            <span style={{ fontSize: '.75rem', color: 'var(--yn-text-muted, #6b7280)' }}>
-              🛵 {etab.deliveryFee === 0 ? 'Livraison offerte' : `${etab.deliveryFee}€`}
-            </span>
-          )}
-          {etab.rating != null && (
-            <span style={{ fontSize: '.75rem', color: '#f59e0b', fontWeight: 600 }}>⭐ {etab.rating.toFixed(1)}{etab.reviewCount ? ` (${etab.reviewCount})` : ''}</span>
-          )}
-        </div>
-
-        <div style={{
-          textAlign: 'center',
-          background: 'linear-gradient(135deg,#ff2d78,#e11d69)',
-          color: '#fff', borderRadius: 8, padding: '8px 0',
-          fontSize: '.82rem', fontWeight: 700, letterSpacing: '.04em',
-        }}>
-          Voir le menu →
+        {/* Tags */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+          {etab.isComingSoon && <span style={{ fontSize: '.65rem', color: '#6366f1', background: '#eef2ff', padding: '2px 7px', borderRadius: 4, fontWeight: 600 }}>Bientôt</span>}
+          {etab.category && <span style={{ fontSize: '.65rem', color: '#374151', background: '#f3f4f6', padding: '2px 7px', borderRadius: 4 }}>{etab.category}</span>}
+          {etab.deliveryMin != null && <span style={{ fontSize: '.65rem', color: '#374151', background: '#f3f4f6', padding: '2px 7px', borderRadius: 4 }}>{etab.deliveryMin}–{etab.deliveryMax} min</span>}
         </div>
       </div>
     </button>
   );
 }
 
-/* ─── Slider horizontal ──────────────────────────────────────────────── */
+/* ─── Carte établissement — version liste (pleine largeur) ──────────── */
+function EtabCardFull({ etab, onClick }: { etab: Etablissement; onClick: () => void }) {
+  const isOpen = etab.isOpen ?? etab.isActive;
+  const availText = etab.isComingSoon ? 'Bientôt disponible' : isOpen ? 'Disponible maintenant' : etab.openHours ? `Disponible à ${etab.openHours.split('–')[0] || etab.openHours}` : 'Actuellement fermé';
+  return (
+    <button onClick={onClick} style={{ display: 'block', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+      {/* Cover */}
+      <div style={{ position: 'relative', width: '100%', height: 180, borderRadius: 14, overflow: 'hidden', background: etab.bgColor || '#f3f4f6' }}>
+        {etab.coverUrl
+          ? <img src={etab.coverUrl} alt={etab.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem' }}>{etab.emoji || '🏪'}</div>
+        }
+        {etab.deliveryFee === 0 && (
+          <span style={{ position: 'absolute', top: 10, left: 10, background: '#ff2d78', color: '#fff', fontSize: '.7rem', fontWeight: 700, padding: '5px 10px', borderRadius: 6 }}>Livraison à 0 €</span>
+        )}
+        {!isOpen && !etab.isComingSoon && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '.8rem', background: 'rgba(0,0,0,.55)', padding: '5px 14px', borderRadius: 20 }}>Fermé</span>
+          </div>
+        )}
+      </div>
+      {/* Info */}
+      <div style={{ padding: '10px 2px 4px' }}>
+        <div style={{ fontSize: '.75rem', color: '#6b7280', marginBottom: 3 }}>{availText}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--yn-text,#111827)' }}>{etab.name}</div>
+          <span style={{ color: '#9ca3af', fontSize: '1.1rem' }}>♡</span>
+        </div>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 5 }}>
+          {etab.isComingSoon && <span style={{ fontSize: '.68rem', color: '#6366f1', background: '#eef2ff', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>Bientôt</span>}
+          {etab.category && <span style={{ fontSize: '.68rem', color: '#374151', background: '#f3f4f6', padding: '2px 8px', borderRadius: 4 }}>{etab.category}</span>}
+          {etab.deliveryMin != null && <span style={{ fontSize: '.68rem', color: '#374151', background: '#f3f4f6', padding: '2px 8px', borderRadius: 4 }}>⏱ {etab.deliveryMin}–{etab.deliveryMax} min</span>}
+          {etab.rating != null && <span style={{ fontSize: '.68rem', color: '#374151', background: '#f3f4f6', padding: '2px 8px', borderRadius: 4 }}>⭐ {etab.rating.toFixed(1)}</span>}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* ─── Slider horizontal (2 cartes visibles) ─────────────────────────── */
 function EtabSlider({ title, etabs, service, onSelect }: { title: string; etabs: Etablissement[]; service: 'day' | 'night'; onSelect: (e: Etablissement) => void }) {
   if (etabs.length === 0) return null;
   return (
     <section className="yn-section">
-      <SectionHeader title={title} />
-      <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
+      <SectionHeader title={title} arrow />
+      <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', marginLeft: -2, paddingLeft: 2 }}>
         {etabs.map(e => (
-          <div key={e.id} style={{ minWidth: 240, maxWidth: 260, flex: '0 0 auto', scrollSnapAlign: 'start' }}>
-            <EtabCard etab={e} service={service} onClick={() => onSelect(e)} />
+          <div key={e.id} style={{ minWidth: 'calc(50% - 6px)', maxWidth: 220, flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+            <EtabCardSmall etab={e} onClick={() => onSelect(e)} />
           </div>
         ))}
       </div>
@@ -243,14 +256,14 @@ function EtabSlider({ title, etabs, service, onSelect }: { title: string; etabs:
   );
 }
 
-/* ─── Grille établissements ──────────────────────────────────────────── */
+/* ─── Liste pleine largeur ───────────────────────────────────────────── */
 function EtabGrid({ title, etabs, service, onSelect }: { title: string; etabs: Etablissement[]; service: 'day' | 'night'; onSelect: (e: Etablissement) => void }) {
   if (etabs.length === 0) return null;
   return (
     <section className="yn-section">
       <SectionHeader title={title} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 16 }}>
-        {etabs.map(e => <EtabCard key={e.id} etab={e} service={service} onClick={() => onSelect(e)} />)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {etabs.map(e => <EtabCardFull key={e.id} etab={e} onClick={() => onSelect(e)} />)}
       </div>
     </section>
   );
