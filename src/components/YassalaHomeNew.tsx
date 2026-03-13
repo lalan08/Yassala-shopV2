@@ -620,6 +620,16 @@ export default function YassalaHomeNew({
             </div>
             <div className="yn-header-right">
               <ThemeToggle />
+              <button
+                className="yn-header-cart"
+                onClick={() => { setCartOpen(true); setStep('cart'); }}
+                aria-label="Ouvrir le panier"
+              >
+                <span style={{ fontSize: '1.1rem' }}>🛒</span>
+                {cartCount > 0 && (
+                  <span className="yn-cart-badge">{cartCount > 99 ? '99+' : cartCount}</span>
+                )}
+              </button>
             </div>
           </div>
           <div className="yn-info-bar">
