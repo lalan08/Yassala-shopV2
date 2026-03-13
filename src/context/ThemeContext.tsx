@@ -66,15 +66,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // L'admin a la priorité sur le choix du client (pour le thème visuel)
-  const effectiveTheme: ThemeMode = adminOverride ?? localTheme;
-  const resolvedTheme = resolveTheme(effectiveTheme);
+  // Le client contrôle toujours le thème visuel (catalogue affiché)
+  // L'adminOverride ne bloque que les commandes (via serviceMode), pas la navigation
+  const resolvedTheme = resolveTheme(localTheme);
 
   // Mode de service : basé sur l'heure Cayenne + override admin
   const serviceMode = useServiceMode(adminOverride);
 
   return (
-    <ThemeContext.Provider value={{ theme: effectiveTheme, resolvedTheme, setTheme, serviceMode }}>
+    <ThemeContext.Provider value={{ theme: localTheme, resolvedTheme, setTheme, serviceMode }}>
       {children}
     </ThemeContext.Provider>
   );
