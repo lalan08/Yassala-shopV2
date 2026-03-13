@@ -132,7 +132,7 @@ export default function AdminPage() {
   const [usersSearch, setUsersSearch]         = useState("");
   const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string;password?:string;contractAccepted?:boolean;contractAcceptedAt?:string}[]>([]);
   const [driverFilter, setDriverFilter]       = useState<"all"|"nouveau"|"accepte"|"refuse">("all");
-  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"UTILISATEURS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true,"BUSINESS":false,"YASSALA DAY":true,"YASSALA NIGHT":true});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"PARTENAIRES":false,"MON CATALOGUE":true,"RÉGLAGES":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
   const [adminWeather, setAdminWeather] = useState<{ condition: string; precipitation: number; isRaining: boolean; isHeavyRain: boolean } | null>(null);
@@ -1184,35 +1184,20 @@ export default function AdminPage() {
               { key:"dispatch",       label:"DISPATCH",         icon:"🗺️" },
               { key:"drivers",        label:"CANDIDATURE",      icon:"🏍️" },
             ]},
-            { section:"UTILISATEURS", items:[
-              { key:"users",          label:"UTILISATEURS",     icon:"👥" },
+            { section:"PARTENAIRES", items:[
+              { key:"yassala_day_overview",   label:"SERVICE DAY",   icon:"☀️" },
+              { key:"yassala_night_overview", label:"SERVICE NIGHT",  icon:"🌙" },
             ]},
-            { section:"CATALOGUE", items:[
-              { key:"products",   label:"PRODUITS",        icon:"🍺" },
-              { key:"categories", label:"CATÉGORIES",      icon:"🗂️" },
-              { key:"packs",      label:"PACKS",           icon:"🎉" },
+            { section:"MON CATALOGUE", items:[
+              { key:"products",   label:"PRODUITS",   icon:"🍺" },
+              { key:"categories", label:"CATÉGORIES", icon:"🗂️" },
+              { key:"packs",      label:"PACKS",      icon:"🎉" },
             ]},
-            { section:"MARKETING", items:[
-              { key:"coupons",    label:"COUPONS",         icon:"🏷️" },
-              { key:"banners",    label:"BANNIÈRES",       icon:"🎨" },
-            ]},
-            { section:"CONFIGURATION", items:[
-              { key:"settings",          label:"PARAMÈTRES",      icon:"⚙️" },
-            ]},
-            { section:"BUSINESS", items:[
-              { key:"yassala_day_overview",         label:"SERVICE DAY",      icon:"☀️" },
-              { key:"yassala_night_overview",       label:"SERVICE NIGHT",    icon:"🌙" },
-            ]},
-            { section:"YASSALA DAY", items:[
-              { key:"yassala_day_config",          label:"CONFIG JOUR",     icon:"⚙️" },
-              { key:"yassala_day_etablissements",  label:"ÉTABLISSEMENTS",  icon:"🏪" },
-              { key:"yassala_day_products",        label:"PRODUITS JOUR",   icon:"🛍️" },
-              { key:"yassala_day_cats",            label:"CATÉGORIES JOUR", icon:"🗂️" },
-              { key:"yassala_day_packs",           label:"PACKS JOUR",      icon:"📦" },
-              { key:"yassala_day_offres",          label:"OFFRES DU JOUR",  icon:"🎁" },
-            ]},
-            { section:"YASSALA NIGHT", items:[
-              { key:"yassala_night_etablissements", label:"PARTENAIRES NUIT", icon:"👥" },
+            { section:"RÉGLAGES", items:[
+              { key:"settings",  label:"PARAMÈTRES",   icon:"⚙️" },
+              { key:"coupons",   label:"COUPONS",      icon:"🏷️" },
+              { key:"banners",   label:"BANNIÈRES",    icon:"🎨" },
+              { key:"users",     label:"UTILISATEURS", icon:"👥" },
             ]},
           ] as const).map((group, gi) => (
             <div key={group.section}>

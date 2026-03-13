@@ -83,10 +83,10 @@ export default function ServiceNightPage() {
   });
 
   const nightCards = [
-    { label: "Catégories", sublabel: "NIGHT", emoji: "📦", count: catCount,  href: "/admin/yassala-night/etablissements" },
-    { label: "Produits",   sublabel: "NIGHT", emoji: "🍔", count: prodCount, href: "/admin/yassala-night/etablissements" },
-    { label: "Packs",      sublabel: "NIGHT", emoji: "📦", count: packCount, href: "/admin/yassala-night/etablissements" },
-    { label: "Offres",     sublabel: "NIGHT", emoji: "🏷️", count: offerCount, href: "/admin/yassala-night/etablissements" },
+    { label: "Catégories", sublabel: "NIGHT", emoji: "📦", count: catCount,  href: "/admin/yassala-night/etablissements", note: "Mon catalogue" },
+    { label: "Produits",   sublabel: "NIGHT", emoji: "🍔", count: prodCount, href: "/admin/yassala-night/etablissements", note: "Mon catalogue" },
+    { label: "Packs",      sublabel: "NIGHT", emoji: "📦", count: packCount, href: "/admin/yassala-night/etablissements", note: "Mon catalogue" },
+    { label: "Offres",     sublabel: "NIGHT", emoji: "🏷️", count: offerCount, href: "/admin/yassala-night/etablissements", note: "Mon catalogue" },
   ];
 
   const dayCards = [
@@ -299,13 +299,15 @@ export default function ServiceNightPage() {
 
                   {/* Actions */}
                   <td style={{ padding: "14px 12px" }}>
-                    <a href="/admin/yassala-night/etablissements" style={{
-                      background: "#f4f5f9", border: "1px solid #e8eaf0", color: "#7c3aed",
-                      borderRadius: 6, padding: "6px 14px", fontSize: ".8rem", fontWeight: 600,
-                      cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
-                    }}>
-                      ✎ Éditer
-                    </a>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <a href={`/admin/yassala-night/etablissements`} style={{
+                        background: "#f4f5f9", border: "1px solid #e8eaf0", color: "#7c3aed",
+                        borderRadius: 6, padding: "6px 12px", fontSize: ".8rem", fontWeight: 600,
+                        cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,
+                      }}>
+                        ✎ Gérer
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}
