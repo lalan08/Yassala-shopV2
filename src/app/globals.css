@@ -583,33 +583,6 @@ body {
   padding: 0 4px;
 }
 
-/* ── Cart icon dans le header ── */
-.yn-header-cart {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: var(--yn-pink);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: opacity var(--yn-transition), transform var(--yn-transition);
-  box-shadow: 0 2px 12px rgba(255, 45, 120, 0.30);
-}
-
-.yn-header-cart:active {
-  transform: scale(0.90);
-  opacity: 0.85;
-}
-
-.yn-night .yn-header-cart {
-  box-shadow: 0 2px 16px rgba(255, 45, 120, 0.50);
-}
-
 /* ── Toggle DAY/NIGHT ── */
 .yn-toggle {
   display: flex;
@@ -1239,64 +1212,80 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px 12px;
+  padding: 6px 16px;
   color: var(--yn-text-muted);
-  transition: color var(--yn-transition);
+  transition: color var(--yn-transition), transform var(--yn-transition);
   position: relative;
+  flex: 1;
 }
 
-.yn-nav-active {
-  color: var(--yn-pink);
-}
+.yn-nav-item:active { transform: scale(0.88); }
+
+.yn-nav-active { color: var(--yn-pink); }
 
 .yn-nav-icon {
-  font-size: 1.3rem;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
 }
 
 .yn-nav-label {
   font-family: var(--yn-font-body);
-  font-size: 0.62rem;
+  font-size: 0.60rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Bouton panier central surélevé (FAB style) */
+.yn-nav-cart {
+  margin-top: -10px;
 }
 
 .yn-nav-cart .yn-nav-cart-icon {
-  font-size: 1.5rem;
-  background: var(--yn-pink);
+  position: relative;
+  background: linear-gradient(135deg, var(--yn-pink), #e11d69);
   border-radius: 50%;
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(255,45,120,0.4);
-  margin-top: -14px;
+  box-shadow: 0 6px 20px rgba(255, 45, 120, 0.45);
   color: #fff;
+  transition: transform var(--yn-transition), box-shadow var(--yn-transition);
 }
+
+.yn-nav-cart:active .yn-nav-cart-icon {
+  transform: scale(0.90);
+  box-shadow: 0 3px 10px rgba(255, 45, 120, 0.35);
+}
+
+.yn-nav-cart .yn-nav-label { color: var(--yn-pink); }
 
 .yn-nav-cart .yn-cart-badge {
   position: absolute;
   top: -4px;
-  right: -2px;
+  right: -4px;
   min-width: 18px;
   height: 18px;
   background: #fff;
   color: var(--yn-pink);
-  font-size: 0.62rem;
+  font-size: 0.60rem;
   font-weight: 800;
   border-radius: var(--yn-radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 3px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 
 /* ── Body override for new home ── */

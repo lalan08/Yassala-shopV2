@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Home, ShoppingCart, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, query, where, addDoc } from 'firebase/firestore';
@@ -620,16 +621,6 @@ export default function YassalaHomeNew({
             </div>
             <div className="yn-header-right">
               <ThemeToggle />
-              <button
-                className="yn-header-cart"
-                onClick={() => { setCartOpen(true); setStep('cart'); }}
-                aria-label="Ouvrir le panier"
-              >
-                <span style={{ fontSize: '1.1rem' }}>🛒</span>
-                {cartCount > 0 && (
-                  <span className="yn-cart-badge">{cartCount > 99 ? '99+' : cartCount}</span>
-                )}
-              </button>
             </div>
           </div>
           <div className="yn-info-bar">
@@ -689,12 +680,28 @@ export default function YassalaHomeNew({
 
         {/* ── BOTTOM NAV ── */}
         <nav className="yn-bottom-nav">
+          {/* Accueil */}
           <button className="yn-nav-item yn-nav-active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <span className="yn-nav-icon">🏠</span>
+            <span className="yn-nav-icon"><Home size={22} strokeWidth={2} /></span>
             <span className="yn-nav-label">Accueil</span>
           </button>
+
+          {/* Panier — bouton central surélevé */}
+          <button className="yn-nav-item yn-nav-cart" onClick={() => { setCartOpen(true); setStep('cart'); }} aria-label="Panier">
+            <span className="yn-nav-cart-icon">
+              <ShoppingCart size={22} strokeWidth={2.2} />
+              {cartCount > 0 && (
+                <span className="yn-cart-badge">{cartCount > 99 ? '99+' : cartCount}</span>
+              )}
+            </span>
+            <span className="yn-nav-label">Panier</span>
+          </button>
+
+          {/* Mode DAY / NIGHT */}
           <button className="yn-nav-item" onClick={() => setTheme(resolvedTheme === 'day' ? 'night' : 'day')}>
-            <span className="yn-nav-icon">{resolvedTheme === 'day' ? '🌙' : '☀️'}</span>
+            <span className="yn-nav-icon">
+              {resolvedTheme === 'day' ? <Moon size={22} strokeWidth={2} /> : <Sun size={22} strokeWidth={2} />}
+            </span>
             <span className="yn-nav-label">{resolvedTheme === 'day' ? 'Night' : 'Day'}</span>
           </button>
         </nav>
