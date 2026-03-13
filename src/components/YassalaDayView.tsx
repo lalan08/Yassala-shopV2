@@ -24,30 +24,30 @@ const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const STRIPE_APPEARANCE_DAY = {
   theme: "stripe" as const,
   variables: {
-    colorPrimary:    "#ff2d78",
-    colorBackground: "#F4F6FA",
+    colorPrimary:    "#FF2D7A",
+    colorBackground: "#F7F7F8",
     colorText:       "#111827",
-    colorDanger:     "#ff2d78",
-    fontFamily:      "'Inter', sans-serif",
-    borderRadius:    "4px",
+    colorDanger:     "#FF2D7A",
+    fontFamily:      "'Inter', system-ui, sans-serif",
+    borderRadius:    "12px",
   },
   rules: {
     ".Input": {
-      border:     "1px solid #E6EAF2",
-      padding:    "12px",
+      border:     "1px solid #E5E7EB",
+      padding:    "14px",
       fontSize:   ".9rem",
       background: "#FFFFFF",
       color:      "#111827",
     },
     ".Label": {
       color:         "#6B7280",
-      fontSize:      ".72rem",
-      fontFamily:    "'Share Tech Mono', monospace",
-      letterSpacing: ".08em",
-      textTransform: "uppercase",
+      fontSize:      ".75rem",
+      fontFamily:    "'Inter', system-ui, sans-serif",
+      fontWeight:    "500",
+      letterSpacing: ".02em",
     },
-    ".Tab": { border: "1px solid #E6EAF2", background: "#F4F6FA" },
-    ".Tab--selected": { border: "1px solid #FF2D8D", background: "rgba(255,45,141,.06)" },
+    ".Tab": { border: "1px solid #E5E7EB", background: "#F7F7F8" },
+    ".Tab--selected": { border: "1px solid #FF2D7A", background: "rgba(255,45,122,.06)" },
   },
 } as const;
 
@@ -71,12 +71,12 @@ function CheckoutPaymentFormDay({ onSuccess, onCancel }: { onSuccess: () => void
 
   return (
     <div>
-      <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:".68rem", color:"#6B7280", letterSpacing:".1em", marginBottom:12, textTransform:"uppercase" }}>
+      <div style={{ fontFamily:"'Inter',system-ui,sans-serif", fontSize:".68rem", color:"#6B7280", letterSpacing:".1em", marginBottom:12, textTransform:"uppercase" }}>
         // DÉTAILS DE PAIEMENT
       </div>
       <PaymentElement options={{ layout: "tabs" }} />
       {error && (
-        <div style={{ marginTop:12, padding:"10px 14px", background:"rgba(255,45,120,.08)", border:"1px solid rgba(255,45,120,.3)", borderRadius:4, fontFamily:"'Share Tech Mono',monospace", fontSize:".75rem", color:"#ff2d78" }}>
+        <div style={{ marginTop:12, padding:"10px 14px", background:"rgba(255,45,120,.08)", border:"1px solid rgba(255,45,120,.3)", borderRadius:4, fontFamily:"'Inter',system-ui,sans-serif", fontSize:".75rem", color:"#ff2d78" }}>
           ⚠️ {error}
         </div>
       )}
@@ -85,7 +85,7 @@ function CheckoutPaymentFormDay({ onSuccess, onCancel }: { onSuccess: () => void
         {confirming ? "⏳ CONFIRMATION EN COURS..." : "🔒 CONFIRMER LE PAIEMENT"}
       </button>
       <button onClick={onCancel} disabled={confirming}
-        style={{ width:"100%", marginTop:10, background:"transparent", border:"1px solid rgba(0,0,0,.12)", color:"#6B7280", borderRadius:4, padding:"12px", fontFamily:"'Share Tech Mono',monospace", fontSize:".75rem", cursor: confirming ? "not-allowed" : "pointer", letterSpacing:".05em" }}>
+        style={{ width:"100%", marginTop:10, background:"transparent", border:"1px solid rgba(0,0,0,.12)", color:"#6B7280", borderRadius:4, padding:"12px", fontFamily:"'Inter',system-ui,sans-serif", fontSize:".75rem", cursor: confirming ? "not-allowed" : "pointer", letterSpacing:".05em" }}>
         ← MODIFIER MA COMMANDE
       </button>
     </div>
@@ -816,116 +816,112 @@ export default function YassalaDayView() {
 
   // ── DAY COLORS ──
   const D = {
-    bg:        "#F4F6FA",
+    bg:        "#F7F7F8",
     card:      "#FFFFFF",
-    cardDark:  "#F4F6FA",
+    cardDark:  "#F2F3F5",
     text:      "#111827",
     muted:     "#6B7280",
-    pink:      "#FF2D8D",
-    cyan:      "#3ABFF8",
-    lime:      "#b8ff00",
-    border:    "#E6EAF2",
-    borderPink:"rgba(255,45,141,.2)",
-    overlay:   "rgba(244,246,250,.97)",
-    navBg:     "rgba(244,246,250,.96)",
-    shadow:    "0 10px 30px rgba(17,24,39,0.08)",
-    shadowHov: "0 14px 40px rgba(17,24,39,0.12)",
+    pink:      "#FF2D7A",
+    cyan:      "#1BA9FF",
+    lime:      "#22c55e",
+    border:    "#E5E7EB",
+    borderPink:"rgba(255,45,122,.15)",
+    overlay:   "rgba(0,0,0,.45)",
+    navBg:     "rgba(255,255,255,.97)",
+    shadow:    "0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04)",
+    shadowHov: "0 4px 12px rgba(0,0,0,.08)",
   };
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800;900&display=swap');
         :root { --bg:${D.bg}; --card:${D.card}; --pink:${D.pink}; --cyan:${D.cyan}; --lime:${D.lime}; --text:${D.text}; --muted:${D.muted}; }
         *{margin:0;padding:0;box-sizing:border-box;}
-        html{scroll-behavior:smooth;font-size:16px;}
-        body{background:${D.bg} !important;color:${D.text} !important;font-family:'Inter',sans-serif !important;font-weight:500;min-height:100vh;overflow-x:hidden;}
-        @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.4);}}
-        @keyframes flicker{0%,95%,100%{opacity:1;}96%{opacity:.7;}97%{opacity:1;}98%{opacity:.5;}99%{opacity:1;}}
-        @keyframes gridScroll{from{background-position:0 0;}to{background-position:50px 50px;}}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
-        @keyframes bannerIn{from{opacity:0;transform:translateX(22px);}to{opacity:1;transform:translateX(0);}}
-        @keyframes flashPulse{0%,100%{box-shadow:0 0 10px rgba(255,45,120,.4);}50%{box-shadow:0 0 20px rgba(255,45,120,.7),0 0 30px rgba(255,100,0,.3);}}
-        @keyframes bgShift{from{opacity:.8;}to{opacity:1;}}
+        html{scroll-behavior:smooth;font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+        body{background:${D.bg} !important;color:${D.text} !important;font-family:'Inter',system-ui,-apple-system,sans-serif !important;font-weight:400;min-height:100vh;overflow-x:hidden;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes bannerIn{from{opacity:0;transform:translateX(16px);}to{opacity:1;transform:translateX(0);}}
         @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
         @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-        @keyframes scrollHint{0%,100%{transform:translateX(0);}50%{transform:translateX(7px);}}
-        .flicker{animation:flicker 6s infinite;}
-        .fade1{animation:fadeUp .5s .0s both;}.fade2{animation:fadeUp .5s .1s both;}.fade3{animation:fadeUp .5s .2s both;}
-        .fade4{animation:fadeUp .5s .3s both;}.fade5{animation:fadeUp .5s .4s both;}
+        @keyframes scrollHint{0%,100%{transform:translateX(0);opacity:.4;}50%{transform:translateX(6px);opacity:.8;}}
+        @keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+        .fade1{animation:fadeUp .4s .0s both;}.fade2{animation:fadeUp .4s .08s both;}.fade3{animation:fadeUp .4s .16s both;}
+        .fade4{animation:fadeUp .4s .24s both;}.fade5{animation:fadeUp .4s .32s both;}
         @media(max-width:640px){
           .nav-main{padding:10px 14px !important;}
-          .nav-logo{font-size:1.4rem !important;}
+          .nav-logo{font-size:1.2rem !important;}
           .nav-status{display:none !important;}
           .nav-driver-btn{padding:7px 10px !important;font-size:.82rem !important;}
           .nav-driver-label{display:none !important;}
           .nav-cart-btn{padding:7px 12px !important;font-size:.85rem !important;gap:5px !important;}
-          .hero-content{padding:36px 16px 72px !important;max-width:100% !important;}
-          .hero-content h1{font-size:clamp(2.6rem,14vw,4.5rem) !important;}
+          .hero-content{padding:32px 16px 56px !important;max-width:100% !important;}
+          .hero-content h1{font-size:clamp(2rem,10vw,3rem) !important;}
           .clock-hero{display:none !important;}
           .info-bar{flex-wrap:wrap !important;}
           .info-bar-item{flex:0 0 50% !important;}
-          .cat-bar{gap:8px !important;padding:10px 12px !important;}
+          .cat-bar{gap:6px !important;padding:10px 12px !important;}
           .cat-btn{padding:8px 10px !important;min-width:60px !important;}
-          .section-title{font-size:1.2rem !important;}
-          .products-grid{grid-template-columns:repeat(2,1fr) !important;}
+          .section-title{font-size:1.1rem !important;}
+          .products-grid{grid-template-columns:repeat(2,1fr) !important;gap:10px !important;}
         }
         @media(max-width:400px){
-          .nav-logo{font-size:1.2rem !important;}
-          .hero-content h1{font-size:clamp(2.2rem,12vw,3.5rem) !important;}
+          .nav-logo{font-size:1.1rem !important;}
+          .hero-content h1{font-size:clamp(1.8rem,10vw,2.5rem) !important;}
         }
         .cat-bar{overflow-x:auto;flex-wrap:nowrap !important;scrollbar-width:none;-ms-overflow-style:none;}
         .cat-bar::-webkit-scrollbar{display:none;}
         .cat-btn{flex-shrink:0;}
         body{padding-bottom:90px;}
+        input:focus,select:focus,textarea:focus{outline:none;border-color:${D.pink} !important;box-shadow:0 0 0 3px rgba(255,45,122,.1) !important;}
       `}</style>
 
-      {/* Fond Day — uni doux */}
-      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"#F4F6FA"}} />
+      {/* Fond Day */}
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:D.bg}} />
 
       {/* ── Bande info livraison ── */}
-      <div style={{background:settings.shopOpen ? D.pink : "#6B7280",color:"#fff",textAlign:"center",padding:"8px 16px",
-        fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".78rem",letterSpacing:".1em",position:"relative",zIndex:10}}>
+      <div style={{background:settings.shopOpen ? D.pink : "#6B7280",color:"#fff",textAlign:"center",padding:"10px 16px",
+        fontFamily:"'Inter',system-ui,sans-serif",fontWeight:500,fontSize:".8rem",letterSpacing:".02em",position:"relative",zIndex:10}}>
         {settings.shopOpen
-          ? `LIVRAISON DE JOUR · ${settings.zone.toUpperCase()} · MIN. ${deliveryConfig.minimum_order_amount}€ · ${settings.hours}`
-          : "SHOP FERMÉ · REVENEZ PLUS TARD"}
+          ? `Livraison de jour · ${settings.zone} · Min. ${deliveryConfig.minimum_order_amount}€ · ${settings.hours}`
+          : "Shop fermé · Revenez plus tard"}
       </div>
 
       {/* NAV */}
       <nav className="nav-main" style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-        padding:"16px 28px",borderBottom:`1px solid ${D.borderPink}`,
+        padding:"12px 20px",borderBottom:`1px solid ${D.border}`,
         position:"sticky",top:0,zIndex:100,background:D.navBg,backdropFilter:"blur(20px)"}}>
-        <div className="flicker nav-logo" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",
-          letterSpacing:".08em",color:D.pink,textShadow:"0 0 20px rgba(255,45,120,.3)",lineHeight:1}}>
+        <div className="nav-logo" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",
+          letterSpacing:".02em",color:D.pink,lineHeight:1}}>
           YASSALA
-          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:D.cyan,
-            letterSpacing:".2em",display:"block",marginTop:"-4px"}}>
+          <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:600,fontSize:".55rem",color:D.muted,
+            letterSpacing:".08em",display:"block",marginTop:"-2px"}}>
             Day Shop
           </span>
         </div>
-        <div className="nav-status" style={{display:"flex",alignItems:"center",gap:8,
-          border: settings.shopOpen ? `1px solid ${D.cyan}` : `1px solid ${D.muted}`,
-          color: settings.shopOpen ? D.cyan : D.muted,
-          padding:"6px 14px",borderRadius:3,fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".12em"}}>
-          <div style={{width:6,height:6,background: settings.shopOpen ? D.cyan : D.muted,borderRadius:"50%",animation: settings.shopOpen ? "pulse 1.5s infinite" : "none"}} />
-          {settings.shopOpen ? `OPEN · ${settings.hours}` : "FERMÉ"}
+        <div className="nav-status" style={{display:"flex",alignItems:"center",gap:6,
+          background: settings.shopOpen ? "rgba(34,197,94,.08)" : D.cardDark,
+          color: settings.shopOpen ? "#22c55e" : D.muted,
+          padding:"6px 14px",borderRadius:20,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",fontWeight:600,letterSpacing:".02em"}}>
+          <div style={{width:6,height:6,background: settings.shopOpen ? "#22c55e" : D.muted,borderRadius:"50%"}} />
+          {settings.shopOpen ? `Ouvert · ${settings.hours}` : "Fermé"}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <button className="nav-driver-btn" onClick={() => setShowDriverForm(true)}
-            style={{background:"rgba(58,191,248,.08)",border:`1px solid rgba(58,191,248,.35)`,color:D.cyan,
-              padding:"8px 14px",fontFamily:"'Inter',sans-serif",fontWeight:700,
-              fontSize:".82rem",letterSpacing:".06em",textTransform:"uppercase",cursor:"pointer",
-              display:"flex",alignItems:"center",gap:6,borderRadius:6,whiteSpace:"nowrap"}}>
-            🏍️ <span className="nav-driver-label">LIVREUR</span>
+            style={{background:D.cardDark,border:`1px solid ${D.border}`,color:D.text,
+              padding:"8px 14px",fontFamily:"'Inter',system-ui,sans-serif",fontWeight:600,
+              fontSize:".82rem",letterSpacing:".02em",cursor:"pointer",
+              display:"flex",alignItems:"center",gap:6,borderRadius:12,whiteSpace:"nowrap"}}>
+            🏍️ <span className="nav-driver-label">Livreur</span>
           </button>
           <button className="nav-cart-btn" onClick={openCart}
-            style={{background:"transparent",border:`1px solid ${D.pink}`,color:D.pink,
-              padding:"8px 18px",fontFamily:"'Inter',sans-serif",fontWeight:700,
-              fontSize:".85rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",
-              display:"flex",alignItems:"center",gap:8,borderRadius:3}}>
-            🛒 PANIER
-            <span style={{background:D.pink,color:"#fff",borderRadius:2,width:20,height:20,
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:".72rem",fontWeight:900}}>
+            style={{background:D.pink,border:"none",color:"#fff",
+              padding:"8px 18px",fontFamily:"'Inter',system-ui,sans-serif",fontWeight:700,
+              fontSize:".85rem",letterSpacing:".02em",cursor:"pointer",
+              display:"flex",alignItems:"center",gap:8,borderRadius:12}}>
+            🛒 Panier
+            <span style={{background:"#fff",color:D.pink,borderRadius:"50%",width:22,height:22,
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:".75rem",fontWeight:800}}>
               {cartCount}
             </span>
           </button>
@@ -933,135 +929,119 @@ export default function YassalaDayView() {
       </nav>
 
       {/* ── HERO / CAROUSEL ── */}
-      <section style={{position:"relative",minHeight:420,overflow:"hidden",zIndex:1,display:"flex",alignItems:"center",background:D.bg}}
+      <section style={{position:"relative",minHeight:300,overflow:"hidden",zIndex:1,display:"flex",alignItems:"center",background:D.bg}}
         onMouseEnter={() => banners.length > 1 && setBannerPaused(true)}
         onMouseLeave={() => banners.length > 1 && setBannerPaused(false)}>
-        {/* Ambient glow Day (no grid) */}
-        <div style={{position:"absolute",inset:0,pointerEvents:"none",
-          background:"radial-gradient(ellipse 50% 60% at 10% 30%,rgba(255,45,141,.05) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 85% 70%,rgba(58,191,248,.04) 0%,transparent 60%)"}} />
         {banners.length > 0 && banners[bannerIdx]?.gradient && (
           <div key={`grad-${bannerIdx}`} style={{position:"absolute",inset:0,
             background: banners[bannerIdx].gradient,
-            animation:"bannerIn .7s both",zIndex:1}} />
+            animation:"bannerIn .5s both",zIndex:1}} />
         )}
         {banners.length > 0 && banners[bannerIdx]?.image && (
           <div key={`img-${bannerIdx}`} style={{position:"absolute",inset:0,
             backgroundImage:`url(${banners[bannerIdx].image})`,backgroundSize:"cover",backgroundPosition:"center",
-            opacity: banners[bannerIdx].brightness ?? .2,animation:"bannerIn .7s both",zIndex:1}} />
+            opacity: banners[bannerIdx].brightness ?? .2,animation:"bannerIn .5s both",zIndex:1}} />
         )}
         <div key={banners.length > 0 ? `banner-${bannerIdx}` : "static"} className="hero-content"
-          style={{position:"relative",zIndex:2,maxWidth:580,padding:"60px 28px 70px",
-            animation: banners.length > 0 ? "bannerIn .5s .12s both" : undefined}}>
+          style={{position:"relative",zIndex:2,maxWidth:520,padding:"48px 20px 56px",
+            animation: banners.length > 0 ? "bannerIn .4s .1s both" : undefined}}>
           <div className={banners.length === 0 ? "fade1" : undefined}
-            style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".8rem",color:D.cyan,letterSpacing:".15em",textTransform:"uppercase",marginBottom:18}}>
-            &gt; {banners.length > 0 ? (banners[bannerIdx]?.subtitle || "livraison de jour — guyane") : "livraison de jour — guyane"}
+            style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:600,fontSize:".85rem",color:D.pink,letterSpacing:".04em",marginBottom:14}}>
+            {banners.length > 0 ? (banners[bannerIdx]?.subtitle || "Livraison de jour — Guyane") : "Livraison de jour — Guyane"}
           </div>
           <h1 className={banners.length === 0 ? "fade2" : undefined}
-            style={{fontFamily:"'Black Ops One',cursive",fontSize:"clamp(3.5rem,9vw,6.5rem)",lineHeight:.9,letterSpacing:".03em",marginBottom:22}}>
+            style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:900,fontSize:"clamp(2.2rem,7vw,3.5rem)",lineHeight:.95,letterSpacing:"-.02em",marginBottom:18}}>
             {banners.length > 0 ? (
-              <span style={{color:D.text,textShadow:"0 2px 8px rgba(0,0,0,.1)",display:"block"}}>
+              <span style={{color:D.text,display:"block"}}>
                 {banners[bannerIdx]?.title || "YASSALA DAY SHOP"}
               </span>
             ) : (<>
-              <span style={{color:D.pink,textShadow:"0 0 20px rgba(255,45,120,.3)",display:"block"}}>YASSALA</span>
-              <span style={{color:D.cyan,textShadow:"0 0 20px rgba(58,191,248,.3)",display:"block"}}>DAY</span>
+              <span style={{color:D.pink,display:"block"}}>YASSALA</span>
+              <span style={{color:D.cyan,display:"block"}}>DAY</span>
               <span style={{color:D.text,display:"block"}}>SHOP</span>
             </>)}
           </h1>
           {banners.length > 0 && banners[bannerIdx]?.desc ? (
-            <p style={{fontSize:"1rem",color:D.text,lineHeight:1.65,maxWidth:400,marginBottom:32,opacity:.75}}>{banners[bannerIdx].desc}</p>
+            <p style={{fontSize:".95rem",color:D.muted,lineHeight:1.6,maxWidth:400,marginBottom:28}}>{banners[bannerIdx].desc}</p>
           ) : banners.length === 0 ? (
-            <p className="fade3" style={{fontSize:"1.05rem",color:D.muted,lineHeight:1.7,maxWidth:400,marginBottom:32}}>
+            <p className="fade3" style={{fontSize:".95rem",color:D.muted,lineHeight:1.6,maxWidth:400,marginBottom:28}}>
               Boissons, snacks et repas livrés chez toi en moins de 30 minutes. Partout à Cayenne, toute la journée.
             </p>
-          ) : <div style={{marginBottom:32}} />}
-          <div className={banners.length === 0 ? "fade4" : undefined} style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          ) : <div style={{marginBottom:28}} />}
+          <div className={banners.length === 0 ? "fade4" : undefined} style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <button onClick={() => {
               const link = banners.length > 0 ? (banners[bannerIdx]?.link||"catalogue") : "catalogue";
               if (link==="catalogue"||link==="") document.getElementById("catalogue")?.scrollIntoView({behavior:"smooth"});
               else if (link==="packs") document.getElementById("packs")?.scrollIntoView({behavior:"smooth"});
               else window.open(link,"_blank");
-            }} style={{padding:"13px 26px",fontFamily:"'Inter',sans-serif",fontWeight:700,
-              fontSize:".9rem",letterSpacing:".12em",textTransform:"uppercase",border:"none",
-              cursor:"pointer",borderRadius:3,background:D.pink,color:"#fff"}}>
-              {banners.length > 0 ? (banners[bannerIdx]?.cta||"COMMANDER →") : "COMMANDER →"}
+            }} style={{padding:"14px 28px",fontFamily:"'Inter',system-ui,sans-serif",fontWeight:700,
+              fontSize:".9rem",letterSpacing:".02em",border:"none",
+              cursor:"pointer",borderRadius:14,background:D.pink,color:"#fff"}}>
+              {banners.length > 0 ? (banners[bannerIdx]?.cta||"Commander →") : "Commander →"}
             </button>
             {banners.length === 0 && (
               <button onClick={() => document.getElementById("packs")?.scrollIntoView({behavior:"smooth"})}
-                style={{padding:"13px 26px",fontFamily:"'Inter',sans-serif",fontWeight:700,
-                  fontSize:".9rem",letterSpacing:".12em",textTransform:"uppercase",
-                  background:"transparent",color:D.cyan,border:`1px solid ${D.cyan}`,
-                  cursor:"pointer",borderRadius:3}}>
-                VOIR LES PACKS
+                style={{padding:"14px 28px",fontFamily:"'Inter',system-ui,sans-serif",fontWeight:700,
+                  fontSize:".9rem",letterSpacing:".02em",
+                  background:D.cardDark,color:D.text,border:`1px solid ${D.border}`,
+                  cursor:"pointer",borderRadius:14}}>
+                Voir les packs
               </button>
             )}
           </div>
         </div>
-        {/* Logo + Horloge */}
+        {/* Horloge */}
         <div className="clock-hero" style={{position:"absolute",right:28,top:"50%",transform:"translateY(-50%)",zIndex:3,textAlign:"center"}}>
-          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"2.8rem",color:D.cyan,letterSpacing:".05em",lineHeight:1,marginTop:16}}>
+          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"2rem",color:D.muted,letterSpacing:".02em",lineHeight:1}}>
             {clock}
           </div>
-          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,letterSpacing:".2em",textTransform:"uppercase",marginTop:4}}>
+          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",fontWeight:500,color:D.muted,letterSpacing:".04em",marginTop:4}}>
             heure locale
           </div>
         </div>
         {/* Dots navigation */}
         {banners.length > 1 && (
-          <div style={{position:"absolute",bottom:16,left:0,right:0,display:"flex",alignItems:"center",justifyContent:"center",gap:10,zIndex:3}}>
-            <button onClick={() => { setBannerIdx(i => (i-1+banners.length)%banners.length); setBannerPaused(true); setTimeout(()=>setBannerPaused(false),8000); }}
-              style={{background:"rgba(255,255,255,.7)",border:`1px solid ${D.border}`,color:D.text,width:28,height:28,borderRadius:"50%",cursor:"pointer",fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>‹</button>
+          <div style={{position:"absolute",bottom:16,left:0,right:0,display:"flex",alignItems:"center",justifyContent:"center",gap:6,zIndex:3}}>
             {banners.map((_,i) => (
               <button key={i} onClick={() => { setBannerIdx(i); setBannerPaused(true); setTimeout(()=>setBannerPaused(false),8000); }}
-                style={{width:i===bannerIdx?24:8,height:8,borderRadius:4,border:"none",cursor:"pointer",background:i===bannerIdx?D.pink:`rgba(0,0,0,.2)`,transition:"all .3s",padding:0,flexShrink:0}} />
+                style={{width:i===bannerIdx?20:6,height:6,borderRadius:3,border:"none",cursor:"pointer",background:i===bannerIdx?D.pink:"rgba(0,0,0,.15)",transition:"all .3s",padding:0,flexShrink:0}} />
             ))}
-            <button onClick={() => { setBannerIdx(i => (i+1)%banners.length); setBannerPaused(true); setTimeout(()=>setBannerPaused(false),8000); }}
-              style={{background:"rgba(255,255,255,.7)",border:`1px solid ${D.border}`,color:D.text,width:28,height:28,borderRadius:"50%",cursor:"pointer",fontSize:"1.1rem",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>›</button>
           </div>
         )}
       </section>
 
-      {/* ── INFO BAR — même design que Night mais skin Day ── */}
+      {/* ── INFO BAR ── */}
       <div className="info-bar" style={{
-        position:"relative",zIndex:1,
+        position:"relative",zIndex:2,
         background:D.card,
-        borderTop:`1px solid ${D.border}`,
-        borderBottom:`1px solid ${D.border}`,
+        borderRadius:18,
+        margin:"0 16px",
+        marginTop:-20,
         overflow:"hidden",
-        boxShadow:`0 2px 12px rgba(17,24,39,0.06)`,
+        boxShadow:"0 2px 8px rgba(0,0,0,.06), 0 0 0 1px rgba(0,0,0,.04)",
       }}>
-        {/* fond ambient soft */}
-        <div style={{
-          position:"absolute",inset:0,
-          background:"radial-gradient(ellipse 60% 100% at 20% 50%,rgba(255,45,141,.04) 0%,transparent 70%)," +
-                     "radial-gradient(ellipse 60% 100% at 80% 50%,rgba(58,191,248,.03) 0%,transparent 70%)",
-          pointerEvents:"none",
-        }}/>
         <div style={{display:"flex",position:"relative"}}>
           {[
-            {icon:"⚡", color:"#F59E0B", glow:"rgba(245,158,11,.25)",  title:"Ultra rapide",     sub:"– 30 min"},
-            {icon:"🎁", color:D.pink,   glow:"rgba(255,45,141,.2)",   title:"Livraison offerte",sub:`dès ${deliveryConfig.free_delivery_threshold}€`},
-            {icon:"📡", color:D.cyan,   glow:"rgba(58,191,248,.2)",   title:settings.zone,      sub:"couverture totale"},
-            {icon:"☀️", color:"#6B7280",glow:"rgba(107,114,128,.15)", title:settings.hours,     sub:"7j/7"},
+            {icon:"⚡", title:"Ultra rapide",     sub:"– 30 min"},
+            {icon:"🎁", title:"Livraison offerte",sub:`dès ${deliveryConfig.free_delivery_threshold}€`},
+            {icon:"📡", title:settings.zone,      sub:"Couverture totale"},
+            {icon:"☀️", title:settings.hours,     sub:"7j/7"},
           ].map((item,i,arr) => (
             <div key={i} className="info-bar-item" style={{
               flex:1,
-              padding:"16px 10px",
+              padding:"16px 8px",
               display:"flex",
               flexDirection:"column",
               alignItems:"center",
-              gap:8,
+              gap:6,
               borderRight: i < arr.length-1 ? `1px solid ${D.border}` : "none",
-              position:"relative",
             }}>
               <div style={{
-                width:42,height:42,
-                borderRadius:"50%",
-                background:`radial-gradient(circle,${item.glow} 0%,transparent 70%)`,
-                border:`1px solid ${item.color}33`,
+                width:38,height:38,
+                borderRadius:12,
+                background:D.cardDark,
                 display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:"1.3rem",
-                boxShadow:`0 0 12px ${item.glow}`,
+                fontSize:"1.2rem",
               }}>
                 {item.icon}
               </div>
@@ -1070,21 +1050,18 @@ export default function YassalaDayView() {
                   display:"block",
                   fontWeight:700,
                   fontSize:".75rem",
-                  letterSpacing:".06em",
                   color:D.text,
-                  textTransform:"uppercase",
                   lineHeight:1.2,
                 }}>
                   {item.title}
                 </strong>
                 <small style={{
                   display:"block",
-                  marginTop:3,
-                  fontSize:".68rem",
-                  fontFamily:"'Share Tech Mono',monospace",
-                  color:item.color,
-                  opacity:.9,
-                  letterSpacing:".04em",
+                  marginTop:2,
+                  fontSize:".7rem",
+                  fontFamily:"'Inter',system-ui,sans-serif",
+                  fontWeight:500,
+                  color:D.muted,
                 }}>
                   {item.sub}
                 </small>
@@ -1114,16 +1091,16 @@ export default function YassalaDayView() {
           <div style={{display:"flex",alignItems:"center",gap:10,zIndex:1}}>
             <span style={{fontSize:"1.8rem",lineHeight:1,filter:"drop-shadow(0 0 8px rgba(58,191,248,.7))"}}>🌙</span>
             <div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".58rem",
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".58rem",
                 color:"rgba(58,191,248,.55)",letterSpacing:".18em",textTransform:"uppercase"}}>
                 PROCHAINEMENT
               </div>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.1rem",
                 color:"#FF2D8D",letterSpacing:".08em",lineHeight:1.1,
                 textShadow:"0 0 12px rgba(255,45,141,.4)"}}>
                 YASSALA NIGHT
               </div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".52rem",
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".52rem",
                 color:"rgba(58,191,248,.45)",letterSpacing:".12em",marginTop:2}}>
                 → NIGHT DANS
               </div>
@@ -1147,15 +1124,15 @@ export default function YassalaDayView() {
               {val: countdown.s, unit:"sec"},
             ].map(({val,unit},i) => (
               <div key={i} style={{display:"flex",alignItems:"baseline",gap:2}}>
-                {i > 0 && <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1.4rem",
+                {i > 0 && <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:"1.4rem",
                   color:"rgba(58,191,248,.35)",marginRight:4,marginLeft:-2}}>:</span>}
                 <div style={{textAlign:"center"}}>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:"1.9rem",fontWeight:900,
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:"1.9rem",fontWeight:900,
                     color:"#3abff8",lineHeight:1,letterSpacing:".02em",
                     textShadow:"0 0 16px rgba(58,191,248,.8)"}}>
                     {val}
                   </div>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".45rem",
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".45rem",
                     color:"rgba(58,191,248,.4)",letterSpacing:".15em",textTransform:"uppercase",marginTop:2}}>
                     {unit}
                   </div>
@@ -1179,17 +1156,17 @@ export default function YassalaDayView() {
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 20px"}}>
             <div>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:D.text,margin:0,letterSpacing:".02em"}}>
-                  📍 <span style={{color:D.pink}}>Autour de toi</span>
+                <h2 style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.25rem",color:D.text,margin:0,letterSpacing:"-.01em"}}>
+                  Autour de toi
                 </h2>
                 {etablissements.filter(e => e.isActive).length > 0 && (
-                  <span style={{fontFamily:"'Inter',sans-serif",fontSize:".72rem",fontWeight:700,color:"#fff",
-                    background:"linear-gradient(90deg,#ff6b35,#ff2d78)",padding:"3px 10px",borderRadius:20,flexShrink:0}}>
-                    🔥 {etablissements.filter(e => e.isActive).length} ouverts
+                  <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",fontWeight:600,color:D.pink,
+                    background:"rgba(255,45,122,.08)",padding:"4px 10px",borderRadius:8,flexShrink:0}}>
+                    {etablissements.filter(e => e.isActive).length} ouverts
                   </span>
                 )}
               </div>
-              <p style={{fontFamily:"'Inter',sans-serif",fontSize:".82rem",color:D.muted,margin:"4px 0 0"}}>
+              <p style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".82rem",color:D.muted,margin:"4px 0 0"}}>
                 Découvre les commerces disponibles
               </p>
             </div>
@@ -1227,11 +1204,11 @@ export default function YassalaDayView() {
                 <div key={etab.id}
                   onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
                   style={{
-                    minWidth:220,
-                    width:220,
+                    minWidth:200,
+                    width:200,
                     flexShrink:0,
                     background:D.card,
-                    borderRadius:16,
+                    borderRadius:18,
                     overflow:"hidden",
                     cursor:"pointer",
                     boxShadow:D.shadow,
@@ -1244,24 +1221,24 @@ export default function YassalaDayView() {
                   onMouseUp={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(1)";}}
                 >
                   {/* Image cover */}
-                  <div style={{position:"relative",height:140,overflow:"hidden",
-                    background:etab.coverUrl?D.cardDark:`linear-gradient(135deg,rgba(255,45,141,.08) 0%,rgba(58,191,248,.06) 100%)`}}>
+                  <div style={{position:"relative",height:130,overflow:"hidden",
+                    background:etab.coverUrl?D.cardDark:D.cardDark}}>
                     {etab.coverUrl ? (
                       <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
                     ) : (
-                      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",opacity:.15}}>🏪</div>
+                      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",opacity:.12}}>🏪</div>
                     )}
                     {/* Badge OUVERT / FERMÉ */}
-                    <div style={{position:"absolute",top:8,left:8,
-                      background:etab.isActive?"rgba(34,197,94,.95)":"rgba(100,100,100,.85)",
-                      color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 8px",borderRadius:20,
-                      fontFamily:"'Inter',sans-serif",backdropFilter:"blur(4px)",letterSpacing:".05em"}}>
-                      {etab.isActive ? "OUVERT" : "FERMÉ"}
+                    <div style={{position:"absolute",top:10,left:10,
+                      background:etab.isActive?"#22c55e":"#9CA3AF",
+                      color:"#fff",fontSize:".65rem",fontWeight:600,padding:"3px 10px",borderRadius:8,
+                      fontFamily:"'Inter',system-ui,sans-serif",letterSpacing:".02em"}}>
+                      {etab.isActive ? "Ouvert" : "Fermé"}
                     </div>
                   </div>
-                  {/* Nom uniquement */}
-                  <div style={{padding:"10px 12px 12px"}}>
-                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".92rem",
+                  {/* Nom */}
+                  <div style={{padding:"12px 14px 14px"}}>
+                    <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:700,fontSize:".9rem",
                       color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
                       {etab.name}
                     </div>
@@ -1301,16 +1278,16 @@ export default function YassalaDayView() {
           />
 
           {/* Fiche établissement — slide depuis le bas */}
-          <div style={{position:"fixed",bottom:0,left:0,right:0,height:"93vh",background:"#F4F6FA",
-            borderRadius:"24px 24px 0 0",zIndex:101,overflow:"hidden",
+          <div style={{position:"fixed",bottom:0,left:0,right:0,height:"93vh",background:D.bg,
+            borderRadius:"20px 20px 0 0",zIndex:101,overflow:"hidden",
             display:"flex",flexDirection:"column",
-            animation:"slideUp .35s cubic-bezier(.32,.72,0,1) both",
-            boxShadow:"0 -8px 40px rgba(0,0,0,.2)"}}>
+            animation:"slideUp .3s cubic-bezier(.32,.72,0,1) both",
+            boxShadow:"0 -4px 24px rgba(0,0,0,.12)"}}>
 
             {/* Barre de poignée */}
             <div style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
-              padding:"10px 0 4px",background:"#F4F6FA"}}>
-              <div style={{width:40,height:4,background:"#D1D5DB",borderRadius:2}} />
+              padding:"10px 0 4px",background:D.bg}}>
+              <div style={{width:36,height:4,background:D.border,borderRadius:2}} />
             </div>
 
             {/* Zone scrollable */}
@@ -1394,8 +1371,8 @@ export default function YassalaDayView() {
                     value={etabSearch}
                     onChange={e => setEtabSearch(e.target.value)}
                     placeholder={`Rechercher dans ${selectedEtab.name}`}
-                    style={{width:"100%",background:"#F4F6FA",border:`1px solid #E6EAF2`,
-                      borderRadius:28,padding:"11px 16px 11px 42px",
+                    style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,
+                      borderRadius:14,padding:"13px 16px 13px 42px",
                       fontFamily:"'Inter',sans-serif",fontSize:".9rem",
                       color:"#111827",outline:"none",boxSizing:"border-box"}}
                   />
@@ -1439,7 +1416,7 @@ export default function YassalaDayView() {
                       <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 12px 8px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
                         {featured.map(p => (
                           <div key={p.id} onClick={() => openProductModal(p)}
-                            style={{flexShrink:0,width:150,background:"#fff",borderRadius:14,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:"0 2px 10px rgba(0,0,0,.08)"}}>
+                            style={{flexShrink:0,width:150,background:"#fff",borderRadius:18,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:D.shadow,border:`1px solid ${D.border}`}}>
                             {p.image ? (
                               <img src={p.image} alt={p.name} style={{width:"100%",height:100,objectFit:"cover",display:"block"}} />
                             ) : (
@@ -1512,14 +1489,14 @@ export default function YassalaDayView() {
       )}
 
       {/* LIVRAISON GRATUITE BANNER */}
-      <div style={{margin:"0 28px 44px",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,flexWrap:"wrap",background:"linear-gradient(135deg,rgba(255,45,120,.04),rgba(58,191,248,.03))",boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
+      <div style={{margin:"0 28px 44px",border:`1px solid ${D.border}`,borderRadius:18,padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,flexWrap:"wrap",background:D.card,boxShadow:D.shadow}}>
         <div>
-          <strong style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.6rem",color:D.pink,display:"block",marginBottom:4}}>🚀 LIVRAISON GRATUITE</strong>
-          <p style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.muted}}>// pour toute commande à partir de {deliveryConfig.free_delivery_threshold}€</p>
+          <strong style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.4rem",color:D.pink,display:"block",marginBottom:4}}>Livraison gratuite</strong>
+          <p style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".78rem",color:D.muted}}>Pour toute commande à partir de {deliveryConfig.free_delivery_threshold}€</p>
         </div>
         <button onClick={() => document.getElementById("catalogue")?.scrollIntoView({behavior:"smooth"})}
-          style={{padding:"13px 26px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".9rem",letterSpacing:".12em",textTransform:"uppercase",border:"none",cursor:"pointer",borderRadius:3,background:D.pink,color:"#fff"}}>
-          COMMANDER
+          style={{padding:"14px 28px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",letterSpacing:".04em",textTransform:"uppercase",border:"none",cursor:"pointer",borderRadius:14,background:D.pink,color:"#fff"}}>
+          Commander
         </button>
       </div>
 
@@ -1527,31 +1504,31 @@ export default function YassalaDayView() {
       {packs.length > 0 && (
       <section id="packs" style={{padding:"48px 28px",position:"relative",zIndex:1}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
-          <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.8rem",letterSpacing:".05em",color:D.text}}>
-            🎊 PACKS <span style={{color:D.pink}}>DU JOUR</span>
+          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.5rem",letterSpacing:".01em",color:D.text}}>
+            Packs <span style={{color:D.pink}}>du jour</span>
           </div>
-          <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.cyan,letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer"}}>VOIR TOUT &gt;</span>
+          <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",color:D.cyan,letterSpacing:".02em",cursor:"pointer"}}>Voir tout →</span>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:14}}>
           {packs.map(pk => (
-            <div key={pk.id} style={{background:D.card,border: pk.star ? `1px solid ${D.pink}` : `1px solid ${D.border}`,borderRadius:6,padding:22,position:"relative",overflow:"hidden",cursor:"pointer",boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+            <div key={pk.id} style={{background:D.card,border: pk.star ? `1px solid ${D.pink}` : `1px solid ${D.border}`,borderRadius:18,padding:22,position:"relative",overflow:"hidden",cursor:"pointer",boxShadow:D.shadow}}>
               {pk.star && (
-                <div style={{position:"absolute",top:0,right:0,background:D.pink,color:"#fff",fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".12em",padding:"5px 12px",borderRadius:"0 6px 0 8px"}}>★ POPULAIRE</div>
+                <div style={{position:"absolute",top:0,right:0,background:D.pink,color:"#fff",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".6rem",letterSpacing:".06em",padding:"5px 12px",borderRadius:"0 18px 0 12px"}}>Populaire</div>
               )}
               <span style={{fontSize:"2.2rem",marginBottom:12,display:"block"}}>{pk.emoji}</span>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.5rem",color:D.text,marginBottom:4}}>{pk.name}</div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.cyan,letterSpacing:".12em",marginBottom:10}}>{pk.tag}</div>
-              <div style={{fontSize:".72rem",color:D.muted,lineHeight:1.8,marginBottom:18,borderLeft:`2px solid rgba(255,45,120,.2)`,paddingLeft:10,fontFamily:"'Share Tech Mono',monospace"}}>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.3rem",color:D.text,marginBottom:4}}>{pk.name}</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",color:D.cyan,letterSpacing:".12em",marginBottom:10}}>{pk.tag}</div>
+              <div style={{fontSize:".72rem",color:D.muted,lineHeight:1.8,marginBottom:18,borderLeft:`2px solid rgba(255,45,120,.2)`,paddingLeft:10,fontFamily:"'Inter',system-ui,sans-serif"}}>
                 {pk.items.split('\n').map((item,i) => <div key={i}>{item}</div>)}
               </div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div>
-                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.9rem",color:D.pink,lineHeight:1}}>{Number(pk.price).toFixed(2)}€</div>
-                  <small style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,textDecoration:"line-through"}}>valeur : {pk.real}€</small>
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.6rem",color:D.pink,lineHeight:1}}>{Number(pk.price).toFixed(2)}€</div>
+                  <small style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:D.muted,textDecoration:"line-through"}}>valeur : {pk.real}€</small>
                 </div>
                 <button onClick={() => addToCart(pk.id, pk.name, pk.price)}
-                  style={{background:"transparent",border:`1px solid ${D.pink}`,color:D.pink,padding:"9px 18px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".8rem",letterSpacing:".1em",textTransform:"uppercase",cursor:"pointer",borderRadius:3}}>
-                  AJOUTER
+                  style={{background:"transparent",border:`1px solid ${D.pink}`,color:D.pink,padding:"10px 20px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".82rem",letterSpacing:".04em",textTransform:"uppercase",cursor:"pointer",borderRadius:12}}>
+                  Ajouter
                 </button>
               </div>
             </div>
@@ -1561,20 +1538,20 @@ export default function YassalaDayView() {
       )}
 
       {/* FOOTER */}
-      <footer style={{borderTop:`1px solid rgba(255,45,120,.15)`,padding:"28px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,position:"relative",zIndex:1,background:D.cardDark}}>
-        <div className="flicker" style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:D.pink,letterSpacing:".06em"}}>YASSALA DAY</div>
-        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.muted,letterSpacing:".1em",textAlign:"center",lineHeight:1.8}}>
-          ☀️ OUVERT {settings.hours} · {settings.zone.toUpperCase()}<br/>© 2025 YASSALA SHOP — TOUS DROITS RÉSERVÉS
+      <footer style={{borderTop:`1px solid ${D.border}`,padding:"28px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,position:"relative",zIndex:1,background:D.cardDark}}>
+        <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.2rem",color:D.pink,letterSpacing:".04em"}}>YASSALA DAY</div>
+        <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,letterSpacing:".02em",textAlign:"center",lineHeight:1.8}}>
+          Ouvert {settings.hours} · {settings.zone}<br/>© 2025 Yassala Shop — Tous droits réservés
         </div>
         <button onClick={() => setShowHistory(true)}
-          style={{background:"transparent",border:`1px solid ${D.border}`,color:D.muted,borderRadius:4,padding:"8px 16px",fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase"}}>
-          📋 MES COMMANDES
+          style={{background:"transparent",border:`1px solid ${D.border}`,color:D.muted,borderRadius:12,padding:"10px 18px",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",cursor:"pointer",letterSpacing:".02em"}}>
+          Mes commandes
         </button>
       </footer>
 
       {/* TOAST */}
-      <div style={{position:"fixed",top:18,right:18,background:D.card,border:`1px solid ${D.pink}`,borderRadius:4,padding:"12px 18px",display:"flex",alignItems:"center",gap:10,zIndex:9998,maxWidth:270,fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:D.pink,boxShadow:"0 4px 20px rgba(255,45,120,.15)",transform: toast.show ? "translateX(0)" : "translateX(130%)",transition:"transform .4s cubic-bezier(.34,1.56,.64,1)"}}>
-        ⚡ {toast.msg}
+      <div style={{position:"fixed",top:18,right:18,background:D.card,border:`1px solid ${D.border}`,borderRadius:14,padding:"14px 20px",display:"flex",alignItems:"center",gap:10,zIndex:9998,maxWidth:280,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".82rem",color:D.text,boxShadow:"0 4px 20px rgba(0,0,0,.1)",transform: toast.show ? "translateX(0)" : "translateX(130%)",transition:"transform .4s cubic-bezier(.34,1.56,.64,1)"}}>
+        {toast.msg}
       </div>
 
       {/* ORDER CONFIRMATION */}
@@ -1584,21 +1561,21 @@ export default function YassalaDayView() {
             <div style={{fontSize:"3rem",marginBottom:12}}>{lastConfirmPickup ? "🏪" : "✅"}</div>
             {lastConfirmPickup && (
               <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(58,191,248,.08)",border:"1px solid rgba(58,191,248,.25)",borderRadius:20,padding:"4px 14px",marginBottom:12}}>
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.cyan,letterSpacing:".1em"}}>🏪 CLICK & COLLECT</span>
+                <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",color:D.cyan,letterSpacing:".1em"}}>🏪 CLICK & COLLECT</span>
               </div>
             )}
-            <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.5rem",color: lastConfirmPickup ? D.cyan : D.pink,marginBottom:6}}>COMMANDE CONFIRMÉE</div>
-            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.muted,marginBottom:16}}>
+            <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.5rem",color: lastConfirmPickup ? D.cyan : D.pink,marginBottom:6}}>COMMANDE CONFIRMÉE</div>
+            <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",color:D.muted,marginBottom:16}}>
               {orderConfirmNum ? `#${orderConfirmNum}` : orderConfirmId.slice(-8).toUpperCase()}
             </div>
             {lastConfirmPickup && (
               <div style={{background:"rgba(58,191,248,.04)",border:"1px solid rgba(58,191,248,.12)",borderRadius:8,padding:"14px 16px",marginBottom:16,textAlign:"left"}}>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.cyan,letterSpacing:".1em",marginBottom:8}}>🏠 RETRAIT STOCK</div>
+                <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:D.cyan,letterSpacing:".1em",marginBottom:8}}>🏠 RETRAIT STOCK</div>
                 <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".95rem",color:D.text,marginBottom:2}}>{lastConfirmPickup.snapshot?.name}</div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,marginBottom:6}}>{lastConfirmPickup.snapshot?.address}{lastConfirmPickup.snapshot?.city ? `, ${lastConfirmPickup.snapshot.city}` : ""}</div>
-                {lastConfirmPickup.snapshot?.instructions && <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.cyan,marginBottom:6}}>ℹ️ {lastConfirmPickup.snapshot.instructions}</div>}
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted}}>🕐 {lastConfirmPickup.time === 'asap' ? 'Dès que possible' : lastConfirmPickup.time}</div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.pink,marginTop:8,letterSpacing:".06em"}}>Présente ton numéro de commande au retrait.</div>
+                <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,marginBottom:6}}>{lastConfirmPickup.snapshot?.address}{lastConfirmPickup.snapshot?.city ? `, ${lastConfirmPickup.snapshot.city}` : ""}</div>
+                {lastConfirmPickup.snapshot?.instructions && <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",color:D.cyan,marginBottom:6}}>ℹ️ {lastConfirmPickup.snapshot.instructions}</div>}
+                <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted}}>🕐 {lastConfirmPickup.time === 'asap' ? 'Dès que possible' : lastConfirmPickup.time}</div>
+                <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.pink,marginTop:8,letterSpacing:".06em"}}>Présente ton numéro de commande au retrait.</div>
               </div>
             )}
             <a href={`/suivi?id=${orderConfirmId}`}
@@ -1606,7 +1583,7 @@ export default function YassalaDayView() {
               🔎 SUIVRE MA COMMANDE
             </a>
             <button onClick={() => { setOrderConfirmId(null); setLastConfirmPickup(null); }}
-              style={{background:"transparent",border:`1px solid ${D.border}`,color:D.muted,borderRadius:4,padding:"10px",width:"100%",fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",cursor:"pointer",letterSpacing:".08em"}}>
+              style={{background:"transparent",border:`1px solid ${D.border}`,color:D.muted,borderRadius:4,padding:"10px",width:"100%",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",cursor:"pointer",letterSpacing:".08em"}}>
               FERMER
             </button>
           </div>
@@ -1619,12 +1596,12 @@ export default function YassalaDayView() {
         <div onClick={() => setShowCart(false)} style={{position:"fixed",inset:0,background:D.overlay,zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:16,paddingLeft:16,paddingRight:16,paddingBottom:80,overflowY:"auto"}}>
           <div onClick={e => e.stopPropagation()} style={{background:D.card,border:`1px solid rgba(255,45,120,.2)`,borderRadius:10,width:"100%",maxWidth:500,animation:"fadeUp .3s both",maxHeight:"calc(100vh - 96px)",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.1)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 24px 16px",flexShrink:0,borderBottom:`1px solid rgba(255,45,120,.12)`,background:D.card,position:"sticky",top:0,zIndex:10}}>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.5rem",color:D.pink,letterSpacing:".04em"}}>🛒 MON PANIER</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.5rem",color:D.pink,letterSpacing:".04em"}}>🛒 MON PANIER</div>
               <button onClick={() => setShowCart(false)} style={{background:D.cardDark,border:`1px solid ${D.border}`,color:D.text,fontSize:"1rem",cursor:"pointer",borderRadius:6,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
             <div style={{overflowY:"auto",padding:"20px 24px 24px",flex:1}}>
               {cart.length === 0 ? (
-                <div style={{textAlign:"center",padding:"40px",color:D.muted,fontFamily:"'Share Tech Mono',monospace",fontSize:".8rem"}}>// panier vide</div>
+                <div style={{textAlign:"center",padding:"40px",color:D.muted,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".8rem"}}>// panier vide</div>
               ) : (
                 <>
                   <div style={{marginBottom:20}}>
@@ -1652,10 +1629,10 @@ export default function YassalaDayView() {
                   <div style={{display:"flex",gap:8,marginBottom:8}}>
                     <input placeholder="Code promo" value={couponInput} onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }} onKeyDown={e => e.key==="Enter" && applyCoupon()}
                       style={{flex:1,background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:4,padding:"9px 12px",color:D.text,fontFamily:"'Inter',sans-serif",fontSize:".85rem",outline:"none"}} />
-                    <button onClick={applyCoupon} style={{background:"rgba(58,191,248,.08)",border:`1px solid rgba(58,191,248,.3)`,color:D.cyan,padding:"0 14px",borderRadius:4,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",letterSpacing:".06em",whiteSpace:"nowrap"}}>APPLIQUER</button>
+                    <button onClick={applyCoupon} style={{background:"rgba(58,191,248,.08)",border:`1px solid rgba(58,191,248,.3)`,color:D.cyan,padding:"0 14px",borderRadius:4,cursor:"pointer",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",letterSpacing:".06em",whiteSpace:"nowrap"}}>APPLIQUER</button>
                   </div>
-                  {couponError && <div style={{color:D.pink,fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",marginBottom:8}}>{couponError}</div>}
-                  {coupon && <div style={{color:"#22c55e",fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",marginBottom:8}}>
+                  {couponError && <div style={{color:D.pink,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",marginBottom:8}}>{couponError}</div>}
+                  {coupon && <div style={{color:"#22c55e",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",marginBottom:8}}>
                     ✓ Code «{coupon.code}» : -{coupon.type==="percent" ? `${coupon.value}%` : `${coupon.value.toFixed(2)}€`}
                     <button onClick={() => { setCoupon(null); setCouponInput(""); }} style={{marginLeft:8,background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontSize:".8rem"}}>✕</button>
                   </div>}
@@ -1663,7 +1640,7 @@ export default function YassalaDayView() {
                   {/* FULFILLMENT TOGGLE */}
                   {(settings.fulfillmentDeliveryEnabled !== false || settings.fulfillmentPickupEnabled !== false) && (
                   <div style={{marginBottom:18}}>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.muted,letterSpacing:".12em",marginBottom:8}}>// MODE DE RÉCEPTION</div>
+                    <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:D.muted,letterSpacing:".12em",marginBottom:8}}>// MODE DE RÉCEPTION</div>
                     {settings.fulfillmentDeliveryEnabled !== false && settings.fulfillmentPickupEnabled !== false ? (
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                         <div onClick={() => setFulfillmentType('delivery')} style={{padding:"10px 8px",borderRadius:6,cursor:"pointer",textAlign:"center",border: fulfillmentType==='delivery' ? `2px solid ${D.pink}` : `1px solid ${D.border}`,background: fulfillmentType==='delivery' ? "rgba(255,45,120,.06)" : D.cardDark,transition:"all .2s"}}>
@@ -1709,20 +1686,20 @@ export default function YassalaDayView() {
                     {feeResult && !feeResult.isFree && feeResult.supplements.length > 0 && (
                       <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
                         {feeResult.supplements.map((s,i) => (
-                          <span key={i} style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",background:"rgba(58,191,248,.08)",border:`1px solid rgba(58,191,248,.2)`,color:D.cyan,borderRadius:4,padding:"2px 7px",letterSpacing:".06em"}}>{s}</span>
+                          <span key={i} style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",background:"rgba(58,191,248,.08)",border:`1px solid rgba(58,191,248,.2)`,color:D.cyan,borderRadius:4,padding:"2px 7px",letterSpacing:".06em"}}>{s}</span>
                         ))}
                       </div>
                     )}
                     {feeResult && !feeResult.isFree && distanceKm > 0 && (
                       <div style={{marginBottom:6,opacity:.6}}>
-                        <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted}}>
+                        <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:D.muted}}>
                           {distanceKm.toFixed(1)} km · base {feeResult.breakdown.base.toFixed(2)}€{feeResult.breakdown.distance > 0 && ` + dist ${feeResult.breakdown.distance.toFixed(2)}€`}{feeResult.breakdown.rain > 0 && ` + pluie ${feeResult.breakdown.rain.toFixed(2)}€`}{feeResult.breakdown.rush > 0 && ` + rush ${feeResult.breakdown.rush.toFixed(2)}€`}
                         </span>
                       </div>
                     )}
                     <div style={{display:"flex",justifyContent:"space-between",paddingTop:12,borderTop:`1px solid rgba(255,45,120,.15)`}}>
-                      <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.1rem",color:D.pink}}>TOTAL</span>
-                      <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:D.pink}}>{finalTotal.toFixed(2)}€</span>
+                      <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.1rem",color:D.pink}}>TOTAL</span>
+                      <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.3rem",color:D.pink}}>{finalTotal.toFixed(2)}€</span>
                     </div>
                   </div>
 
@@ -1750,7 +1727,7 @@ export default function YassalaDayView() {
                             onFocus={() => { if (addressSuggestions.length > 0) setShowSuggestions(true); }}
                             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                             style={{width:"100%",background:D.cardDark,border: orderForm.lat ? `1px solid rgba(34,197,94,.4)` : `1px solid ${D.border}`,borderRadius:4,padding:"12px 12px 12px 36px",color:D.text,fontSize:".9rem",fontFamily:"'Inter',sans-serif"}} />
-                          {orderForm.lat !== 0 && <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:"#22c55e",fontSize:".78rem",fontFamily:"'Share Tech Mono',monospace"}}>✓ localisé</span>}
+                          {orderForm.lat !== 0 && <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:"#22c55e",fontSize:".78rem",fontFamily:"'Inter',system-ui,sans-serif"}}>✓ localisé</span>}
                         </div>
                         {showSuggestions && addressSuggestions.length > 0 && (
                           <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:50,background:D.card,border:`1px solid rgba(58,191,248,.2)`,borderRadius:"0 0 6px 6px",maxHeight:200,overflowY:"auto",boxShadow:"0 8px 32px rgba(0,0,0,.12)"}}>
@@ -1775,13 +1752,13 @@ export default function YassalaDayView() {
                             <span style={{fontSize:"1.4rem"}}>🏠</span>
                             <div>
                               <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",color:D.text}}>Retrait Yassala Day Stock</div>
-                              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.muted}}>Retrait chez Yassala Day, Cayenne</div>
+                              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",color:D.muted}}>Retrait chez Yassala Day, Cayenne</div>
                             </div>
                           </div>
-                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.cyan}}>ℹ️ Présente ton numéro de commande à l&apos;accueil</div>
+                          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:D.cyan}}>ℹ️ Présente ton numéro de commande à l&apos;accueil</div>
                         </div>
                         <div>
-                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.muted,letterSpacing:".1em",marginBottom:8}}>// HEURE DE RETRAIT</div>
+                          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:D.muted,letterSpacing:".1em",marginBottom:8}}>// HEURE DE RETRAIT</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                             <div onClick={() => setPickupTimeMode('asap')} style={{padding:"10px",borderRadius:6,cursor:"pointer",textAlign:"center",border: pickupTimeMode==='asap' ? `2px solid ${D.pink}` : `1px solid ${D.border}`,background: pickupTimeMode==='asap' ? "rgba(255,45,120,.06)" : D.cardDark,transition:"all .2s"}}>
                               <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".8rem",color: pickupTimeMode==='asap' ? D.pink : D.muted}}>⚡ DÈS QUE POSSIBLE</div>
@@ -1800,7 +1777,7 @@ export default function YassalaDayView() {
                   </div>
 
                   {cartTotal < deliveryConfig.minimum_order_amount && (
-                    <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"12px",marginBottom:16,fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.pink,textAlign:"center"}}>
+                    <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"12px",marginBottom:16,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",color:D.pink,textAlign:"center"}}>
                       ⚠️ Commande minimum : {deliveryConfig.minimum_order_amount}€ (il te manque {(deliveryConfig.minimum_order_amount - cartTotal).toFixed(2)}€)
                     </div>
                   )}
@@ -1810,13 +1787,13 @@ export default function YassalaDayView() {
                     <div style={{display:"flex",alignItems:"center",gap:12,background: etaResult.isBusy ? "rgba(255,107,53,.06)" : "rgba(34,197,94,.06)",border:`1px solid ${etaResult.isBusy ? "rgba(255,107,53,.25)" : "rgba(34,197,94,.2)"}`,borderRadius:10,padding:"12px 14px",marginBottom:16}}>
                       <span style={{fontSize:"1.4rem",flexShrink:0}}>⏱️</span>
                       <div style={{flex:1}}>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,letterSpacing:".1em",marginBottom:3}}>LIVRAISON ESTIMÉE</div>
-                        <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.25rem",color: etaResult.isBusy ? "#ff6b35" : "#22c55e",lineHeight:1}}>{formatETA(etaResult.minutes)}</div>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:D.muted,marginTop:4}}>
+                        <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:D.muted,letterSpacing:".1em",marginBottom:3}}>LIVRAISON ESTIMÉE</div>
+                        <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.25rem",color: etaResult.isBusy ? "#ff6b35" : "#22c55e",lineHeight:1}}>{formatETA(etaResult.minutes)}</div>
+                        <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".62rem",color:D.muted,marginTop:4}}>
                           {distanceKm > 0 ? `${distanceKm.toFixed(1)} km · base 10 min + route ${Math.round(etaResult.distanceTime)} min${etaResult.loadTime > 0 ? ` + charge ${Math.round(etaResult.loadTime)} min` : ""}` : "Entrez votre adresse pour affiner l'estimation"}
                         </div>
                       </div>
-                      {etaResult.isBusy && <div style={{flexShrink:0,fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:"#ff6b35",textAlign:"center",background:"rgba(255,107,53,.1)",borderRadius:6,padding:"4px 8px"}}>🔥<br/>FORTE<br/>DEMANDE</div>}
+                      {etaResult.isBusy && <div style={{flexShrink:0,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".6rem",color:"#ff6b35",textAlign:"center",background:"rgba(255,107,53,.1)",borderRadius:6,padding:"4px 8px"}}>🔥<br/>FORTE<br/>DEMANDE</div>}
                     </div>
                   )}
 
@@ -1832,20 +1809,20 @@ export default function YassalaDayView() {
                   ) : (
                     <>
                       <div style={{marginBottom:16}}>
-                        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:D.muted,letterSpacing:".12em",marginBottom:10,textTransform:"uppercase"}}>// MODE DE PAIEMENT</div>
+                        <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",color:D.muted,letterSpacing:".12em",marginBottom:10,textTransform:"uppercase"}}>// MODE DE PAIEMENT</div>
                         <div style={{display:"grid",gridTemplateColumns:`${settings.paymentOnlineEnabled !== false && settings.paymentCashEnabled !== false ? "1fr 1fr" : "1fr"}`,gap:8}}>
                           {settings.paymentOnlineEnabled !== false && (
                           <div onClick={() => setPaymentMethod('online')} style={{padding:"12px 8px",borderRadius:6,cursor: settings.paymentCashEnabled !== false ? "pointer" : "default",textAlign:"center",border: paymentMethod==='online' ? `2px solid ${D.cyan}` : `1px solid ${D.border}`,background: paymentMethod==='online' ? "rgba(58,191,248,.06)" : D.cardDark,transition:"all .2s"}}>
                             <div style={{fontSize:"1.4rem",marginBottom:4}}>💳</div>
                             <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".8rem",color: paymentMethod==='online' ? D.cyan : D.text,letterSpacing:".05em"}}>PAYER EN LIGNE</div>
-                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:D.muted,marginTop:2}}>Carte · Apple Pay</div>
+                            <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".6rem",color:D.muted,marginTop:2}}>Carte · Apple Pay</div>
                           </div>
                           )}
                           {settings.paymentCashEnabled !== false && (
                           <div onClick={() => setPaymentMethod('cash')} style={{padding:"12px 8px",borderRadius:6,cursor: settings.paymentOnlineEnabled !== false ? "pointer" : "default",textAlign:"center",border: paymentMethod==='cash' ? `2px solid ${D.pink}` : `1px solid ${D.border}`,background: paymentMethod==='cash' ? "rgba(255,45,120,.06)" : D.cardDark,transition:"all .2s"}}>
                             <div style={{fontSize:"1.4rem",marginBottom:4}}>💵</div>
                             <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".8rem",color: paymentMethod==='cash' ? D.pink : D.text,letterSpacing:".05em"}}>{fulfillmentType==='pickup' ? 'CASH AU RETRAIT' : 'CASH LIVRAISON'}</div>
-                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:D.muted,marginTop:2}}>Payer à la réception</div>
+                            <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".6rem",color:D.muted,marginTop:2}}>Payer à la réception</div>
                           </div>
                           )}
                         </div>
@@ -1874,24 +1851,24 @@ export default function YassalaDayView() {
               ) : (
                 <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"5rem"}}>📷</div>
               )}
-              <button onClick={() => setSelectedProduct(null)} style={{position:"absolute",top:12,right:12,background:"rgba(255,255,255,.85)",border:`1px solid ${D.border}`,color:D.text,borderRadius:4,padding:"6px 12px",cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem"}}>
+              <button onClick={() => setSelectedProduct(null)} style={{position:"absolute",top:12,right:12,background:"rgba(255,255,255,.85)",border:`1px solid ${D.border}`,color:D.text,borderRadius:4,padding:"6px 12px",cursor:"pointer",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem"}}>
                 ✕ FERMER
               </button>
               {selectedProduct.badge && (
-                <span style={{position:"absolute",top:12,left:12,fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",letterSpacing:".1em",textTransform:"uppercase",padding:"4px 10px",borderRadius:2,background: getBadgeType(selectedProduct.badge)==="hot" ? D.pink : getBadgeType(selectedProduct.badge)==="new" ? "#22c55e" : D.cyan,color:"#fff"}}>
+                <span style={{position:"absolute",top:12,left:12,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".62rem",letterSpacing:".1em",textTransform:"uppercase",padding:"4px 10px",borderRadius:2,background: getBadgeType(selectedProduct.badge)==="hot" ? D.pink : getBadgeType(selectedProduct.badge)==="new" ? "#22c55e" : D.cyan,color:"#fff"}}>
                   {selectedProduct.badge}
                 </span>
               )}
             </div>
             <div style={{padding:"24px"}}>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:catColor(selectedProduct.cat),letterSpacing:".15em",textTransform:"uppercase",marginBottom:8}}>{catLabel(selectedProduct.cat)}</div>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.7rem",letterSpacing:".03em",color:D.text,marginBottom:10}}>{selectedProduct.name}</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:catColor(selectedProduct.cat),letterSpacing:".15em",textTransform:"uppercase",marginBottom:8}}>{catLabel(selectedProduct.cat)}</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.7rem",letterSpacing:".03em",color:D.text,marginBottom:10}}>{selectedProduct.name}</div>
               <div style={{fontSize:".9rem",color:D.muted,lineHeight:1.7,marginBottom:16}}>{selectedProduct.desc || "Aucune description disponible."}</div>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
                 <div>
-                  <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"2rem",color:D.pink}}>{Number(selectedProduct.price).toFixed(2)}€</div>
-                  {selectedProduct.stock > 0 && selectedProduct.stock < 10 && <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#ff6b35",marginTop:4}}>⚠️ Plus que {selectedProduct.stock} en stock !</div>}
-                  {selectedProduct.stock === 0 && <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.muted,marginTop:4}}>Rupture de stock</div>}
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"2rem",color:D.pink}}>{Number(selectedProduct.price).toFixed(2)}€</div>
+                  {selectedProduct.stock > 0 && selectedProduct.stock < 10 && <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:"#ff6b35",marginTop:4}}>⚠️ Plus que {selectedProduct.stock} en stock !</div>}
+                  {selectedProduct.stock === 0 && <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:D.muted,marginTop:4}}>Rupture de stock</div>}
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={() => shareProduct(selectedProduct)} style={{background:"transparent",border:`1px solid ${D.border}`,color:D.muted,borderRadius:4,padding:"10px 14px",cursor:"pointer",fontSize:".85rem"}}>↗</button>
@@ -1904,7 +1881,7 @@ export default function YassalaDayView() {
               {/* Combos IA */}
               {(aiRecsLoading || aiRecs.length > 0) && (
                 <div style={{marginBottom:16}}>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:"#22c55e",letterSpacing:".1em",marginBottom:10,textTransform:"uppercase",display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:"#22c55e",letterSpacing:".1em",marginBottom:10,textTransform:"uppercase",display:"flex",alignItems:"center",gap:6}}>
                     ✨ combo idéal ia {aiRecsLoading && <span style={{opacity:.5,animation:"pulse 1s infinite"}}>…</span>}
                   </div>
                   {!aiRecsLoading && aiRecs.length > 0 && (
@@ -1916,7 +1893,7 @@ export default function YassalaDayView() {
                           </div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".84rem",textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap",color:D.text}}>{rec.product.name}</div>
-                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.pink}}>{Number(rec.product.price).toFixed(2)}€</div>
+                            <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:D.pink}}>{Number(rec.product.price).toFixed(2)}€</div>
                             <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",color:D.muted,fontStyle:"italic",textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap"}}>{rec.why}</div>
                           </div>
                         </div>
@@ -1927,7 +1904,7 @@ export default function YassalaDayView() {
               )}
               {suggestions.length > 0 && (
                 <div>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,letterSpacing:".1em",marginBottom:10,textTransform:"uppercase"}}>// Vous aimerez aussi</div>
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:D.muted,letterSpacing:".1em",marginBottom:10,textTransform:"uppercase"}}>// Vous aimerez aussi</div>
                   <div style={{display:"flex",gap:8,overflowX:"auto"}}>
                     {suggestions.map(s => (
                       <div key={s.id} onClick={() => openProductModal(s)} style={{flexShrink:0,width:90,cursor:"pointer",background:D.cardDark,borderRadius:6,overflow:"hidden",border:`1px solid ${D.border}`}}>
@@ -1936,7 +1913,7 @@ export default function YassalaDayView() {
                         </div>
                         <div style={{padding:"6px 8px"}}>
                           <div style={{fontSize:".68rem",fontWeight:700,letterSpacing:".03em",textOverflow:"ellipsis",overflow:"hidden",whiteSpace:"nowrap",color:D.text}}>{s.name}</div>
-                          <div style={{fontFamily:"'Black Ops One',cursive",fontSize:".75rem",color:D.pink}}>{Number(s.price).toFixed(2)}€</div>
+                          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:".75rem",color:D.pink}}>{Number(s.price).toFixed(2)}€</div>
                         </div>
                       </div>
                     ))}
@@ -1954,7 +1931,7 @@ export default function YassalaDayView() {
           style={{position:"fixed",inset:0,background:D.overlay,zIndex:1600,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:20,paddingLeft:16,paddingRight:16,paddingBottom:90,overflowY:"auto"}}>
           <div onClick={e => e.stopPropagation()} style={{background:D.card,border:`1px solid rgba(255,45,120,.2)`,borderRadius:14,width:"100%",maxWidth:420,animation:"fadeUp .3s both",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.1)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"22px 24px 18px",borderBottom:`1px solid ${D.border}`}}>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:D.pink,letterSpacing:".04em"}}>🔑 CONNEXION</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.3rem",color:D.pink,letterSpacing:".04em"}}>🔑 CONNEXION</div>
               <button onClick={() => { setShowAuthModal(false); setAuthError(""); setPhoneAuthStep("input"); setPhoneInput(""); setPhoneAuthCode(""); setPhoneAuthError(""); setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(""); setForgotError(""); }}
                 style={{background:D.cardDark,border:`1px solid ${D.border}`,color:D.text,fontSize:".9rem",cursor:"pointer",borderRadius:6,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
@@ -1965,7 +1942,7 @@ export default function YassalaDayView() {
                   <>
                     <div style={{textAlign:"center",fontSize:"2.5rem",lineHeight:1}}>✉️</div>
                     <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.1rem",color:D.cyan,textAlign:"center",letterSpacing:".04em"}}>Email envoyé !</div>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,textAlign:"center",lineHeight:1.6}}>Vérifie ta boîte mail (et les spams).<br/>Le lien expire dans 1 heure.</div>
+                    <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,textAlign:"center",lineHeight:1.6}}>Vérifie ta boîte mail (et les spams).<br/>Le lien expire dans 1 heure.</div>
                     <button onClick={() => { setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(""); }}
                       style={{background:D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor:"pointer"}}>
                       RETOUR À LA CONNEXION
@@ -1973,16 +1950,16 @@ export default function YassalaDayView() {
                   </>
                 ) : (
                   <>
-                    <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:D.muted,letterSpacing:".06em",lineHeight:1.6}}>Entre ton email et on t&apos;envoie un lien pour réinitialiser ton mot de passe.</div>
+                    <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",color:D.muted,letterSpacing:".06em",lineHeight:1.6}}>Entre ton email et on t&apos;envoie un lien pour réinitialiser ton mot de passe.</div>
                     <input type="email" placeholder="Ton email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} onKeyDown={e => e.key==="Enter" && handleForgotPassword()}
                       style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Inter',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
-                    {forgotError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.pink}}>{forgotError}</div>}
+                    {forgotError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",color:D.pink}}>{forgotError}</div>}
                     <button onClick={handleForgotPassword} disabled={forgotLoading}
                       style={{background: forgotLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: forgotLoading ? "not-allowed" : "pointer"}}>
                       {forgotLoading ? "..." : "ENVOYER LE LIEN"}
                     </button>
                     <button onClick={() => { setShowForgotPassword(false); setForgotError(""); setForgotEmail(""); }}
-                      style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",textDecoration:"underline",padding:4}}>
+                      style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",letterSpacing:".06em",textDecoration:"underline",padding:4}}>
                       ← Retour à la connexion
                     </button>
                   </>
@@ -2000,22 +1977,22 @@ export default function YassalaDayView() {
                   style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Inter',sans-serif",fontSize:"1rem",outline:"none",width:"100%"}} />
                 {authMode === "login" && (
                   <button onClick={() => { setShowForgotPassword(true); setForgotEmail(authEmail); setForgotError(""); setForgotSuccess(false); }}
-                    style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",letterSpacing:".06em",textDecoration:"underline",padding:0,textAlign:"right",alignSelf:"flex-end"}}>
+                    style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".68rem",letterSpacing:".06em",textDecoration:"underline",padding:0,textAlign:"right",alignSelf:"flex-end"}}>
                     Mot de passe oublié ?
                   </button>
                 )}
-                {authError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.pink}}>{authError}</div>}
+                {authError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",color:D.pink}}>{authError}</div>}
                 <button onClick={authMode==="login" ? handleLogin : handleSignup} disabled={authLoading}
                   style={{background: authLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"14px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: authLoading ? "not-allowed" : "pointer"}}>
                   {authLoading ? "..." : authMode==="login" ? "SE CONNECTER" : "CRÉER MON COMPTE"}
                 </button>
                 <button onClick={() => { setAuthMode(authMode==="login" ? "signup" : "login"); setAuthError(""); }}
-                  style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",textDecoration:"underline",padding:4}}>
+                  style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",letterSpacing:".06em",textDecoration:"underline",padding:4}}>
                   {authMode==="login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
                 </button>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <div style={{flex:1,height:1,background:D.border}} />
-                  <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,letterSpacing:".1em"}}>OU</span>
+                  <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:D.muted,letterSpacing:".1em"}}>OU</span>
                   <div style={{flex:1,height:1,background:D.border}} />
                 </div>
                 <button onClick={handleGoogleLogin} disabled={authLoading}
@@ -2028,16 +2005,16 @@ export default function YassalaDayView() {
 
             {/* Espace professionnel */}
             <div style={{margin:"22px 24px 28px",background:"rgba(58,191,248,.04)",border:`1px solid rgba(58,191,248,.15)`,borderRadius:12,padding:"16px 18px"}}>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:"rgba(58,191,248,.5)",letterSpacing:".14em",marginBottom:10,textAlign:"center"}}>— ESPACE PROFESSIONNEL —</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".62rem",color:"rgba(58,191,248,.5)",letterSpacing:".14em",marginBottom:10,textAlign:"center"}}>— ESPACE PROFESSIONNEL —</div>
               <a href="/livreur" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"linear-gradient(135deg,rgba(58,191,248,.12) 0%,rgba(0,80,200,.08) 100%)",border:`1px solid rgba(58,191,248,.3)`,borderRadius:10,padding:"14px",textDecoration:"none",color:D.cyan,fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em"}}>
                 <span style={{fontSize:"1.3rem"}}>🏍️</span>
                 ESPACE LIVREUR
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"rgba(58,191,248,.5)",marginLeft:4}}>→</span>
+                <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",color:"rgba(58,191,248,.5)",marginLeft:4}}>→</span>
               </a>
               <a href="/etablissement/login" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:"linear-gradient(135deg,rgba(255,165,0,.14) 0%,rgba(200,100,0,.08) 100%)",border:"1px solid rgba(255,165,0,.3)",borderRadius:10,padding:"14px",textDecoration:"none",marginTop:8,color:"#ffa500",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".06em"}}>
                 <span style={{fontSize:"1.3rem"}}>🏪</span>
                 ESPACE PRO
-                <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",color:"rgba(255,165,0,.5)",marginLeft:4}}>→</span>
+                <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",color:"rgba(255,165,0,.5)",marginLeft:4}}>→</span>
               </a>
             </div>
           </div>
@@ -2049,41 +2026,41 @@ export default function YassalaDayView() {
         <div onClick={() => { setShowHistory(false); setHistoryOrders(null); }} style={{position:"fixed",inset:0,background:D.overlay,zIndex:1500,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:16,paddingLeft:16,paddingRight:16,paddingBottom:90,overflowY:"auto"}}>
           <div onClick={e => e.stopPropagation()} style={{background:D.card,border:`1px solid rgba(58,191,248,.15)`,borderRadius:14,width:"100%",maxWidth:480,animation:"fadeUp .3s both",maxHeight:"calc(100vh - 106px)",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.1)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 24px 16px",flexShrink:0,borderBottom:`1px solid ${D.border}`,background:D.card}}>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:D.cyan,letterSpacing:".04em"}}>👤 MON PROFIL</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.3rem",color:D.cyan,letterSpacing:".04em"}}>👤 MON PROFIL</div>
               <button onClick={() => { setShowHistory(false); setHistoryOrders(null); }} style={{background:D.cardDark,border:`1px solid ${D.border}`,color:D.text,fontSize:".9rem",cursor:"pointer",borderRadius:6,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
             <div style={{overflowY:"auto",padding:"18px 24px 24px",flex:1}}>
               <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:22,background:"rgba(58,191,248,.04)",border:`1px solid rgba(58,191,248,.1)`,borderRadius:12,padding:"16px"}}>
-                <div style={{width:48,height:48,borderRadius:"50%",background:`linear-gradient(135deg,${D.pink},${D.cyan})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Black Ops One',cursive",fontSize:"1.3rem",color:"#fff",flexShrink:0}}>
+                <div style={{width:48,height:48,borderRadius:"50%",background:`linear-gradient(135deg,${D.pink},${D.cyan})`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.3rem",color:"#fff",flexShrink:0}}>
                   {(currentUser.displayName||currentUser.email||"?")[0].toUpperCase()}
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.1rem",color:D.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentUser.displayName||"Mon compte"}</div>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentUser.email}</div>
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:D.muted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{currentUser.email}</div>
                 </div>
-                <button onClick={handleSignout} style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.15)`,color:D.pink,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",letterSpacing:".08em",whiteSpace:"nowrap"}}>DÉCO</button>
+                <button onClick={handleSignout} style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.15)`,color:D.pink,borderRadius:8,padding:"6px 12px",cursor:"pointer",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".6rem",letterSpacing:".08em",whiteSpace:"nowrap"}}>DÉCO</button>
               </div>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",color:D.cyan,letterSpacing:".06em",marginBottom:12}}>📋 MES COMMANDES</div>
-              {historyLoading && <div style={{textAlign:"center",color:D.muted,fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",padding:"28px"}}>chargement...</div>}
-              {!historyLoading && historyOrders !== null && historyOrders.length === 0 && <div style={{textAlign:"center",color:D.muted,fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",padding:"28px 0"}}>Aucune commande pour l&apos;instant.</div>}
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1rem",color:D.cyan,letterSpacing:".06em",marginBottom:12}}>📋 MES COMMANDES</div>
+              {historyLoading && <div style={{textAlign:"center",color:D.muted,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",padding:"28px"}}>chargement...</div>}
+              {!historyLoading && historyOrders !== null && historyOrders.length === 0 && <div style={{textAlign:"center",color:D.muted,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",padding:"28px 0"}}>Aucune commande pour l&apos;instant.</div>}
               {!historyLoading && historyOrders && historyOrders.length > 0 && (
                 <div style={{display:"grid",gap:10}}>
                   {historyOrders.map((o:any) => (
                     <div key={o.id} style={{background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"14px 16px"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
                         <div>
-                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".6rem",color:D.muted,marginBottom:2}}>{new Date(o.createdAt).toLocaleString("fr-FR")}</div>
-                          <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".65rem",color:D.muted}}>#{(o.id||"").slice(-6).toUpperCase()}</div>
+                          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".6rem",color:D.muted,marginBottom:2}}>{new Date(o.createdAt).toLocaleString("fr-FR")}</div>
+                          <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".65rem",color:D.muted}}>#{(o.id||"").slice(-6).toUpperCase()}</div>
                         </div>
                         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-                          <span style={{fontFamily:"'Black Ops One',cursive",fontSize:"1rem",color:D.pink}}>{Number(o.total).toFixed(2)}€</span>
-                          <span style={{fontSize:".6rem",padding:"2px 8px",borderRadius:10,fontFamily:"'Share Tech Mono',monospace",background: o.status==="nouveau" ? "rgba(255,45,120,.1)" : o.status==="en_cours" ? "rgba(255,149,0,.1)" : o.status==="livre" ? "rgba(34,197,94,.1)" : "rgba(0,0,0,.06)",color: o.status==="nouveau" ? D.pink : o.status==="en_cours" ? "#ff9500" : o.status==="livre" ? "#22c55e" : D.muted}}>{o.status}</span>
+                          <span style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1rem",color:D.pink}}>{Number(o.total).toFixed(2)}€</span>
+                          <span style={{fontSize:".6rem",padding:"2px 8px",borderRadius:10,fontFamily:"'Inter',system-ui,sans-serif",background: o.status==="nouveau" ? "rgba(255,45,120,.1)" : o.status==="en_cours" ? "rgba(255,149,0,.1)" : o.status==="livre" ? "rgba(34,197,94,.1)" : "rgba(0,0,0,.06)",color: o.status==="nouveau" ? D.pink : o.status==="en_cours" ? "#ff9500" : o.status==="livre" ? "#22c55e" : D.muted}}>{o.status}</span>
                         </div>
                       </div>
-                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".63rem",color:D.muted,lineHeight:1.7,borderLeft:`2px solid rgba(58,191,248,.15)`,paddingLeft:8}}>
+                      <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".63rem",color:D.muted,lineHeight:1.7,borderLeft:`2px solid rgba(58,191,248,.15)`,paddingLeft:8}}>
                         {(o.items||"").split("\n").map((l:string,i:number) => <div key={i}>{l}</div>)}
                       </div>
-                      <a href={`/suivi?id=${o.id}`} style={{display:"inline-block",marginTop:8,fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:D.cyan,textDecoration:"none",letterSpacing:".06em"}}>🔎 Suivre cette commande →</a>
+                      <a href={`/suivi?id=${o.id}`} style={{display:"inline-block",marginTop:8,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".62rem",color:D.cyan,textDecoration:"none",letterSpacing:".06em"}}>🔎 Suivre cette commande →</a>
                     </div>
                   ))}
                 </div>
@@ -2124,26 +2101,26 @@ export default function YassalaDayView() {
           <div style={{width:"100%",maxWidth:440,background:D.card,border:`1px solid rgba(58,191,248,.15)`,borderRadius:16,padding:0,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 8px 40px rgba(0,0,0,.1)"}}>
             <div style={{padding:"28px 28px 0",textAlign:"center"}}>
               <div style={{fontSize:"2.8rem",marginBottom:8}}>🏍️</div>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.5rem",background:`linear-gradient(135deg,${D.cyan},${D.pink})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:".04em"}}>DEVENIR LIVREUR</div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",color:D.muted,letterSpacing:".1em",marginTop:6}}>Rejoins l&apos;équipe YASSALA Day</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.5rem",background:`linear-gradient(135deg,${D.cyan},${D.pink})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:".04em"}}>DEVENIR LIVREUR</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".78rem",color:D.muted,letterSpacing:".1em",marginTop:6}}>Rejoins l&apos;équipe YASSALA Day</div>
             </div>
             {driverSuccess ? (
               <div style={{padding:"40px 28px",textAlign:"center"}}>
                 <div style={{fontSize:"3rem",marginBottom:12}}>✅</div>
                 <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1.2rem",color:"#22c55e",marginBottom:6}}>CANDIDATURE ENVOYÉE !</div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".82rem",color:D.muted}}>On te recontacte très vite.</div>
+                <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".82rem",color:D.muted}}>On te recontacte très vite.</div>
               </div>
             ) : (
               <div style={{padding:"20px 28px 28px",display:"grid",gap:14}}>
                 {[{label:"NOM COMPLET *",field:"name",placeholder:"Ton nom",type:"text"},{label:"TÉLÉPHONE *",field:"phone",placeholder:"+594 6XX XXX XXX",type:"tel"},{label:"EMAIL",field:"email",placeholder:"ton@email.com",type:"email"},{label:"ZONE DE LIVRAISON",field:"zone",placeholder:"Cayenne, Rémire, Matoury...",type:"text"}].map(f => (
                   <div key={f.field}>
-                    <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>{f.label}</label>
+                    <label style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>{f.label}</label>
                     <input value={(driverForm as any)[f.field]} onChange={e => setDriverForm(prev => ({...prev, [f.field]:e.target.value}))} placeholder={f.placeholder} type={f.type}
                       style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Inter',sans-serif",fontSize:".95rem"}} />
                   </div>
                 ))}
                 <div>
-                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>VÉHICULE</label>
+                  <label style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>VÉHICULE</label>
                   <div style={{display:"flex",gap:8}}>
                     {([{val:"moto",label:"🏍️ Moto"},{val:"voiture",label:"🚗 Voiture"},{val:"velo",label:"🚲 Vélo"}] as const).map(v => (
                       <button key={v.val} onClick={() => setDriverForm(f => ({...f, vehicle:v.val}))}
@@ -2154,7 +2131,7 @@ export default function YassalaDayView() {
                   </div>
                 </div>
                 <div>
-                  <label style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>MESSAGE (optionnel)</label>
+                  <label style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,letterSpacing:".12em",display:"block",marginBottom:6}}>MESSAGE (optionnel)</label>
                   <textarea value={driverForm.message} onChange={e => setDriverForm(f => ({...f, message:e.target.value}))} placeholder="Parle-nous de toi, tes disponibilités..." rows={3}
                     style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:8,padding:"12px 14px",color:D.text,fontFamily:"'Inter',sans-serif",fontSize:".95rem",resize:"vertical"}} />
                 </div>
@@ -2182,13 +2159,13 @@ export default function YassalaDayView() {
           style={{position:"fixed",inset:0,background:D.overlay,zIndex:1700,display:"flex",alignItems:"center",justifyContent:"center",paddingLeft:16,paddingRight:16}}>
           <div onClick={e => e.stopPropagation()} style={{background:D.card,border:`1px solid rgba(255,45,120,.25)`,borderRadius:14,width:"100%",maxWidth:400,animation:"fadeUp .3s both",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.1)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 22px 16px",borderBottom:`1px solid ${D.border}`}}>
-              <div style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.15rem",color:D.pink,letterSpacing:".04em"}}>📱 VÉRIFICATION TÉLÉPHONE</div>
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.15rem",color:D.pink,letterSpacing:".04em"}}>📱 VÉRIFICATION TÉLÉPHONE</div>
               <button onClick={() => { setShowSmsVerify(false); setCashSmsStep("send"); setCashSmsCode(""); setCashSmsError(""); }} style={{background:D.cardDark,border:`1px solid ${D.border}`,color:D.text,fontSize:".9rem",cursor:"pointer",borderRadius:6,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
             <div style={{padding:"22px 22px 26px",display:"flex",flexDirection:"column",gap:16}}>
               {cashSmsStep === "send" ? (
                 <>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".05em",lineHeight:1.6}}>
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,letterSpacing:".05em",lineHeight:1.6}}>
                     Pour confirmer ta commande <span style={{color:D.pink}}>cash</span>, nous envoyons un code SMS au numéro :<div style={{color:D.text,fontSize:".9rem",marginTop:8,letterSpacing:".08em"}}>📞 {orderForm.phone.startsWith("+") ? orderForm.phone : `${phoneCountry} ${orderForm.phone}`}</div>
                   </div>
                   <div id="recaptcha-cash-sms-day" />
@@ -2198,17 +2175,17 @@ export default function YassalaDayView() {
                 </>
               ) : (
                 <>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:D.muted,letterSpacing:".05em",lineHeight:1.6}}>Code envoyé ! Saisis les 6 chiffres reçus par SMS.</div>
+                  <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".72rem",color:D.muted,letterSpacing:".05em",lineHeight:1.6}}>Code envoyé ! Saisis les 6 chiffres reçus par SMS.</div>
                   <input type="number" placeholder="• • • • • •" maxLength={6} value={cashSmsCode} onChange={e => setCashSmsCode(e.target.value)} onKeyDown={e => e.key==="Enter" && handleCashSmsVerify()} autoFocus
-                    style={{background:D.cardDark,border:`1px solid rgba(255,45,120,.25)`,borderRadius:8,padding:"16px",color:D.pink,fontFamily:"'Share Tech Mono',monospace",fontSize:"2rem",letterSpacing:".6em",textAlign:"center",outline:"none",width:"100%"}} />
+                    style={{background:D.cardDark,border:`1px solid rgba(255,45,120,.25)`,borderRadius:8,padding:"16px",color:D.pink,fontFamily:"'Inter',system-ui,sans-serif",fontSize:"2rem",letterSpacing:".6em",textAlign:"center",outline:"none",width:"100%"}} />
                   <button onClick={handleCashSmsVerify} disabled={cashSmsLoading || cashSmsCode.length < 6} style={{background: cashSmsLoading ? D.muted : D.pink,color:"#fff",border:"none",borderRadius:10,padding:"15px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",letterSpacing:".08em",textTransform:"uppercase",cursor: cashSmsLoading ? "not-allowed" : "pointer",opacity: cashSmsCode.length < 6 ? .5 : 1}}>
                     {cashSmsLoading ? "VÉRIFICATION..." : "✓ CONFIRMER LA COMMANDE"}
                   </button>
-                  <button onClick={() => { setCashSmsStep("send"); setCashSmsCode(""); setCashSmsError(""); }} style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",fontSize:".7rem",textDecoration:"underline"}}>Renvoyer un code</button>
+                  <button onClick={() => { setCashSmsStep("send"); setCashSmsCode(""); setCashSmsError(""); }} style={{background:"transparent",border:"none",color:D.muted,cursor:"pointer",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".7rem",textDecoration:"underline"}}>Renvoyer un code</button>
                 </>
               )}
-              {cashSmsError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:D.pink}}>{cashSmsError}</div>}
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",color:D.muted,letterSpacing:".04em",textAlign:"center",lineHeight:1.5}}>Protégé par reCAPTCHA invisible — anti-spam & sécurité</div>
+              {cashSmsError && <div style={{background:"rgba(255,45,120,.06)",border:`1px solid rgba(255,45,120,.2)`,borderRadius:6,padding:"10px 14px",fontFamily:"'Inter',system-ui,sans-serif",fontSize:".75rem",color:D.pink}}>{cashSmsError}</div>}
+              <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontSize:".62rem",color:D.muted,letterSpacing:".04em",textAlign:"center",lineHeight:1.5}}>Protégé par reCAPTCHA invisible — anti-spam & sécurité</div>
             </div>
           </div>
         </div>
@@ -2234,7 +2211,7 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
   const pp = getProductPromoPrice(p.id, p.price, activePromo);
   return (
     <div onClick={() => openProductModal(p)}
-      style={{background:"#fff",borderRadius:16,overflow:"hidden",cursor:"pointer",position:"relative",opacity: p.stock===0 ? 0.6 : 1,transition:"transform .2s, box-shadow .2s",boxShadow: lastAddedId===p.id ? "0 4px 20px rgba(34,197,94,.18)" : "0 2px 12px rgba(0,0,0,.08)",border: lastAddedId===p.id ? "2px solid #22c55e" : "2px solid transparent"}}>
+      style={{background:"#fff",borderRadius:18,overflow:"hidden",cursor:"pointer",position:"relative",opacity: p.stock===0 ? 0.6 : 1,transition:"transform .2s, box-shadow .2s",boxShadow: lastAddedId===p.id ? "0 4px 20px rgba(34,197,94,.18)" : D.shadow,border: lastAddedId===p.id ? "2px solid #22c55e" : `1px solid ${D.border}`}}>
 
       {/* Image */}
       <div style={{position:"relative",height:160,overflow:"hidden",background:"#f5f5f7"}}>
@@ -2254,7 +2231,7 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
         {p.stock === 0 ? (
           <span style={{position:"absolute",top:10,left:10,background:"rgba(0,0,0,.65)",color:"#fff",fontSize:".65rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"3px 10px",borderRadius:20,zIndex:4}}>ÉPUISÉ</span>
         ) : activePromo && activePromo.productIds.includes(p.id) ? (
-          <span style={{position:"absolute",top:10,left:10,background:D.pink,color:"#fff",fontSize:".65rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"3px 10px",borderRadius:20,zIndex:4,animation:"flashPulse 1.2s ease-in-out infinite"}}>🔥 FLASH</span>
+          <span style={{position:"absolute",top:10,left:10,background:D.pink,color:"#fff",fontSize:".65rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"3px 10px",borderRadius:20,zIndex:4}}>FLASH</span>
         ) : p.badge ? (
           <span style={{position:"absolute",top:10,left:10,background: getBadgeType(p.badge)==="hot" ? D.pink : getBadgeType(p.badge)==="new" ? "#22c55e" : getBadgeType(p.badge)==="best" ? "#ffb400" : D.cyan,color:"#fff",fontSize:".65rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"3px 10px",borderRadius:20,zIndex:4}}>
             {p.badge === "BEST" ? "⭐ BEST" : p.badge}
@@ -2263,19 +2240,19 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
       </div>
 
       {/* Infos */}
-      <div style={{padding:"12px 14px 14px"}}>
-        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",color:D.text,marginBottom:3,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
-        <div style={{fontSize:".82rem",color:D.muted,lineHeight:1.5,marginBottom:10,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",fontFamily:"'Inter',sans-serif"}}>{p.desc}</div>
+      <div style={{padding:"14px 16px 16px"}}>
+        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",color:D.text,marginBottom:4,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+        <div style={{fontSize:".81rem",color:D.muted,lineHeight:1.5,marginBottom:10,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",fontFamily:"'Inter',sans-serif"}}>{p.desc}</div>
         {p.stock > 0 && p.stock < 10 && <div style={{fontSize:".75rem",color:"#ff6b35",fontWeight:700,marginBottom:8}}>Plus que {p.stock} !</div>}
 
         {/* Prix + bouton + */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div>
             {pp !== null && <div style={{fontSize:".72rem",color:D.muted,textDecoration:"line-through",fontFamily:"'Inter',sans-serif"}}>{Number(p.price).toFixed(2)}€</div>}
-            <div style={{fontWeight:800,fontSize:"1.1rem",color:D.text,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{(pp ?? Number(p.price)).toFixed(2)}€</div>
+            <div style={{fontWeight:800,fontSize:"1.15rem",color:D.text,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{(pp ?? Number(p.price)).toFixed(2)}€</div>
           </div>
           <button onClick={e => { e.stopPropagation(); addToCart(p.id, p.name, p.price); }} disabled={p.stock === 0}
-            style={{width:38,height:38,background: p.stock===0 ? "#e5e5e5" : lastAddedId===p.id ? "#22c55e" : D.pink,border:"none",borderRadius:"50%",color:"#fff",fontSize: lastAddedId===p.id ? "1rem" : "1.4rem",display:"flex",alignItems:"center",justifyContent:"center",cursor: p.stock===0 ? "not-allowed" : "pointer",boxShadow: p.stock===0 ? "none" : lastAddedId===p.id ? "0 2px 8px rgba(34,197,94,.35)" : `0 2px 8px rgba(255,45,120,.35)`,transition:"all .25s",fontFamily:"'Inter',sans-serif",fontWeight:700}}>
+            style={{width:42,height:42,background: p.stock===0 ? "#e5e5e5" : lastAddedId===p.id ? "#22c55e" : D.pink,border:"none",borderRadius:"50%",color:"#fff",fontSize: lastAddedId===p.id ? "1rem" : "1.4rem",display:"flex",alignItems:"center",justifyContent:"center",cursor: p.stock===0 ? "not-allowed" : "pointer",boxShadow: p.stock===0 ? "none" : lastAddedId===p.id ? "0 2px 8px rgba(34,197,94,.25)" : `0 2px 8px rgba(255,45,120,.2)`,transition:"all .25s",fontFamily:"'Inter',sans-serif",fontWeight:700}}>
             {p.stock===0 ? "✕" : lastAddedId===p.id ? "✓" : "+"}
           </button>
         </div>
