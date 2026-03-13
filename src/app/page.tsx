@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import YassalaDayView from "@/components/YassalaDayView";
 import YassalaHomeNew from "@/components/YassalaHomeNew";
-import { ThemeProvider } from "@/context/ThemeContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { haversineKm, SHOP_LAT, SHOP_LNG } from "@/utils/pricing";
 import { DEFAULT_DELIVERY_CONFIG, computeDeliveryFee, type DeliveryConfig, type DeliveryFeeResult } from "@/types/delivery";
 import { computeETA, formatETA } from "@/utils/estimateDelivery";
@@ -235,6 +235,7 @@ function useCountdownToDay() {
 
 function NightHome() {
   const countdownToDay = useCountdownToDay();
+  const { resolvedTheme, serviceMode } = useTheme();
   const [clock, setClock]         = useState("--:--");
   const [cart, setCart]           = useState<CartItem[]>([]);
   const [activeCat, setActiveCat] = useState("all");
@@ -517,6 +518,14 @@ function NightHome() {
   };
 
   const addToCart = (id: string, name: string, price: number) => {
+    // ── Vérification des horaires de service (America/Cayenne) ──
+    const canOrder = resolvedTheme === 'day' ? serviceMode.canOrderDay : serviceMode.canOrderNight;
+    if (!canOrder) {
+      const status = resolvedTheme === 'day' ? serviceMode.day : serviceMode.night;
+      showToast(`Service ${resolvedTheme === 'day' ? 'DAY' : 'NIGHT'} fermé · ${status.countdown}`);
+      return;
+    }
+
     const product = products.find(p => p.id === id);
     if (product && product.stock === 0) {
       showToast("Produit en rupture de stock !");

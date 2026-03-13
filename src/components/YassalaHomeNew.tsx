@@ -47,27 +47,36 @@ interface HomeNewProps {
   onAddToCart:      (product: Product) => void;
 }
 
-/* ─── Toggle DAY / NIGHT (sans AUTO côté client) ────────────────────── */
+/* ─── Toggle DAY / NIGHT avec statut de service ─────────────────────── */
 function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme, serviceMode } = useTheme();
+
+  const dayStatus   = serviceMode.day.isOpen   ? 'OUVERT' : 'FERMÉ';
+  const nightStatus = serviceMode.night.isOpen ? 'OUVERT' : 'FERMÉ';
 
   return (
     <div className="yn-toggle" aria-label="Changer le thème">
       <button
         className={`yn-toggle-btn${resolvedTheme === 'day' ? ' yn-toggle-active' : ''}`}
         onClick={() => setTheme('day')}
-        title="Thème jour"
+        title={serviceMode.day.isOpen ? `DAY · Ferme à ${serviceMode.day.closesAt}` : `DAY · ${serviceMode.day.countdown}`}
       >
         <span className="yn-toggle-icon">☀️</span>
         <span className="yn-toggle-label">DAY</span>
+        <span style={{ fontSize: '.58rem', color: serviceMode.day.isOpen ? '#4ade80' : '#f87171', display: 'block', lineHeight: 1, fontWeight: 700, letterSpacing: '.04em' }}>
+          {dayStatus}
+        </span>
       </button>
       <button
         className={`yn-toggle-btn${resolvedTheme === 'night' ? ' yn-toggle-active' : ''}`}
         onClick={() => setTheme('night')}
-        title="Thème nuit"
+        title={serviceMode.night.isOpen ? `NIGHT · Ferme à ${serviceMode.night.closesAt}` : `NIGHT · ${serviceMode.night.countdown}`}
       >
         <span className="yn-toggle-icon">🌙</span>
         <span className="yn-toggle-label">NIGHT</span>
+        <span style={{ fontSize: '.58rem', color: serviceMode.night.isOpen ? '#4ade80' : '#f87171', display: 'block', lineHeight: 1, fontWeight: 700, letterSpacing: '.04em' }}>
+          {nightStatus}
+        </span>
       </button>
     </div>
   );
@@ -308,7 +317,16 @@ export default function YassalaHomeNew({
   onSetActiveCat,
   onAddToCart,
 }: HomeNewProps) {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, setTheme, serviceMode } = useTheme();
+
+  // ── Logique de service (commandes autorisées ou non) ──────────────────────
+  const canOrder = resolvedTheme === 'day' ? serviceMode.canOrderDay : serviceMode.canOrderNight;
+  const currentStatus = resolvedTheme === 'day' ? serviceMode.day : serviceMode.night;
+  const otherMode: 'day' | 'night' = resolvedTheme === 'day' ? 'night' : 'day';
+  const otherServiceIsOpen = resolvedTheme === 'day' ? serviceMode.canOrderNight : serviceMode.canOrderDay;
+
+  /** Ajout au panier bloqué si le service est fermé */
+  const handleAddToCart = (p: Product) => { if (canOrder) onAddToCart(p); };
 
   /* ── Fetch day_banners & day_etablissements indépendamment ── */
   const [dayBanners,  setDayBanners]  = useState<Banner[]>([]);
@@ -407,6 +425,59 @@ export default function YassalaHomeNew({
         {/* 2 INFO CARDS */}
         <InfoCards settings={settings} />
 
+        {/* ── BANDEAU SERVICE FERMÉ ── */}
+        {!canOrder && (
+          <div style={{
+            background: resolvedTheme === 'day'
+              ? 'linear-gradient(135deg,#fffbeb,#fef3c7)'
+              : 'linear-gradient(135deg,#1a1040,#2d1b69)',
+            border: `1px solid ${resolvedTheme === 'day' ? '#fbbf24' : '#6d28d9'}`,
+            borderRadius: 12,
+            margin: '0 0 20px',
+            padding: '20px 24px',
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>
+              {resolvedTheme === 'day' ? '☀️' : '🌙'}
+            </div>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: resolvedTheme === 'day' ? '#92400e' : '#c4b5fd' }}>
+              Service {resolvedTheme === 'day' ? 'DAY' : 'NIGHT'} fermé
+            </div>
+            <div style={{ fontSize: '.85rem', color: resolvedTheme === 'day' ? '#78350f' : '#8b5cf6', marginTop: 6 }}>
+              Ouvre à {currentStatus.opensAt} · <span style={{ fontWeight: 600 }}>{currentStatus.countdown}</span>
+            </div>
+            <div style={{ fontSize: '.78rem', color: '#9ca3af', marginTop: 4 }}>
+              Catalogue disponible · commandes désactivées
+            </div>
+            {otherServiceIsOpen && (
+              <button
+                onClick={() => setTheme(otherMode)}
+                style={{
+                  marginTop: 14,
+                  background: otherMode === 'day'
+                    ? 'linear-gradient(135deg,#f59e0b,#d97706)'
+                    : 'linear-gradient(135deg,#7c3aed,#6d28d9)',
+                  color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '10px 22px', fontWeight: 700, fontSize: '.88rem',
+                  cursor: 'pointer', letterSpacing: '.04em',
+                }}
+              >
+                {otherMode === 'day' ? '☀️ Basculer vers DAY' : '🌙 Basculer vers NIGHT'} — ouvert maintenant
+              </button>
+            )}
+            {!otherServiceIsOpen && serviceMode.isClosed && (
+              <div style={{ fontSize: '.82rem', color: '#9ca3af', marginTop: 12, fontWeight: 500 }}>
+                Le shop est fermé — ouvre à 07:00
+              </div>
+            )}
+            {!otherServiceIsOpen && serviceMode.isPause && (
+              <div style={{ fontSize: '.82rem', color: '#9ca3af', marginTop: 12, fontWeight: 500 }}>
+                Pause entre les services — NIGHT ouvre à {serviceMode.night.opensAt}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── MODE DAY : uniquement les établissements ── */}
         {resolvedTheme === 'day' && (
           <>
@@ -449,7 +520,7 @@ export default function YassalaHomeNew({
                 <SectionHeader title="Promos du moment" onAll={onOpenCart} />
                 <div className="yn-h-scroll">
                   {promoProducts.slice(0, 12).map(p => (
-                    <PromoCard key={p.id} product={p} onAdd={() => onAddToCart(p)} />
+                    <PromoCard key={p.id} product={p} onAdd={() => handleAddToCart(p)} />
                   ))}
                 </div>
               </section>
@@ -482,7 +553,13 @@ export default function YassalaHomeNew({
                 />
                 <div className="yn-products-grid">
                   {filteredProducts.map(p => (
-                    <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
+                    <button
+                      key={p.id}
+                      className="yn-product-card"
+                      onClick={() => handleAddToCart(p)}
+                      disabled={!canOrder}
+                      style={!canOrder ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+                    >
                       <div className="yn-product-img-wrap">
                         {isUrl(p.image) ? (
                           <img src={p.image} alt={p.name} className="yn-product-img-url" />
@@ -498,7 +575,9 @@ export default function YassalaHomeNew({
                         <div className="yn-product-desc">{p.desc}</div>
                         <div className="yn-product-footer">
                           <span className="yn-product-price">{Number(p.price).toFixed(2)}€</span>
-                          <span className="yn-product-add">+</span>
+                          <span className="yn-product-add" style={!canOrder ? { color: '#9ca3af' } : undefined}>
+                            {canOrder ? '+' : '🔒'}
+                          </span>
                         </div>
                       </div>
                     </button>
@@ -602,7 +681,13 @@ export default function YassalaHomeNew({
                   ) : (
                     <div className="yn-products-grid">
                       {filtered2.map(p => (
-                        <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
+                        <button
+                          key={p.id}
+                          className="yn-product-card"
+                          onClick={() => handleAddToCart(p)}
+                          disabled={!canOrder}
+                          style={!canOrder ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+                        >
                           <div className="yn-product-img-wrap">
                             {isUrl(p.image) ? <img src={p.image} alt={p.name} className="yn-product-img-url" /> : <span className="yn-product-emoji">{p.image}</span>}
                             {p.badge && <span className="yn-badge yn-badge-promo">{p.badge}</span>}
