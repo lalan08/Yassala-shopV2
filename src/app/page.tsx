@@ -182,6 +182,7 @@ type Pack = { id: string; name: string; tag: string; emoji: string; items: strin
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
+type NightPartenaire = { id: string; name: string; slug?: string; description?: string; address?: string; phone?: string; logoUrl?: string; coverUrl?: string; openHours?: string; isActive: boolean; };
 
 // Catégories par défaut si Firestore est vide
 const DEFAULT_CATS: Category[] = [
@@ -303,6 +304,9 @@ function NightHome() {
   const [cashSmsError, setCashSmsError]           = useState('');
   const [lastAddedId, setLastAddedId]     = useState<string|null>(null);
   const [likes, setLikes]                 = useState<Set<string>>(new Set());
+  const [nightPartenaires, setNightPartenaires] = useState<NightPartenaire[]>([]);
+  const nightShopsScrollRef = useRef<HTMLDivElement>(null);
+  const [showNightScrollHint, setShowNightScrollHint] = useState(true);
   const [showDriverForm, setShowDriverForm] = useState(false);
   const [driverForm, setDriverForm]         = useState({name:"",phone:"",email:"",zone:"",vehicle:"moto",message:""});
   const [driverSubmitting, setDriverSubmitting] = useState(false);
@@ -436,7 +440,10 @@ function NightHome() {
     const unsubPromos = onSnapshot(collection(db, "promotions"), snap => {
       setPromotions(snap.docs.map(d => ({ id: d.id, ...d.data() } as Promotion)));
     });
-    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPromos(); };
+    const unsubNightPartenaires = onSnapshot(collection(db, "night_etablissements"), snap => {
+      setNightPartenaires(snap.docs.map(d => ({ id: d.id, ...d.data() } as NightPartenaire)));
+    });
+    return () => { unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPromos(); unsubNightPartenaires(); };
   }, []);
 
   // ── GOOGLE REDIRECT RESULT (mobile flow) ──
@@ -1229,6 +1236,7 @@ function NightHome() {
         @keyframes flashPulse{0%,100%{box-shadow:0 0 10px rgba(255,45,120,.6);}50%{box-shadow:0 0 20px rgba(255,45,120,.9),0 0 30px rgba(255,100,0,.4);}}
         @keyframes bgShift{from{opacity:.7;}to{opacity:1;}}
         @keyframes floatPulse{0%,100%{box-shadow:0 4px 20px rgba(0,245,255,.35),0 0 40px rgba(0,245,255,.15);}50%{box-shadow:0 4px 28px rgba(0,245,255,.5),0 0 50px rgba(0,245,255,.25);}}
+        @keyframes scrollHint{0%,100%{transform:translateX(0);opacity:.6;}50%{transform:translateX(6px);opacity:1;}}
         .flicker{animation:flicker 6s infinite;}
         .fade1{animation:fadeUp .5s .0s both;}
         .fade2{animation:fadeUp .5s .1s both;}
@@ -2073,6 +2081,132 @@ function NightHome() {
           ))}
         </div>
       </section>
+
+      {/* ── SECTION PARTENAIRES ── */}
+      {nightPartenaires.length > 0 && (
+      <section style={{padding:"48px 0 32px",position:"relative",zIndex:1}}>
+        <div style={{maxWidth:960,margin:"0 auto"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 28px"}}>
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <h2 style={{fontFamily:"'Black Ops One',cursive",fontSize:"1.4rem",color:"#f0eeff",margin:0,letterSpacing:".02em"}}>
+                  🤝 <span style={{color:"#ff2d78",textShadow:"0 0 20px rgba(255,45,120,.6)"}}>NOS PARTENAIRES</span>
+                </h2>
+                {nightPartenaires.filter(p => p.isActive).length > 0 && (
+                  <span style={{fontFamily:"'Inter',sans-serif",fontSize:".72rem",fontWeight:700,color:"#fff",
+                    background:"linear-gradient(90deg,#ff6b35,#ff2d78)",padding:"3px 10px",borderRadius:20,flexShrink:0}}>
+                    🔥 {nightPartenaires.filter(p => p.isActive).length} ouverts
+                  </span>
+                )}
+              </div>
+              <p style={{fontFamily:"'Inter',sans-serif",fontSize:".82rem",color:"#5a5470",margin:"4px 0 0"}}>
+                Découvre les commerces disponibles la nuit
+              </p>
+            </div>
+          </div>
+
+          <div style={{position:"relative"}}>
+            <div
+              ref={nightShopsScrollRef}
+              onScroll={() => {
+                const el = nightShopsScrollRef.current;
+                if (el && el.scrollLeft > 20) setShowNightScrollHint(false);
+              }}
+              style={{
+                display:"flex",
+                overflowX:"auto",
+                gap:16,
+                paddingLeft:16,
+                paddingRight:16,
+                paddingBottom:20,
+                scrollbarWidth:"none",
+                WebkitOverflowScrolling:"touch" as React.CSSProperties["WebkitOverflowScrolling"],
+              }}>
+              {nightPartenaires.map(etab => (
+                <div key={etab.id}
+                  style={{
+                    minWidth:220,
+                    width:220,
+                    flexShrink:0,
+                    background:"#0c0918",
+                    borderRadius:16,
+                    overflow:"hidden",
+                    cursor:"pointer",
+                    boxShadow:"0 4px 20px rgba(0,0,0,.3)",
+                    border:"1px solid rgba(255,255,255,.06)",
+                    transition:"transform .15s",
+                  }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(0.97)";}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(1)";}}
+                  onMouseDown={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(0.97)";}}
+                  onMouseUp={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(1)";}}
+                >
+                  {/* Image cover */}
+                  <div style={{position:"relative",height:140,overflow:"hidden",
+                    background:etab.coverUrl?"#0c0918":"linear-gradient(135deg,rgba(255,45,141,.12) 0%,rgba(0,245,255,.06) 100%)"}}>
+                    {etab.coverUrl ? (
+                      <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} />
+                    ) : (
+                      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"3rem",opacity:.15}}>🏪</div>
+                    )}
+                    {/* Badge OUVERT / FERMÉ */}
+                    <div style={{position:"absolute",top:8,left:8,
+                      background:etab.isActive?"rgba(34,197,94,.95)":"rgba(100,100,100,.85)",
+                      color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 8px",borderRadius:20,
+                      fontFamily:"'Inter',sans-serif",backdropFilter:"blur(4px)",letterSpacing:".05em"}}>
+                      {etab.isActive ? "OUVERT" : "FERMÉ"}
+                    </div>
+                    {/* Logo */}
+                    {etab.logoUrl && (
+                      <div style={{position:"absolute",bottom:8,right:8,width:36,height:36,borderRadius:10,
+                        overflow:"hidden",background:"#fff",border:"2px solid rgba(255,255,255,.2)",boxShadow:"0 2px 8px rgba(0,0,0,.3)"}}>
+                        <img src={etab.logoUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div style={{padding:"10px 12px 12px"}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".92rem",
+                      color:"#f0eeff",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
+                      {etab.name}
+                    </div>
+                    {etab.description && (
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",
+                        color:"#5a5470",marginTop:4,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
+                        {etab.description}
+                      </div>
+                    )}
+                    {etab.openHours && (
+                      <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".62rem",
+                        color:"#00f5ff",marginTop:4,letterSpacing:".05em"}}>
+                        🕐 {etab.openHours}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {showNightScrollHint && nightPartenaires.length > 1 && (
+              <div style={{
+                position:"absolute",right:0,top:0,bottom:20,
+                display:"flex",alignItems:"center",
+                pointerEvents:"none",
+                background:"linear-gradient(270deg,#06020f 50%,transparent)",
+                paddingRight:14,paddingLeft:40,
+              }}>
+                <div style={{
+                  animation:"scrollHint 1s ease-in-out infinite",
+                  fontSize:"1.8rem",
+                  color:"#ff2d78",
+                  lineHeight:1,
+                  fontWeight:900,
+                }}>›</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+      )}
 
       <footer style={{borderTop:"1px solid rgba(255,45,120,.25)",padding:"28px",
         display:"flex",alignItems:"center",justifyContent:"space-between",
