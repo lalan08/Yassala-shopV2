@@ -1,6 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export type ThemeMode = 'day' | 'night' | 'auto';
 
@@ -8,7 +10,6 @@ interface ThemeContextType {
   theme: ThemeMode;
   resolvedTheme: 'day' | 'night';
   setTheme: (mode: ThemeMode) => void;
-  toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -24,34 +25,49 @@ function resolveTheme(mode: ThemeMode): 'day' | 'night' {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>('auto');
+  // Thème local (choix du client, persisté en localStorage)
+  const [localTheme, setLocalTheme] = useState<ThemeMode>(() => {
+    if (typeof window === 'undefined') return 'auto';
+    return (localStorage.getItem('yassala_theme') as ThemeMode) || 'auto';
+  });
 
+  // Override admin depuis Firestore (settings/main.themeOverride)
+  const [adminOverride, setAdminOverride] = useState<ThemeMode | null>(null);
+
+  // Écoute Firestore — même logique que l'ancienne Home
   useEffect(() => {
-    const saved = localStorage.getItem('yassala_theme') as ThemeMode | null;
-    if (saved && ['day', 'night', 'auto'].includes(saved)) {
-      setThemeState(saved);
-    }
-    // Auto-refresh every minute for auto mode
+    const unsub = onSnapshot(doc(db, 'settings', 'main'), (snap) => {
+      if (snap.exists()) {
+        const override = snap.data().themeOverride as ThemeMode | undefined;
+        setAdminOverride(override ?? null);
+      } else {
+        setAdminOverride(null);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Refresh toutes les minutes pour le mode auto
+  useEffect(() => {
     const id = setInterval(() => {
-      setThemeState(prev => prev); // trigger re-render for auto
+      setLocalTheme(prev => prev); // force re-render pour recalculer auto
     }, 60_000);
     return () => clearInterval(id);
   }, []);
 
   const setTheme = (mode: ThemeMode) => {
-    setThemeState(mode);
-    localStorage.setItem('yassala_theme', mode);
+    setLocalTheme(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('yassala_theme', mode);
+    }
   };
 
-  const toggleTheme = () => {
-    const resolved = resolveTheme(theme);
-    setTheme(resolved === 'day' ? 'night' : 'day');
-  };
-
-  const resolvedTheme = resolveTheme(theme);
+  // L'admin a la priorité sur le choix du client
+  const effectiveTheme: ThemeMode = adminOverride ?? localTheme;
+  const resolvedTheme = resolveTheme(effectiveTheme);
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: effectiveTheme, resolvedTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
