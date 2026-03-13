@@ -3316,8 +3316,8 @@ function NightHome() {
         </div>
       )}
 
-      {/* ── BOTTOM NAV BAR ── */}
-      <nav style={{
+      {/* ── BOTTOM NAV BAR (Yassala Night uniquement) ── */}
+      {resolvedTheme === 'night' && <nav style={{
         position:"fixed", bottom:0, left:0, right:0, zIndex:800,
         background:"rgba(4,2,10,0.97)",
         backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)",
@@ -3404,7 +3404,7 @@ function NightHome() {
           </button>
 
         </div>
-      </nav>
+      </nav>}
 
       {/* floating-driver-btn retiré — bouton déplacé dans la nav en haut */}
 
