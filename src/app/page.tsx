@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import YassalaDayView from "@/components/YassalaDayView";
+import YassalaHomeNew from "@/components/YassalaHomeNew";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { haversineKm, SHOP_LAT, SHOP_LNG } from "@/utils/pricing";
 import { DEFAULT_DELIVERY_CONFIG, computeDeliveryFee, type DeliveryConfig, type DeliveryFeeResult } from "@/types/delivery";
 import { computeETA, formatETA } from "@/utils/estimateDelivery";
@@ -1277,7 +1279,22 @@ function NightHome() {
         body{padding-bottom:90px;}
       `}</style>
 
-      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,
+      <YassalaHomeNew
+        products={products}
+        categories={dbCats.length > 0 ? dbCats : DEFAULT_CATS}
+        merchants={nightPartenaires}
+        banners={banners}
+        settings={settings}
+        cart={cart}
+        onOpenCart={() => setShowCart(true)}
+        onOpenAuth={() => setShowAuthModal(true)}
+        currentUserEmail={currentUser?.email}
+        activeCat={activeCat}
+        onSetActiveCat={setActiveCat}
+        onAddToCart={(p) => addToCart(p.id, p.name, p.price)}
+      />
+
+      {false && <><div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,
         background:"radial-gradient(ellipse 50% 50% at 10% 20%,rgba(255,45,120,.07) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 90% 70%,rgba(0,245,255,.06) 0%,transparent 60%)",
         animation:"bgShift 8s ease-in-out infinite alternate"}} />
 
@@ -2246,6 +2263,7 @@ function NightHome() {
           📋 MES COMMANDES
         </button>
       </footer>
+      </>}
 
       {/* TOAST */}
       <div style={{
@@ -3629,27 +3647,10 @@ function isDayMode(): boolean {
 }
 
 export default function Home() {
-  const [dayMode, setDayMode] = useState<boolean>(() => isDayMode());
-  const [themeOverride, setThemeOverride] = useState<"auto" | "day" | "night">("auto");
-
-  // Écoute le override admin en temps réel depuis Firestore
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "main"), (snap) => {
-      if (snap.exists()) {
-        const override = snap.data().themeOverride as "auto" | "day" | "night" | undefined;
-        setThemeOverride(override ?? "auto");
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => setDayMode(isDayMode()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const isDay = themeOverride === "day" ? true : themeOverride === "night" ? false : dayMode;
-  if (isDay) return <YassalaDayView />;
-  return <NightHome />;
+  return (
+    <ThemeProvider>
+      <NightHome />
+    </ThemeProvider>
+  );
 }
 
