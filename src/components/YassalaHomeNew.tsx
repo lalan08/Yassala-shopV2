@@ -395,80 +395,106 @@ export default function YassalaHomeNew({
         {/* 2 INFO CARDS */}
         <InfoCards settings={settings} />
 
-        {/* SECTION: À proximité */}
-        {displayEtablissements.length > 0 && (
-          <section className="yn-section">
-            <SectionHeader title="À proximité" />
-            <div className="yn-h-scroll">
-              {displayEtablissements.map(e => (
-                <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
-              ))}
-            </div>
-          </section>
+        {/* ── MODE DAY : uniquement les établissements ── */}
+        {resolvedTheme === 'day' && (
+          <>
+            {displayEtablissements.length > 0 ? (
+              <section className="yn-section">
+                <SectionHeader title="Nos établissements" />
+                <div className="yn-etabs-grid">
+                  {displayEtablissements.map(e => (
+                    <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
+                  ))}
+                </div>
+              </section>
+            ) : (
+              <div className="yn-empty">
+                <span>🏪</span>
+                <p>Aucun établissement disponible pour le moment</p>
+              </div>
+            )}
+          </>
         )}
 
-        {/* SECTION: Promos du moment */}
-        {promoProducts.length > 0 && (
-          <section className="yn-section">
-            <SectionHeader title="Promos du moment" onAll={onOpenCart} />
-            <div className="yn-h-scroll">
-              {promoProducts.slice(0, 12).map(p => (
-                <PromoCard key={p.id} product={p} onAdd={() => onAddToCart(p)} />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── MODE NIGHT : articles + établissements ── */}
+        {resolvedTheme === 'night' && (
+          <>
+            {/* Établissements */}
+            {displayEtablissements.length > 0 && (
+              <section className="yn-section">
+                <SectionHeader title="À proximité" />
+                <div className="yn-h-scroll">
+                  {displayEtablissements.map(e => (
+                    <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* SECTION: Catégories */}
-        <section className="yn-section" id="yn-categories">
-          <SectionHeader title="Catégories" />
-          <div className="yn-chips-row">
-            {allCats.map(cat => (
-              <CategoryChip
-                key={cat.key}
-                cat={cat}
-                active={activeCat === cat.key}
-                onClick={() => onSetActiveCat(cat.key)}
-              />
-            ))}
-          </div>
-        </section>
+            {/* Promos du moment */}
+            {promoProducts.length > 0 && (
+              <section className="yn-section">
+                <SectionHeader title="Promos du moment" onAll={onOpenCart} />
+                <div className="yn-h-scroll">
+                  {promoProducts.slice(0, 12).map(p => (
+                    <PromoCard key={p.id} product={p} onAdd={() => onAddToCart(p)} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* SECTION: Produits filtrés */}
-        {filteredProducts.length > 0 && (
-          <section className="yn-section">
-            <SectionHeader
-              title={
-                activeCat === 'all'
-                  ? 'Tous les produits'
-                  : (allCats.find(c => c.key === activeCat)?.label || '')
-              }
-            />
-            <div className="yn-products-grid">
-              {filteredProducts.map(p => (
-                <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
-                  <div className="yn-product-img-wrap">
-                    {isUrl(p.image) ? (
-                      <img src={p.image} alt={p.name} className="yn-product-img-url" />
-                    ) : (
-                      <span className="yn-product-emoji">{p.image}</span>
-                    )}
-                    {p.badge && (
-                      <span className="yn-badge yn-badge-promo">{p.badge}</span>
-                    )}
-                  </div>
-                  <div className="yn-product-info">
-                    <div className="yn-product-name">{p.name}</div>
-                    <div className="yn-product-desc">{p.desc}</div>
-                    <div className="yn-product-footer">
-                      <span className="yn-product-price">{Number(p.price).toFixed(2)}€</span>
-                      <span className="yn-product-add">+</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
+            {/* Catégories */}
+            <section className="yn-section" id="yn-categories">
+              <SectionHeader title="Catégories" />
+              <div className="yn-chips-row">
+                {allCats.map(cat => (
+                  <CategoryChip
+                    key={cat.key}
+                    cat={cat}
+                    active={activeCat === cat.key}
+                    onClick={() => onSetActiveCat(cat.key)}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* Grille produits */}
+            {filteredProducts.length > 0 && (
+              <section className="yn-section">
+                <SectionHeader
+                  title={
+                    activeCat === 'all'
+                      ? 'Tous les produits'
+                      : (allCats.find(c => c.key === activeCat)?.label || '')
+                  }
+                />
+                <div className="yn-products-grid">
+                  {filteredProducts.map(p => (
+                    <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
+                      <div className="yn-product-img-wrap">
+                        {isUrl(p.image) ? (
+                          <img src={p.image} alt={p.name} className="yn-product-img-url" />
+                        ) : (
+                          <span className="yn-product-emoji">{p.image}</span>
+                        )}
+                        {p.badge && (
+                          <span className="yn-badge yn-badge-promo">{p.badge}</span>
+                        )}
+                      </div>
+                      <div className="yn-product-info">
+                        <div className="yn-product-name">{p.name}</div>
+                        <div className="yn-product-desc">{p.desc}</div>
+                        <div className="yn-product-footer">
+                          <span className="yn-product-price">{Number(p.price).toFixed(2)}€</span>
+                          <span className="yn-product-add">+</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         <div style={{ height: 80 }} />
