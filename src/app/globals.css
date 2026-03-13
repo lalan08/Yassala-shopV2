@@ -583,6 +583,33 @@ body {
   padding: 0 4px;
 }
 
+/* ── Cart icon dans le header ── */
+.yn-header-cart {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--yn-pink);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity var(--yn-transition), transform var(--yn-transition);
+  box-shadow: 0 2px 12px rgba(255, 45, 120, 0.30);
+}
+
+.yn-header-cart:active {
+  transform: scale(0.90);
+  opacity: 0.85;
+}
+
+.yn-night .yn-header-cart {
+  box-shadow: 0 2px 16px rgba(255, 45, 120, 0.50);
+}
+
 /* ── Toggle DAY/NIGHT ── */
 .yn-toggle {
   display: flex;
