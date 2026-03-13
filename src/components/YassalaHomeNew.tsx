@@ -96,19 +96,19 @@ function HeroBanner({ banners }: { banners: Banner[] }) {
 
   return (
     <section className="yn-hero">
+      {/* Bannière : backgroundImage CSS (comme YassalaDayView) pour compatibilité Firebase Storage */}
       <div
         className="yn-hero-bg"
-        style={{ background: current?.gradient || fallbackGradient }}
-      >
-        {current?.image ? (
-          <img
-            src={current.image}
-            alt={current.title || 'Bannière'}
-            className="yn-hero-img"
-            style={{ opacity: ((current.brightness ?? 100) / 100) }}
-          />
-        ) : null}
-      </div>
+        style={{
+          background: current?.gradient || fallbackGradient,
+          ...(current?.image ? {
+            backgroundImage: `url(${current.image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: (current.brightness ?? 100) / 100,
+          } : {}),
+        }}
+      />
 
       {/* Aucun texte / bouton sur la bannière — pleine visibilité */}
 
@@ -191,12 +191,21 @@ function MerchantCard({ merchant, onOpenCart }: { merchant: Etablissement; onOpe
   );
 }
 
+/* ─── Helper : image URL ou emoji ───────────────────────────────────── */
+function isUrl(s: string) {
+  return s && (s.startsWith('http') || s.startsWith('/'));
+}
+
 /* ─── Carte produit promo ────────────────────────────────────────────── */
 function PromoCard({ product, onAdd }: { product: Product; onAdd: () => void }) {
   return (
     <button className="yn-promo-card" onClick={onAdd}>
       <div className="yn-promo-img-wrap">
-        <span className="yn-promo-emoji">{product.image}</span>
+        {isUrl(product.image) ? (
+          <img src={product.image} alt={product.name} className="yn-promo-img-url" />
+        ) : (
+          <span className="yn-promo-emoji">{product.image}</span>
+        )}
         {product.badge && (
           <span className="yn-badge yn-badge-promo">{product.badge}</span>
         )}
@@ -439,7 +448,11 @@ export default function YassalaHomeNew({
               {filteredProducts.map(p => (
                 <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
                   <div className="yn-product-img-wrap">
-                    <span className="yn-product-emoji">{p.image}</span>
+                    {isUrl(p.image) ? (
+                      <img src={p.image} alt={p.name} className="yn-product-img-url" />
+                    ) : (
+                      <span className="yn-product-emoji">{p.image}</span>
+                    )}
                     {p.badge && (
                       <span className="yn-badge yn-badge-promo">{p.badge}</span>
                     )}

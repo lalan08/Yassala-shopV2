@@ -984,6 +984,20 @@ body {
   font-size: 2.6rem;
 }
 
+.yn-promo-img-url {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.yn-product-img-url {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .yn-promo-info {
   padding: 8px 10px;
 }
