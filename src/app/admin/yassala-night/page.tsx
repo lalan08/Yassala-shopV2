@@ -18,31 +18,31 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
 
-type Etablissement = {
+type NightEtablissement = {
   id: string;
   name: string;
   logoUrl?: string;
   category?: string;
   isActive?: boolean;
   isOpen?: boolean;
-  activeNight?: boolean;
+  activeDay?: boolean;
 };
 
 const CATEGORY_FILTERS = ["Tous", "Snack", "Burgers", "Pizzas", "Sushis", "Grillade", "Autre"];
 
-export default function ServiceDayPage() {
+export default function ServiceNightPage() {
   const [auth, setAuth] = useState(false);
   const [catCount, setCatCount] = useState(0);
   const [prodCount, setProdCount] = useState(0);
   const [packCount, setPackCount] = useState(0);
   const [offerCount, setOfferCount] = useState(0);
-  const [etablissements, setEtablissements] = useState<Etablissement[]>([]);
+  const [etablissements, setEtablissements] = useState<NightEtablissement[]>([]);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("Tous");
-  const [nightCatCount, setNightCatCount] = useState(0);
-  const [nightProdCount, setNightProdCount] = useState(0);
-  const [nightPackCount, setNightPackCount] = useState(0);
-  const [nightOfferCount, setNightOfferCount] = useState(0);
+  const [dayCatCount, setDayCatCount] = useState(0);
+  const [dayProdCount, setDayProdCount] = useState(0);
+  const [dayPackCount, setDayPackCount] = useState(0);
+  const [dayOfferCount, setDayOfferCount] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") setAuth(!!localStorage.getItem("yassala_admin_auth"));
@@ -50,18 +50,18 @@ export default function ServiceDayPage() {
 
   useEffect(() => {
     if (!auth) return;
-    const u1 = onSnapshot(collection(db, "day_categories"),  s => setCatCount(s.size));
-    const u2 = onSnapshot(collection(db, "day_products"),    s => setProdCount(s.size));
-    const u3 = onSnapshot(collection(db, "day_packs"),       s => setPackCount(s.size));
-    const u4 = onSnapshot(collection(db, "day_offers"),      s => setOfferCount(s.size));
-    const u5 = onSnapshot(collection(db, "day_etablissements"), snap => {
-      setEtablissements(snap.docs.map(d => ({ id: d.id, ...d.data() } as Etablissement))
+    const u1 = onSnapshot(collection(db, "night_categories"),     s => setCatCount(s.size));
+    const u2 = onSnapshot(collection(db, "night_products"),       s => setProdCount(s.size));
+    const u3 = onSnapshot(collection(db, "night_packs"),          s => setPackCount(s.size));
+    const u4 = onSnapshot(collection(db, "night_offers"),         s => setOfferCount(s.size));
+    const u5 = onSnapshot(collection(db, "night_etablissements"), snap => {
+      setEtablissements(snap.docs.map(d => ({ id: d.id, ...d.data() } as NightEtablissement))
         .sort((a, b) => (a.name || "").localeCompare(b.name || "")));
     });
-    const u6 = onSnapshot(collection(db, "night_categories"), s => setNightCatCount(s.size));
-    const u7 = onSnapshot(collection(db, "night_products"),   s => setNightProdCount(s.size));
-    const u8 = onSnapshot(collection(db, "night_packs"),      s => setNightPackCount(s.size));
-    const u9 = onSnapshot(collection(db, "night_offers"),     s => setNightOfferCount(s.size));
+    const u6 = onSnapshot(collection(db, "day_categories"), s => setDayCatCount(s.size));
+    const u7 = onSnapshot(collection(db, "day_products"),   s => setDayProdCount(s.size));
+    const u8 = onSnapshot(collection(db, "day_packs"),      s => setDayPackCount(s.size));
+    const u9 = onSnapshot(collection(db, "day_offers"),     s => setDayOfferCount(s.size));
     return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); u8(); u9(); };
   }, [auth]);
 
@@ -69,8 +69,8 @@ export default function ServiceDayPage() {
     return (
       <div style={{ minHeight: "100vh", background: "#080514", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center", fontFamily: "'Share Tech Mono',monospace", color: "#5a5470" }}>
-          <div style={{ fontSize: "2rem", marginBottom: 12 }}>☀️</div>
-          <div>Accès refusé — <a href="/admin" style={{ color: "#fbbf24" }}>retour admin</a></div>
+          <div style={{ fontSize: "2rem", marginBottom: 12 }}>🌙</div>
+          <div>Accès refusé — <a href="/admin" style={{ color: "#a78bfa" }}>retour admin</a></div>
         </div>
       </div>
     );
@@ -82,18 +82,18 @@ export default function ServiceDayPage() {
     return matchSearch && matchCat;
   });
 
-  const dayCards = [
-    { label: "Catégories", sublabel: "DAY", emoji: "📦", count: catCount,  href: "/admin?tab=yassala_day_cats",     color: "#fbbf24" },
-    { label: "Produits",   sublabel: "DAY", emoji: "🍔", count: prodCount, href: "/admin?tab=yassala_day_products",  color: "#fbbf24" },
-    { label: "Packs",      sublabel: "DAY", emoji: "📦", count: packCount, href: "/admin?tab=yassala_day_packs",     color: "#fbbf24" },
-    { label: "Offres",     sublabel: "DAY", emoji: "🏷️", count: offerCount, href: "/admin?tab=yassala_day_offres",  color: "#fbbf24" },
+  const nightCards = [
+    { label: "Catégories", sublabel: "NIGHT", emoji: "📦", count: catCount,  href: "/admin/yassala-night/etablissements" },
+    { label: "Produits",   sublabel: "NIGHT", emoji: "🍔", count: prodCount, href: "/admin/yassala-night/etablissements" },
+    { label: "Packs",      sublabel: "NIGHT", emoji: "📦", count: packCount, href: "/admin/yassala-night/etablissements" },
+    { label: "Offres",     sublabel: "NIGHT", emoji: "🏷️", count: offerCount, href: "/admin/yassala-night/etablissements" },
   ];
 
-  const nightCards = [
-    { label: "Catégories", sublabel: "NIGHT", emoji: "📦", count: nightCatCount,  href: "/admin/yassala-night", color: "#a78bfa" },
-    { label: "Produits",   sublabel: "NIGHT", emoji: "🍔", count: nightProdCount, href: "/admin/yassala-night", color: "#a78bfa" },
-    { label: "Packs",      sublabel: "NIGHT", emoji: "📦", count: nightPackCount, href: "/admin/yassala-night", color: "#a78bfa" },
-    { label: "Offres",     sublabel: "NIGHT", emoji: "🏷️", count: nightOfferCount, href: "/admin/yassala-night", color: "#a78bfa" },
+  const dayCards = [
+    { label: "Catégories", sublabel: "DAY", emoji: "📦", count: dayCatCount,  href: "/admin/yassala-day" },
+    { label: "Produits",   sublabel: "DAY", emoji: "🍔", count: dayProdCount, href: "/admin/yassala-day" },
+    { label: "Packs",      sublabel: "DAY", emoji: "📦", count: dayPackCount, href: "/admin/yassala-day" },
+    { label: "Offres",     sublabel: "DAY", emoji: "🏷️", count: dayOfferCount, href: "/admin/yassala-day" },
   ];
 
   return (
@@ -108,13 +108,12 @@ export default function ServiceDayPage() {
         <a href="/admin" style={{
           fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem",
           color: "#7a7490", textDecoration: "none", letterSpacing: ".08em",
-          display: "flex", alignItems: "center", gap: 6,
         }}>
           ← Admin
         </a>
         <span style={{ color: "#c8cadc", fontSize: ".9rem" }}>/</span>
         <span style={{ fontFamily: "'Inter',sans-serif", fontWeight: 600, fontSize: ".9rem", color: "#1a1740" }}>
-          Service DAY
+          Service NIGHT
         </span>
       </div>
 
@@ -124,35 +123,36 @@ export default function ServiceDayPage() {
         {/* ── Header ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
           <h1 style={{ fontFamily: "'Inter',sans-serif", fontWeight: 700, fontSize: "1.6rem", color: "#1a1740", margin: 0 }}>
-            Service DAY ☀️
+            Service NIGHT 🌙
           </h1>
-          <a href="/admin/yassala-day/etablissements" style={{
-            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+          <a href="/admin/yassala-night/etablissements" style={{
+            background: "linear-gradient(135deg,#7c3aed,#a855f7)",
             color: "#fff", border: "none", borderRadius: 8,
             padding: "10px 20px", fontFamily: "'Inter',sans-serif",
             fontWeight: 600, fontSize: ".9rem", cursor: "pointer",
             textDecoration: "none", display: "flex", alignItems: "center", gap: 8,
           }}>
-            + Ajouter Produit
+            + Ajouter Partenaire
           </a>
         </div>
 
-        {/* ── DAY quick-access cards ── */}
+        {/* ── NIGHT quick-access cards ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 32 }}>
-          {dayCards.map(card => (
-            <a key={card.label + card.sublabel} href={card.href} style={{ textDecoration: "none" }}>
+          {nightCards.map(card => (
+            <a key={card.label} href={card.href} style={{ textDecoration: "none" }}>
               <div style={{
                 background: "#fff", borderRadius: 12, padding: "20px 20px 16px",
                 boxShadow: "0 1px 4px rgba(0,0,0,.06)", cursor: "pointer",
                 transition: "box-shadow .15s", display: "flex", flexDirection: "column", gap: 6,
+                borderTop: "3px solid #a78bfa",
               }}
-                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(99,102,241,.15)")}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 4px 16px rgba(167,139,250,.2)")}
                 onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.06)")}
               >
                 <div style={{ fontSize: "2rem", marginBottom: 4 }}>{card.emoji}</div>
                 <div style={{ fontWeight: 700, fontSize: ".95rem", color: "#1a1740" }}>
                   {card.label}{" "}
-                  <span style={{ color: "#6366f1" }}>{card.sublabel}</span>
+                  <span style={{ color: "#7c3aed" }}>{card.sublabel}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".78rem", color: "#9ca3af" }}>
@@ -165,13 +165,12 @@ export default function ServiceDayPage() {
           ))}
         </div>
 
-        {/* ── Établissements actifs en DAY ── */}
+        {/* ── Établissements actifs en NIGHT ── */}
         <div style={{ background: "#fff", borderRadius: 14, padding: "24px 28px", boxShadow: "0 1px 4px rgba(0,0,0,.06)", marginBottom: 32 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <h2 style={{ fontWeight: 700, fontSize: "1.1rem", color: "#1a1740", margin: 0 }}>
-              Établissements actifs en DAY
+              Établissements actifs en NIGHT
             </h2>
-            {/* Search */}
             <div style={{ position: "relative" }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9ca3af", fontSize: "1rem" }}>🔍</span>
               <input
@@ -195,8 +194,8 @@ export default function ServiceDayPage() {
                 onClick={() => setCatFilter(cat)}
                 style={{
                   padding: "6px 16px", borderRadius: 20, border: "1px solid",
-                  borderColor: catFilter === cat ? "#6366f1" : "#e8eaf0",
-                  background: catFilter === cat ? "#6366f1" : "#fff",
+                  borderColor: catFilter === cat ? "#7c3aed" : "#e8eaf0",
+                  background: catFilter === cat ? "#7c3aed" : "#fff",
                   color: catFilter === cat ? "#fff" : "#6b7280",
                   fontWeight: catFilter === cat ? 600 : 400,
                   fontSize: ".85rem", cursor: "pointer", transition: "all .15s",
@@ -211,9 +210,9 @@ export default function ServiceDayPage() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #f0f1f5" }}>
-                {["Nom", "Catégories", "Actif NIGHT ↑", "Statut", "Actions"].map(h => (
+                {["Nom", "Catégories", "Actif DAY ↑", "Statut", "Actions"].map(h => (
                   <th key={h} style={{
-                    textAlign: "left", padding: "8px 12px", fontFamily: "'Inter',sans-serif",
+                    textAlign: "left", padding: "8px 12px",
                     fontSize: ".78rem", fontWeight: 600, color: "#9ca3af", letterSpacing: ".04em",
                   }}>{h}</th>
                 ))}
@@ -223,7 +222,7 @@ export default function ServiceDayPage() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "#9ca3af", fontSize: ".85rem" }}>
-                    Aucun établissement trouvé
+                    Aucun établissement partenaire NIGHT trouvé
                   </td>
                 </tr>
               ) : filtered.map(etab => (
@@ -236,7 +235,7 @@ export default function ServiceDayPage() {
                       ) : (
                         <div style={{
                           width: 36, height: 36, borderRadius: "50%",
-                          background: "linear-gradient(135deg,#fbbf24,#f59e0b)",
+                          background: "linear-gradient(135deg,#7c3aed,#a855f7)",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: ".85rem", fontWeight: 700, color: "#fff",
                         }}>
@@ -252,7 +251,7 @@ export default function ServiceDayPage() {
                     {etab.category ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{
-                          background: "#fef3c7", color: "#92400e", borderRadius: 6,
+                          background: "#ede9fe", color: "#5b21b6", borderRadius: 6,
                           padding: "4px 10px", fontSize: ".78rem", fontWeight: 600,
                         }}>
                           {etab.category}
@@ -264,21 +263,21 @@ export default function ServiceDayPage() {
                     )}
                   </td>
 
-                  {/* Actif NIGHT toggle */}
+                  {/* Actif DAY toggle */}
                   <td style={{ padding: "14px 12px" }}>
                     <div
                       onClick={async () => {
-                        const next = !etab.activeNight;
-                        await updateDoc(doc(db, "day_etablissements", etab.id), { activeNight: next });
+                        const next = !etab.activeDay;
+                        await updateDoc(doc(db, "night_etablissements", etab.id), { activeDay: next });
                       }}
                       style={{
                         width: 44, height: 24, borderRadius: 12, position: "relative", cursor: "pointer",
-                        background: etab.activeNight ? "#a78bfa" : "#e5e7eb", transition: "background .2s",
+                        background: etab.activeDay ? "#fbbf24" : "#e5e7eb", transition: "background .2s",
                       }}
                     >
                       <div style={{
                         position: "absolute", top: 3,
-                        left: etab.activeNight ? 22 : 3,
+                        left: etab.activeDay ? 22 : 3,
                         width: 18, height: 18, borderRadius: "50%",
                         background: "#fff", transition: "left .2s",
                         boxShadow: "0 1px 3px rgba(0,0,0,.2)",
@@ -300,8 +299,8 @@ export default function ServiceDayPage() {
 
                   {/* Actions */}
                   <td style={{ padding: "14px 12px" }}>
-                    <a href="/admin/yassala-day/etablissements" style={{
-                      background: "#f4f5f9", border: "1px solid #e8eaf0", color: "#6366f1",
+                    <a href="/admin/yassala-night/etablissements" style={{
+                      background: "#f4f5f9", border: "1px solid #e8eaf0", color: "#7c3aed",
                       borderRadius: 6, padding: "6px 14px", fontSize: ".8rem", fontWeight: 600,
                       cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
                     }}>
@@ -314,53 +313,51 @@ export default function ServiceDayPage() {
           </table>
         </div>
 
-        {/* ── Service NIGHT preview section ── */}
+        {/* ── Service DAY preview section ── */}
         <div style={{
-          background: "linear-gradient(135deg,#0f0c24,#1a1040)",
+          background: "#fff",
+          border: "2px solid #fef3c7",
           borderRadius: 16, padding: "28px 32px",
-          boxShadow: "0 4px 24px rgba(0,0,0,.3)",
+          boxShadow: "0 1px 4px rgba(0,0,0,.06)",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <span style={{ fontSize: "1.4rem" }}>🌙</span>
-            <h2 style={{
-              fontFamily: "'Inter',sans-serif", fontWeight: 700, fontSize: "1.2rem",
-              color: "#f0eeff", margin: 0,
-            }}>
-              Service <span style={{ color: "#a78bfa" }}>NIGHT</span>
+            <span style={{ fontSize: "1.4rem" }}>☀️</span>
+            <h2 style={{ fontFamily: "'Inter',sans-serif", fontWeight: 700, fontSize: "1.2rem", color: "#1a1740", margin: 0 }}>
+              Service <span style={{ color: "#d97706" }}>DAY</span>
             </h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
-            {nightCards.map(card => (
+            {dayCards.map(card => (
               <a key={card.label} href={card.href} style={{ textDecoration: "none" }}>
                 <div style={{
-                  background: "rgba(167,139,250,.08)", border: "1px solid rgba(167,139,250,.2)",
+                  background: "#fffbeb", border: "1px solid #fde68a",
                   borderRadius: 12, padding: "18px 16px 14px", cursor: "pointer",
                   transition: "background .15s",
                 }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(167,139,250,.16)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "rgba(167,139,250,.08)")}
+                  onMouseEnter={e => (e.currentTarget.style.background = "#fef3c7")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "#fffbeb")}
                 >
                   <div style={{ fontSize: "1.8rem", marginBottom: 8 }}>{card.emoji}</div>
-                  <div style={{ fontWeight: 700, fontSize: ".9rem", color: "#f0eeff" }}>
+                  <div style={{ fontWeight: 700, fontSize: ".9rem", color: "#1a1740" }}>
                     {card.label}{" "}
-                    <span style={{ color: "#a78bfa" }}>{card.sublabel}</span>
+                    <span style={{ color: "#d97706" }}>{card.sublabel}</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".74rem", color: "#6b5fa0" }}>
+                    <span style={{ fontFamily: "'Share Tech Mono',monospace", fontSize: ".74rem", color: "#92400e" }}>
                       {card.count} éléments
                     </span>
-                    <span style={{ color: "#6b5fa0", fontSize: ".85rem" }}>›</span>
+                    <span style={{ color: "#d97706", fontSize: ".85rem" }}>›</span>
                   </div>
                 </div>
               </a>
             ))}
           </div>
           <div style={{ marginTop: 16, textAlign: "right" }}>
-            <a href="/admin/yassala-night" style={{
-              color: "#a78bfa", fontSize: ".82rem", fontFamily: "'Inter',sans-serif",
+            <a href="/admin/yassala-day" style={{
+              color: "#d97706", fontSize: ".82rem", fontFamily: "'Inter',sans-serif",
               textDecoration: "none", fontWeight: 500,
             }}>
-              Gérer le Service NIGHT →
+              Gérer le Service DAY →
             </a>
           </div>
         </div>
