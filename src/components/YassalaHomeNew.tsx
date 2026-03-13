@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useTheme, type ThemeMode } from '@/context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
-/* ─── Types (local, matching NightHome) ──────────────────────────────── */
+/* ─── Types ──────────────────────────────────────────────────────────── */
 export type Product = {
   id: string; name: string; desc: string; price: number;
   image: string; cat: string; badge: string; stock: number; isActive?: boolean;
 };
 export type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
-export type Pack     = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 export type Settings = {
   shopOpen: boolean; deliveryMin: number; freeDelivery: number;
   hours: string; zone: string; whatsapp: string;
@@ -19,9 +20,10 @@ export type Settings = {
 };
 export type Banner = {
   id: string; title: string; subtitle: string; desc: string; cta: string;
-  link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number;
+  link: string; gradient: string; image: string; brightness?: number;
+  active: boolean; order: number;
 };
-export type NightPartenaire = {
+export type Etablissement = {
   id: string; name: string; slug?: string; description?: string;
   address?: string; phone?: string; logoUrl?: string; coverUrl?: string;
   openHours?: string; isActive: boolean;
@@ -31,116 +33,91 @@ export type CartItem = { id: string; name: string; price: number; qty: number; }
 interface HomeNewProps {
   products:         Product[];
   categories:       Category[];
-  merchants:        NightPartenaire[];
+  /** night_etablissements (utilisé en mode NIGHT) */
+  merchants:        Etablissement[];
+  /** banners collection (nuit) – utilisé comme fallback */
   banners:          Banner[];
   settings:         Settings;
   cart:             CartItem[];
   onOpenCart:       () => void;
   onOpenAuth:       () => void;
   currentUserEmail?: string | null;
-  onSignOut?:       () => void;
   activeCat:        string;
   onSetActiveCat:   (cat: string) => void;
   onAddToCart:      (product: Product) => void;
 }
 
-/* ─── Theme toggle button ─────────────────────────────────────────────── */
+/* ─── Toggle DAY / NIGHT (sans AUTO côté client) ────────────────────── */
 function ThemeToggle() {
-  const { theme, resolvedTheme, setTheme } = useTheme();
-
-  const options: { value: ThemeMode; label: string; icon: string }[] = [
-    { value: 'day',   label: 'DAY',   icon: '☀️' },
-    { value: 'night', label: 'NIGHT', icon: '🌙' },
-    { value: 'auto',  label: 'AUTO',  icon: '⚡' },
-  ];
+  const { resolvedTheme, setTheme } = useTheme();
 
   return (
     <div className="yn-toggle" aria-label="Changer le thème">
-      {options.map(opt => (
-        <button
-          key={opt.value}
-          className={`yn-toggle-btn${theme === opt.value ? ' yn-toggle-active' : ''}`}
-          onClick={() => setTheme(opt.value)}
-          title={opt.value === 'auto' ? 'Mode automatique selon l\'heure' : `Thème ${opt.label}`}
-        >
-          <span className="yn-toggle-icon">{opt.icon}</span>
-          <span className="yn-toggle-label">{opt.label}</span>
-        </button>
-      ))}
+      <button
+        className={`yn-toggle-btn${resolvedTheme === 'day' ? ' yn-toggle-active' : ''}`}
+        onClick={() => setTheme('day')}
+        title="Thème jour"
+      >
+        <span className="yn-toggle-icon">☀️</span>
+        <span className="yn-toggle-label">DAY</span>
+      </button>
+      <button
+        className={`yn-toggle-btn${resolvedTheme === 'night' ? ' yn-toggle-active' : ''}`}
+        onClick={() => setTheme('night')}
+        title="Thème nuit"
+      >
+        <span className="yn-toggle-icon">🌙</span>
+        <span className="yn-toggle-label">NIGHT</span>
+      </button>
     </div>
   );
 }
 
-/* ─── Hero carrousel ─────────────────────────────────────────────────── */
-function HeroBanner({
-  banners, resolvedTheme, onOpenCart,
-}: { banners: Banner[]; resolvedTheme: 'day' | 'night'; onOpenCart: () => void }) {
+/* ─── Hero carrousel — bannière libre, aucune information dessus ─────── */
+function HeroBanner({ banners }: { banners: Banner[] }) {
+  const { resolvedTheme } = useTheme();
   const [idx, setIdx] = useState(0);
 
-  useEffect(() => {
-    if (banners.length <= 1) return;
-    const id = setInterval(() => setIdx(i => (i + 1) % banners.length), 4000);
-    return () => clearInterval(id);
-  }, [banners.length]);
+  const active = banners
+    .filter(b => b.active)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-  const activeBanners = banners.filter(b => b.active).sort((a, b) => a.order - b.order);
+  useEffect(() => {
+    if (active.length <= 1) return;
+    const id = setInterval(() => setIdx(i => (i + 1) % active.length), 4500);
+    return () => clearInterval(id);
+  }, [active.length]);
+
+  const current = active[idx % Math.max(active.length, 1)];
+
+  const fallbackGradient = resolvedTheme === 'night'
+    ? 'linear-gradient(135deg,#0B0F1A 0%,#1a0a2e 60%,#0d1b3e 100%)'
+    : 'linear-gradient(135deg,#ff2d78 0%,#ff8e53 50%,#ffd93d 100%)';
 
   return (
     <section className="yn-hero">
-      {activeBanners.length > 0 ? (
-        <div
-          className="yn-hero-bg"
-          style={{
-            background: activeBanners[idx % activeBanners.length]?.gradient ||
-              (resolvedTheme === 'night'
-                ? 'linear-gradient(135deg,#0B0F1A 0%,#1a0a2e 50%,#0d1b3e 100%)'
-                : 'linear-gradient(135deg,#ff2d78 0%,#ff6b6b 50%,#ffd93d 100%)'),
-          }}
-        >
-          {activeBanners[idx % activeBanners.length]?.image && (
-            <img
-              src={activeBanners[idx % activeBanners.length].image}
-              alt="banner"
-              className="yn-hero-img"
-              style={{ opacity: (activeBanners[idx % activeBanners.length].brightness ?? 70) / 100 }}
-            />
-          )}
-        </div>
-      ) : (
-        <div
-          className="yn-hero-bg"
-          style={{
-            background: resolvedTheme === 'night'
-              ? 'linear-gradient(135deg,#0B0F1A 0%,#1a0a2e 60%,#0d1b3e 100%)'
-              : 'linear-gradient(135deg,#ff2d78 0%,#ff8e53 50%,#ffd93d 100%)',
-          }}
-        />
-      )}
-
-      <div className="yn-hero-overlay" />
-
-      <div className="yn-hero-content">
-        <div className="yn-hero-badge">
-          {resolvedTheme === 'night' ? '🌙 Livraison nocturne' : '☀️ Livraison de jour'}
-        </div>
-        <h1 className="yn-hero-title">
-          {resolvedTheme === 'night' ? 'Livraison nocturne' : 'Livraison de jour'}
-          <br /><span className="yn-hero-accent">— Guyane</span>
-        </h1>
-        <p className="yn-hero-subtitle">
-          Boissons, snacks &amp; plus — livrés en 15–30 min
-        </p>
-        <button className="yn-hero-cta" onClick={onOpenCart}>
-          Commander <span className="yn-cta-arrow">→</span>
-        </button>
+      <div
+        className="yn-hero-bg"
+        style={{ background: current?.gradient || fallbackGradient }}
+      >
+        {current?.image ? (
+          <img
+            src={current.image}
+            alt={current.title || 'Bannière'}
+            className="yn-hero-img"
+            style={{ opacity: ((current.brightness ?? 100) / 100) }}
+          />
+        ) : null}
       </div>
 
-      {activeBanners.length > 1 && (
+      {/* Aucun texte / bouton sur la bannière — pleine visibilité */}
+
+      {active.length > 1 && (
         <div className="yn-hero-dots">
-          {activeBanners.map((_, i) => (
+          {active.map((_, i) => (
             <button
               key={i}
-              className={`yn-dot${i === idx % activeBanners.length ? ' yn-dot-active' : ''}`}
+              className={`yn-dot${i === idx % active.length ? ' yn-dot-active' : ''}`}
               onClick={() => setIdx(i)}
               aria-label={`Slide ${i + 1}`}
             />
@@ -151,7 +128,7 @@ function HeroBanner({
   );
 }
 
-/* ─── Info cards ─────────────────────────────────────────────────────── */
+/* ─── 2 cartes info ──────────────────────────────────────────────────── */
 function InfoCards({ settings }: { settings: Settings }) {
   return (
     <div className="yn-info-cards">
@@ -179,18 +156,16 @@ function SectionHeader({ title, onAll }: { title: string; onAll?: () => void }) 
     <div className="yn-section-header">
       <h2 className="yn-section-title">{title}</h2>
       {onAll && (
-        <button className="yn-section-all" onClick={onAll}>
-          Tout →
-        </button>
+        <button className="yn-section-all" onClick={onAll}>Tout →</button>
       )}
     </div>
   );
 }
 
-/* ─── Merchant card ──────────────────────────────────────────────────── */
-function MerchantCard({ merchant, onClick }: { merchant: NightPartenaire; onClick?: () => void }) {
+/* ─── Carte établissement ────────────────────────────────────────────── */
+function MerchantCard({ merchant, onOpenCart }: { merchant: Etablissement; onOpenCart: () => void }) {
   return (
-    <button className="yn-merchant-card" onClick={onClick}>
+    <button className="yn-merchant-card" onClick={onOpenCart}>
       <div className="yn-merchant-cover">
         {merchant.coverUrl || merchant.logoUrl ? (
           <img
@@ -201,39 +176,41 @@ function MerchantCard({ merchant, onClick }: { merchant: NightPartenaire; onClic
         ) : (
           <div className="yn-merchant-placeholder">🏪</div>
         )}
-        {merchant.isActive && <span className="yn-badge yn-badge-open">Ouvert</span>}
+        {merchant.isActive && (
+          <span className="yn-badge yn-badge-open">Ouvert</span>
+        )}
       </div>
       <div className="yn-merchant-info">
         <div className="yn-merchant-name">{merchant.name}</div>
         <div className="yn-merchant-meta">
           {merchant.openHours && <span>{merchant.openHours}</span>}
-          {merchant.address && <span>{merchant.address}</span>}
+          {merchant.address   && <span>{merchant.address}</span>}
         </div>
       </div>
     </button>
   );
 }
 
-/* ─── Product promo card ─────────────────────────────────────────────── */
+/* ─── Carte produit promo ────────────────────────────────────────────── */
 function PromoCard({ product, onAdd }: { product: Product; onAdd: () => void }) {
   return (
     <button className="yn-promo-card" onClick={onAdd}>
       <div className="yn-promo-img-wrap">
         <span className="yn-promo-emoji">{product.image}</span>
-        {product.badge && <span className="yn-badge yn-badge-promo">{product.badge}</span>}
+        {product.badge && (
+          <span className="yn-badge yn-badge-promo">{product.badge}</span>
+        )}
       </div>
       <div className="yn-promo-info">
         <div className="yn-promo-name">{product.name}</div>
-        <div className="yn-promo-price">{product.price.toFixed(2)}€</div>
+        <div className="yn-promo-price">{Number(product.price).toFixed(2)}€</div>
       </div>
     </button>
   );
 }
 
-/* ─── Category chip ──────────────────────────────────────────────────── */
-function CategoryChip({
-  cat, active, onClick,
-}: { cat: Category; active: boolean; onClick: () => void }) {
+/* ─── Chip catégorie ─────────────────────────────────────────────────── */
+function CategoryChip({ cat, active, onClick }: { cat: Category; active: boolean; onClick: () => void }) {
   return (
     <button
       className={`yn-chip${active ? ' yn-chip-active' : ''}`}
@@ -247,8 +224,8 @@ function CategoryChip({
 
 /* ─── Bottom nav ─────────────────────────────────────────────────────── */
 function BottomNav({
-  cartCount, onOpenCart, activeCat, onSetActiveCat,
-}: { cartCount: number; onOpenCart: () => void; activeCat: string; onSetActiveCat: (c: string) => void }) {
+  cartCount, onOpenCart, onSetActiveCat,
+}: { cartCount: number; onOpenCart: () => void; onSetActiveCat: (c: string) => void }) {
   const [active, setActive] = useState('home');
 
   return (
@@ -302,26 +279,57 @@ function BottomNav({
   );
 }
 
-/* ─── Main YassalaHomeNew component ──────────────────────────────────── */
+/* ─── Composant principal ────────────────────────────────────────────── */
 export default function YassalaHomeNew({
   products,
   categories,
-  merchants,
-  banners,
+  merchants,       // night_etablissements (depuis NightHome)
+  banners,         // banners collection night (depuis NightHome)
   settings,
   cart,
   onOpenCart,
   onOpenAuth,
   currentUserEmail,
-  onSignOut,
   activeCat,
   onSetActiveCat,
   onAddToCart,
 }: HomeNewProps) {
   const { resolvedTheme } = useTheme();
 
-  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  /* ── Fetch day_banners & day_etablissements indépendamment ── */
+  const [dayBanners,  setDayBanners]  = useState<Banner[]>([]);
+  const [dayEtabs,    setDayEtabs]    = useState<Etablissement[]>([]);
 
+  useEffect(() => {
+    // day_banners (avec fallback sur banners si vide)
+    const unsubDB = onSnapshot(collection(db, 'day_banners'), snap => {
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Banner));
+      setDayBanners(all.length > 0 ? all : []);
+    });
+
+    // day_etablissements
+    const unsubDE = onSnapshot(collection(db, 'day_etablissements'), snap => {
+      setDayEtabs(
+        snap.docs
+          .map(d => ({ id: d.id, ...d.data() } as Etablissement))
+          .filter(e => e.isActive)
+          .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      );
+    });
+
+    return () => { unsubDB(); unsubDE(); };
+  }, []);
+
+  /* ── Choisir les données selon le thème ── */
+  const displayBanners      = resolvedTheme === 'day'
+    ? (dayBanners.length > 0 ? dayBanners : banners)
+    : banners;
+
+  const displayEtablissements: Etablissement[] = resolvedTheme === 'day'
+    ? dayEtabs
+    : merchants;
+
+  const cartCount    = cart.reduce((s, i) => s + i.qty, 0);
   const promoProducts = products.filter(p => p.badge && p.isActive !== false);
   const filteredProducts = activeCat === 'all'
     ? products.filter(p => p.isActive !== false)
@@ -331,17 +339,6 @@ export default function YassalaHomeNew({
     { key: 'all', label: 'Tout', emoji: '✨', order: 0 },
     ...categories,
   ];
-
-  const [clock, setClock] = useState('');
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      setClock(now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
 
   return (
     <div className={`yn-root yn-${resolvedTheme}`} data-theme={resolvedTheme}>
@@ -380,32 +377,23 @@ export default function YassalaHomeNew({
         </div>
       </header>
 
-      {/* ── MAIN SCROLL CONTENT ── */}
+      {/* ── MAIN ── */}
       <main className="yn-main">
 
-        {/* HERO */}
-        <HeroBanner
-          banners={banners}
-          resolvedTheme={resolvedTheme}
-          onOpenCart={onOpenCart}
-        />
+        {/* HERO — bannière libre, sans texte ni bouton */}
+        <HeroBanner banners={displayBanners} />
 
         {/* 2 INFO CARDS */}
         <InfoCards settings={settings} />
 
         {/* SECTION: À proximité */}
-        {merchants.length > 0 && (
+        {displayEtablissements.length > 0 && (
           <section className="yn-section">
             <SectionHeader title="À proximité" />
             <div className="yn-h-scroll">
-              {merchants.filter(m => m.isActive).length === 0
-                ? merchants.map(m => (
-                    <MerchantCard key={m.id} merchant={m} onClick={onOpenCart} />
-                  ))
-                : merchants.filter(m => m.isActive).map(m => (
-                    <MerchantCard key={m.id} merchant={m} onClick={onOpenCart} />
-                  ))
-              }
+              {displayEtablissements.map(e => (
+                <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
+              ))}
             </div>
           </section>
         )}
@@ -441,20 +429,26 @@ export default function YassalaHomeNew({
         {filteredProducts.length > 0 && (
           <section className="yn-section">
             <SectionHeader
-              title={activeCat === 'all' ? 'Tous les produits' : allCats.find(c => c.key === activeCat)?.label || ''}
+              title={
+                activeCat === 'all'
+                  ? 'Tous les produits'
+                  : (allCats.find(c => c.key === activeCat)?.label || '')
+              }
             />
             <div className="yn-products-grid">
               {filteredProducts.map(p => (
                 <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
                   <div className="yn-product-img-wrap">
                     <span className="yn-product-emoji">{p.image}</span>
-                    {p.badge && <span className="yn-badge yn-badge-promo">{p.badge}</span>}
+                    {p.badge && (
+                      <span className="yn-badge yn-badge-promo">{p.badge}</span>
+                    )}
                   </div>
                   <div className="yn-product-info">
                     <div className="yn-product-name">{p.name}</div>
                     <div className="yn-product-desc">{p.desc}</div>
                     <div className="yn-product-footer">
-                      <span className="yn-product-price">{p.price.toFixed(2)}€</span>
+                      <span className="yn-product-price">{Number(p.price).toFixed(2)}€</span>
                       <span className="yn-product-add">+</span>
                     </div>
                   </div>
@@ -464,7 +458,6 @@ export default function YassalaHomeNew({
           </section>
         )}
 
-        {/* Bottom padding for nav */}
         <div style={{ height: 80 }} />
       </main>
 
@@ -472,7 +465,6 @@ export default function YassalaHomeNew({
       <BottomNav
         cartCount={cartCount}
         onOpenCart={onOpenCart}
-        activeCat={activeCat}
         onSetActiveCat={onSetActiveCat}
       />
     </div>
