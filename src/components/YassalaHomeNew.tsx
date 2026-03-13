@@ -78,8 +78,9 @@ function HeroBanner({ banners }: { banners: Banner[] }) {
   const { resolvedTheme } = useTheme();
   const [idx, setIdx] = useState(0);
 
+  // Même filtre que YassalaDayView : active !== false (affiche tout sauf explicitement désactivé)
   const active = banners
-    .filter(b => b.active)
+    .filter(b => b.active !== false)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   useEffect(() => {
@@ -88,7 +89,7 @@ function HeroBanner({ banners }: { banners: Banner[] }) {
     return () => clearInterval(id);
   }, [active.length]);
 
-  const current = active[idx % Math.max(active.length, 1)];
+  const current = active.length > 0 ? active[idx % active.length] : null;
 
   const fallbackGradient = resolvedTheme === 'night'
     ? 'linear-gradient(135deg,#0B0F1A 0%,#1a0a2e 60%,#0d1b3e 100%)'
@@ -96,19 +97,23 @@ function HeroBanner({ banners }: { banners: Banner[] }) {
 
   return (
     <section className="yn-hero">
-      {/* Bannière : backgroundImage CSS (comme YassalaDayView) pour compatibilité Firebase Storage */}
+      {/* Couche 1 : gradient de fond */}
       <div
         className="yn-hero-bg"
-        style={{
-          background: current?.gradient || fallbackGradient,
-          ...(current?.image ? {
+        style={{ background: current?.gradient || fallbackGradient }}
+      />
+      {/* Couche 2 : image par-dessus (2 divs séparés comme YassalaDayView) */}
+      {current?.image && (
+        <div
+          className="yn-hero-bg"
+          style={{
             backgroundImage: `url(${current.image})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            opacity: (current.brightness ?? 100) / 100,
-          } : {}),
-        }}
-      />
+            opacity: current.brightness ?? 1,
+          }}
+        />
+      )}
 
       {/* Aucun texte / bouton sur la bannière — pleine visibilité */}
 
@@ -310,10 +315,13 @@ export default function YassalaHomeNew({
   const [dayEtabs,    setDayEtabs]    = useState<Etablissement[]>([]);
 
   useEffect(() => {
-    // day_banners (avec fallback sur banners si vide)
+    // day_banners — même filtre que YassalaDayView : active !== false
     const unsubDB = onSnapshot(collection(db, 'day_banners'), snap => {
-      const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Banner));
-      setDayBanners(all.length > 0 ? all : []);
+      const all = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Banner))
+        .filter(b => b.active !== false)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      setDayBanners(all);
     });
 
     // day_etablissements
