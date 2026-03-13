@@ -132,7 +132,7 @@ export default function AdminPage() {
   const [usersSearch, setUsersSearch]         = useState("");
   const [driverApps, setDriverApps]           = useState<{id:string;name:string;phone:string;email:string;zone:string;vehicle:string;message:string;status:string;createdAt:string;password?:string;contractAccepted?:boolean;contractAcceptedAt?:string}[]>([]);
   const [driverFilter, setDriverFilter]       = useState<"all"|"nouveau"|"accepte"|"refuse">("all");
-  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"UTILISATEURS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true,"YASSALA DAY":true,"YASSALA NIGHT":true});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string,boolean>>({"OPÉRATIONS":true,"UTILISATEURS":true,"CATALOGUE":true,"MARKETING":true,"CONFIGURATION":true,"BUSINESS":false,"YASSALA DAY":true,"YASSALA NIGHT":true});
   const [dashPeriod, setDashPeriod] = useState<"24h"|"7j"|"30j">("7j");
   const [pwdWarning, setPwdWarning] = useState(false);
   const [adminWeather, setAdminWeather] = useState<{ condition: string; precipitation: number; isRaining: boolean; isHeavyRain: boolean } | null>(null);
@@ -1199,8 +1199,12 @@ export default function AdminPage() {
             { section:"CONFIGURATION", items:[
               { key:"settings",          label:"PARAMÈTRES",      icon:"⚙️" },
             ]},
+            { section:"BUSINESS", items:[
+              { key:"yassala_day_overview",         label:"SERVICE DAY",      icon:"☀️" },
+              { key:"yassala_night_overview",       label:"SERVICE NIGHT",    icon:"🌙" },
+            ]},
             { section:"YASSALA DAY", items:[
-              { key:"yassala_day_config",          label:"CONFIG JOUR",     icon:"☀️" },
+              { key:"yassala_day_config",          label:"CONFIG JOUR",     icon:"⚙️" },
               { key:"yassala_day_etablissements",  label:"ÉTABLISSEMENTS",  icon:"🏪" },
               { key:"yassala_day_products",        label:"PRODUITS JOUR",   icon:"🛍️" },
               { key:"yassala_day_cats",            label:"CATÉGORIES JOUR", icon:"🗂️" },
@@ -1208,7 +1212,7 @@ export default function AdminPage() {
               { key:"yassala_day_offres",          label:"OFFRES DU JOUR",  icon:"🎁" },
             ]},
             { section:"YASSALA NIGHT", items:[
-              { key:"yassala_night_etablissements", label:"PARTENAIRES NUIT", icon:"🌙" },
+              { key:"yassala_night_etablissements", label:"PARTENAIRES NUIT", icon:"👥" },
             ]},
           ] as const).map((group, gi) => (
             <div key={group.section}>
@@ -1226,7 +1230,7 @@ export default function AdminPage() {
               {!collapsedSections[group.section] && group.items.map(item => (
                 <button key={item.key}
                   className={`admin-sidebar-btn${tab===item.key ? " active" : ""}`}
-                  onClick={() => { if (item.key === "yassala_day_etablissements") { window.location.href = "/admin/yassala-day/etablissements"; return; } if (item.key === "yassala_night_etablissements") { window.location.href = "/admin/yassala-night/etablissements"; return; } setTab(item.key as any); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
+                  onClick={() => { if (item.key === "yassala_day_overview") { window.location.href = "/admin/yassala-day"; return; } if (item.key === "yassala_night_overview") { window.location.href = "/admin/yassala-night"; return; } if (item.key === "yassala_day_etablissements") { window.location.href = "/admin/yassala-day/etablissements"; return; } if (item.key === "yassala_night_etablissements") { window.location.href = "/admin/yassala-night/etablissements"; return; } setTab(item.key as any); setDrawerOpen(false); if (item.key === "orders") setNewOrdersCount(0); }}
                   style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"11px 20px",
                     background: tab===item.key ? "rgba(255,45,120,.08)" : "transparent",
                     border:"none",borderLeft: tab===item.key ? "2px solid #ff2d78" : "2px solid transparent",
