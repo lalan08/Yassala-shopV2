@@ -83,10 +83,10 @@ export default function ServiceDayPage() {
   });
 
   const dayCards = [
-    { label: "Catégories", sublabel: "DAY", emoji: "📦", count: catCount,  href: "/admin?tab=yassala_day_cats",     color: "#fbbf24" },
-    { label: "Produits",   sublabel: "DAY", emoji: "🍔", count: prodCount, href: "/admin?tab=yassala_day_products",  color: "#fbbf24" },
-    { label: "Packs",      sublabel: "DAY", emoji: "📦", count: packCount, href: "/admin?tab=yassala_day_packs",     color: "#fbbf24" },
-    { label: "Offres",     sublabel: "DAY", emoji: "🏷️", count: offerCount, href: "/admin?tab=yassala_day_offres",  color: "#fbbf24" },
+    { label: "Catégories", sublabel: "DAY", emoji: "📦", count: catCount,  href: "/admin/yassala-day/etablissements", color: "#fbbf24" },
+    { label: "Produits",   sublabel: "DAY", emoji: "🍔", count: prodCount, href: "/admin/yassala-day/etablissements", color: "#fbbf24" },
+    { label: "Packs",      sublabel: "DAY", emoji: "📦", count: packCount, href: "/admin/yassala-day/etablissements", color: "#fbbf24" },
+    { label: "Offres",     sublabel: "DAY", emoji: "🏷️", count: offerCount, href: "/admin/yassala-day/etablissements", color: "#fbbf24" },
   ];
 
   const nightCards = [
@@ -300,13 +300,22 @@ export default function ServiceDayPage() {
 
                   {/* Actions */}
                   <td style={{ padding: "14px 12px" }}>
-                    <a href="/admin/yassala-day/etablissements" style={{
-                      background: "#f4f5f9", border: "1px solid #e8eaf0", color: "#6366f1",
-                      borderRadius: 6, padding: "6px 14px", fontSize: ".8rem", fontWeight: 600,
-                      cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6,
-                    }}>
-                      ✎ Éditer
-                    </a>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <a href={`/admin/yassala-day/etablissements/${etab.id}`} style={{
+                        background: "#f4f5f9", border: "1px solid #e8eaf0", color: "#6366f1",
+                        borderRadius: 6, padding: "6px 12px", fontSize: ".8rem", fontWeight: 600,
+                        cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,
+                      }}>
+                        ✎ Profil
+                      </a>
+                      <a href={`/admin/yassala-day/etablissements/${etab.id}/menu`} style={{
+                        background: "linear-gradient(135deg,#6366f1,#8b5cf6)", border: "none", color: "#fff",
+                        borderRadius: 6, padding: "6px 12px", fontSize: ".8rem", fontWeight: 600,
+                        cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4,
+                      }}>
+                        📋 Menu
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}
