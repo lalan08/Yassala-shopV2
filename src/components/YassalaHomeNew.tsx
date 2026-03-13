@@ -168,9 +168,9 @@ function SectionHeader({ title, onAll }: { title: string; onAll?: () => void }) 
 }
 
 /* ─── Carte établissement ────────────────────────────────────────────── */
-function MerchantCard({ merchant, onOpenCart }: { merchant: Etablissement; onOpenCart: () => void }) {
+function MerchantCard({ merchant, onOpen }: { merchant: Etablissement; onOpen: () => void }) {
   return (
-    <button className="yn-merchant-card" onClick={onOpenCart}>
+    <button className="yn-merchant-card" onClick={onOpen}>
       <div className="yn-merchant-cover">
         {merchant.coverUrl || merchant.logoUrl ? (
           <img
@@ -337,6 +337,10 @@ export default function YassalaHomeNew({
     return () => { unsubDB(); unsubDE(); };
   }, []);
 
+  /* ── Établissement sélectionné ── */
+  const [selectedEtab, setSelectedEtab] = useState<Etablissement | null>(null);
+  const [etabSearch, setEtabSearch] = useState('');
+
   /* ── Choisir les données selon le thème ── */
   const displayBanners      = resolvedTheme === 'day'
     ? (dayBanners.length > 0 ? dayBanners : banners)
@@ -411,7 +415,7 @@ export default function YassalaHomeNew({
                 <SectionHeader title="Nos établissements" />
                 <div className="yn-etabs-grid">
                   {displayEtablissements.map(e => (
-                    <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
+                    <MerchantCard key={e.id} merchant={e} onOpen={() => { setSelectedEtab(e); setEtabSearch(''); }} />
                   ))}
                 </div>
               </section>
@@ -433,7 +437,7 @@ export default function YassalaHomeNew({
                 <SectionHeader title="À proximité" />
                 <div className="yn-h-scroll">
                   {displayEtablissements.map(e => (
-                    <MerchantCard key={e.id} merchant={e} onOpenCart={onOpenCart} />
+                    <MerchantCard key={e.id} merchant={e} onOpen={() => { setSelectedEtab(e); setEtabSearch(''); }} />
                   ))}
                 </div>
               </section>
@@ -514,6 +518,113 @@ export default function YassalaHomeNew({
         onOpenCart={onOpenCart}
         onSetActiveCat={onSetActiveCat}
       />
+
+      {/* ── FICHE ÉTABLISSEMENT (bottom sheet) ── */}
+      {selectedEtab && (() => {
+        const etabProds = products.filter((p: any) =>
+          p.etablissementId === selectedEtab.id && p.isActive !== false
+        );
+        const q = etabSearch.toLowerCase().trim();
+        const filtered2 = q
+          ? etabProds.filter(p => p.name.toLowerCase().includes(q) || (p.desc || '').toLowerCase().includes(q))
+          : etabProds;
+        return (
+          <>
+            {/* Backdrop */}
+            <div
+              onClick={() => setSelectedEtab(null)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 100 }}
+            />
+            {/* Sheet */}
+            <div style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, height: '93vh',
+              background: 'var(--yn-bg, #fff)', borderRadius: '20px 20px 0 0',
+              zIndex: 101, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+              animation: 'slideUp .3s cubic-bezier(.32,.72,0,1) both',
+              boxShadow: '0 -4px 24px rgba(0,0,0,.12)',
+            }}>
+              {/* Poignée */}
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px 0 4px' }}>
+                <div style={{ width: 36, height: 4, background: '#e5e7eb', borderRadius: 2 }} />
+              </div>
+
+              {/* Scrollable */}
+              <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
+                {/* Cover */}
+                <div style={{ position: 'relative', height: 180, overflow: 'hidden', background: 'linear-gradient(135deg,#ff2d78 0%,#ffd93d 100%)' }}>
+                  {selectedEtab.coverUrl && (
+                    <img src={selectedEtab.coverUrl} alt={selectedEtab.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(.65)' }} />
+                  )}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(0,0,0,.6) 100%)' }} />
+                  <button onClick={() => setSelectedEtab(null)}
+                    style={{ position: 'absolute', top: 14, right: 14, zIndex: 3, width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,.45)', border: 'none', color: '#fff', fontSize: '1.1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                  <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '0 20px 16px', textAlign: 'center' }}>
+                    {selectedEtab.logoUrl && (
+                      <div style={{ width: 60, height: 60, borderRadius: '50%', border: '3px solid #fff', overflow: 'hidden', background: '#fff', marginBottom: 8, boxShadow: '0 4px 16px rgba(0,0,0,.3)' }}>
+                        <img src={selectedEtab.logoUrl} alt={selectedEtab.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
+                    <h1 style={{ fontFamily: "'Inter',sans-serif", fontWeight: 800, fontSize: '1.3rem', margin: '0 0 6px', color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,.5)' }}>
+                      {selectedEtab.name}
+                    </h1>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {selectedEtab.openHours && <span style={{ fontSize: '.75rem', color: 'rgba(255,255,255,.88)' }}>🕐 {selectedEtab.openHours}</span>}
+                      {selectedEtab.address && <span style={{ fontSize: '.75rem', color: 'rgba(255,255,255,.82)' }}>📍 {selectedEtab.address}</span>}
+                      {selectedEtab.phone && <a href={`tel:${selectedEtab.phone}`} style={{ fontSize: '.75rem', color: 'rgba(255,255,255,.92)', textDecoration: 'none', fontWeight: 600 }}>📞 {selectedEtab.phone}</a>}
+                      <span style={{ background: selectedEtab.isActive ? 'rgba(34,197,94,.85)' : 'rgba(120,120,120,.75)', color: '#fff', fontSize: '.68rem', fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
+                        {selectedEtab.isActive ? 'OUVERT' : 'FERMÉ'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Barre de recherche */}
+                <div style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 16px 10px', background: 'var(--yn-bg, #fff)', borderBottom: '1px solid #e5e7eb' }}>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: '.95rem', color: '#9ca3af', pointerEvents: 'none' }}>🔍</span>
+                    <input
+                      value={etabSearch}
+                      onChange={e => setEtabSearch(e.target.value)}
+                      placeholder={`Rechercher dans ${selectedEtab.name}`}
+                      style={{ width: '100%', background: '#f5f5f7', border: '1px solid #e5e7eb', borderRadius: 14, padding: '12px 16px 12px 42px', fontFamily: "'Inter',sans-serif", fontSize: '.9rem', color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Produits */}
+                <div style={{ padding: '20px 16px 80px' }}>
+                  {filtered2.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af', fontFamily: "'Inter',sans-serif" }}>
+                      <div style={{ fontSize: '2rem', marginBottom: 8 }}>🍽️</div>
+                      <p>{q ? 'Aucun résultat' : 'Aucun article disponible'}</p>
+                    </div>
+                  ) : (
+                    <div className="yn-products-grid">
+                      {filtered2.map(p => (
+                        <button key={p.id} className="yn-product-card" onClick={() => onAddToCart(p)}>
+                          <div className="yn-product-img-wrap">
+                            {isUrl(p.image) ? <img src={p.image} alt={p.name} className="yn-product-img-url" /> : <span className="yn-product-emoji">{p.image}</span>}
+                            {p.badge && <span className="yn-badge yn-badge-promo">{p.badge}</span>}
+                          </div>
+                          <div className="yn-product-info">
+                            <div className="yn-product-name">{p.name}</div>
+                            <div className="yn-product-desc">{p.desc}</div>
+                            <div className="yn-product-footer">
+                              <span className="yn-product-price">{Number(p.price).toFixed(2)}€</span>
+                              <span className="yn-product-add">+</span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
