@@ -3406,6 +3406,96 @@ function NightHome() {
         </div>
       </nav>}
 
+      {/* ── BOTTOM NAV BAR (Yassala Day uniquement) ── */}
+      {resolvedTheme === 'day' && <nav style={{
+        position:"fixed", bottom:0, left:0, right:0, zIndex:800,
+        background:"rgba(246,247,251,0.97)",
+        backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)",
+        paddingTop:10,
+        paddingBottom:"max(14px, env(safe-area-inset-bottom))",
+        paddingLeft:12, paddingRight:12,
+        borderTop:"1px solid rgba(255,45,120,.15)",
+        boxShadow:"0 -8px 40px rgba(0,0,0,.06), 0 -1px 0 rgba(255,45,120,.08)",
+      }}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-evenly",maxWidth:520,margin:"0 auto"}}>
+
+          {/* Accueil */}
+          <button onClick={() => window.scrollTo({top:0,behavior:"smooth"})}
+            style={{width:54,height:54,borderRadius:"50%",
+              background:"rgba(255,45,120,.05)",
+              border:"1px solid rgba(255,45,120,.25)",
+              boxShadow:"0 0 14px rgba(255,45,120,.1), inset 0 1px 0 rgba(255,255,255,.8)",
+              cursor:"pointer",flexShrink:0,
+              display:"flex",alignItems:"center",justifyContent:"center",color:"#ff2d78"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+              <polyline points="9,22 9,12 15,12 15,22"/>
+            </svg>
+          </button>
+
+          {/* Catalogue */}
+          <button onClick={() => document.getElementById("catalogue")?.scrollIntoView({behavior:"smooth"})}
+            style={{width:54,height:54,borderRadius:"50%",
+              background:"rgba(255,45,120,.05)",
+              border:"1px solid rgba(255,45,120,.25)",
+              boxShadow:"0 0 14px rgba(255,45,120,.1), inset 0 1px 0 rgba(255,255,255,.8)",
+              cursor:"pointer",flexShrink:0,
+              display:"flex",alignItems:"center",justifyContent:"center",color:"#ff2d78"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </button>
+
+          {/* Panier */}
+          <button onClick={openCart}
+            style={{width:54,height:54,borderRadius:"50%",
+              background:"rgba(255,45,120,.08)",
+              border:"1px solid rgba(255,45,120,.35)",
+              boxShadow:"0 0 18px rgba(255,45,120,.2), inset 0 1px 0 rgba(255,255,255,.8)",
+              cursor:"pointer",flexShrink:0,position:"relative",
+              display:"flex",alignItems:"center",justifyContent:"center",color:"#ff2d78"}}>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/>
+            </svg>
+            {cartCount > 0 && (
+              <span style={{position:"absolute",top:5,right:5,
+                background:"linear-gradient(135deg,#ff2d78,#ff6b9d)",
+                color:"#fff",borderRadius:"50%",
+                minWidth:16,height:16,fontSize:".5rem",fontWeight:900,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                border:"1.5px solid rgba(246,247,251,.8)",lineHeight:1,
+                boxShadow:"0 0 8px rgba(255,45,120,.5)"}}>
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </button>
+
+          {/* Compte / Connexion */}
+          <button onClick={() => {
+            if (currentUser) { setShowHistory(true); fetchHistory(); }
+            else {
+              if (!authEmail && orderForm.email) setAuthEmail(orderForm.email);
+              setShowAuthModal(true);
+            }
+          }}
+            style={{width:54,height:54,borderRadius:"50%",
+              background: currentUser ? "rgba(255,45,120,.08)" : "rgba(255,45,120,.05)",
+              border:"1px solid rgba(255,45,120,.25)",
+              boxShadow: currentUser ? "0 0 18px rgba(255,45,120,.2), inset 0 1px 0 rgba(255,255,255,.8)" : "0 0 14px rgba(255,45,120,.1), inset 0 1px 0 rgba(255,255,255,.8)",
+              cursor:"pointer",flexShrink:0,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              color:"#ff2d78"}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </button>
+
+        </div>
+      </nav>}
+
       {/* floating-driver-btn retiré — bouton déplacé dans la nav en haut */}
 
       {/* ── DRIVER REGISTRATION MODAL ── */}
