@@ -1464,76 +1464,85 @@ function NightHome() {
       </section>
 
       {/* ── INFO BAR ── */}
-      <div className="info-bar" style={{
-        position:"relative",zIndex:1,
-        background:"linear-gradient(180deg,#0a0620 0%,#060412 100%)",
-        borderTop:"1px solid rgba(255,45,120,.35)",
-        borderBottom:"1px solid rgba(0,245,255,.25)",
-        overflow:"hidden",
+      <div style={{
+        position:"relative",zIndex:2,
+        marginTop:-28,
+        padding:"0 12px 12px",
       }}>
-        {/* fond ambient glow */}
-        <div style={{
-          position:"absolute",inset:0,
-          background:"radial-gradient(ellipse 60% 100% at 20% 50%,rgba(255,45,120,.06) 0%,transparent 70%)," +
-                     "radial-gradient(ellipse 60% 100% at 80% 50%,rgba(0,245,255,.05) 0%,transparent 70%)",
-          pointerEvents:"none",
-        }}/>
-        <div style={{display:"flex",position:"relative"}}>
-          {[
-            {icon:"⚡", color:"#ffe44d", glow:"rgba(255,228,77,.35)",  title:"Ultra rapide",     sub:"– 30 min"},
-            {icon:"🎁", color:"#ff2d78", glow:"rgba(255,45,120,.35)",  title:"Livraison offerte",sub:`dès ${deliveryConfig.free_delivery_threshold}€`},
-            {icon:"📡", color:"#00c3ff", glow:"rgba(0,195,255,.35)",   title:settings.zone,      sub:"couverture totale"},
-            {icon:"🌙", color:"#a78bfa", glow:"rgba(167,139,250,.35)", title:settings.hours,     sub:"7j/7"},
-          ].map((item,i,arr) => (
-            <div key={i} className="info-bar-item" style={{
-              flex:1,
-              padding:"16px 10px",
-              display:"flex",
-              flexDirection:"column",
-              alignItems:"center",
-              gap:8,
-              borderRight: i < arr.length-1 ? "1px solid rgba(255,255,255,.05)" : "none",
-              position:"relative",
-            }}>
-              {/* icône avec halo */}
-              <div style={{
-                width:42,height:42,
-                borderRadius:"50%",
-                background:`radial-gradient(circle,${item.glow} 0%,rgba(0,0,0,0) 70%)`,
-                border:`1px solid ${item.color}33`,
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:"1.3rem",
-                boxShadow:`0 0 14px ${item.glow}, inset 0 0 8px ${item.color}22`,
+        <div className="info-bar" style={{
+          position:"relative",
+          background:"rgba(10,6,32,.85)",
+          backdropFilter:"blur(16px)",
+          WebkitBackdropFilter:"blur(16px)",
+          borderRadius:16,
+          border:"1px solid rgba(255,255,255,.1)",
+          boxShadow:"0 8px 32px rgba(0,0,0,.4), 0 0 0 1px rgba(255,45,120,.1), inset 0 1px 0 rgba(255,255,255,.06)",
+          overflow:"hidden",
+        }}>
+          {/* fond ambient glow */}
+          <div style={{
+            position:"absolute",inset:0,borderRadius:16,
+            background:"radial-gradient(ellipse 50% 120% at 25% 50%,rgba(255,45,120,.07) 0%,transparent 70%)," +
+                       "radial-gradient(ellipse 50% 120% at 75% 50%,rgba(0,245,255,.06) 0%,transparent 70%)",
+            pointerEvents:"none",
+          }}/>
+          <div style={{display:"flex",position:"relative"}}>
+            {[
+              {icon:"⚡", color:"#ffe44d", glow:"rgba(255,228,77,.35)",  title:"Ultra rapide",     sub:"– 30 min"},
+              {icon:"🎁", color:"#ff2d78", glow:"rgba(255,45,120,.35)",  title:"Livraison offerte",sub:`dès ${deliveryConfig.free_delivery_threshold}€`},
+              {icon:"📡", color:"#00c3ff", glow:"rgba(0,195,255,.35)",   title:settings.zone,      sub:"couverture totale"},
+              {icon:"🌙", color:"#a78bfa", glow:"rgba(167,139,250,.35)", title:settings.hours,     sub:"7j/7"},
+            ].map((item,i,arr) => (
+              <div key={i} className="info-bar-item" style={{
+                flex:1,
+                padding:"14px 6px",
+                display:"flex",
+                flexDirection:"column",
+                alignItems:"center",
+                gap:6,
+                borderRight: i < arr.length-1 ? "1px solid rgba(255,255,255,.06)" : "none",
+                position:"relative",
               }}>
-                {item.icon}
-              </div>
-              {/* texte */}
-              <div style={{textAlign:"center"}}>
-                <strong style={{
-                  display:"block",
-                  fontWeight:800,
-                  fontSize:".75rem",
-                  letterSpacing:".08em",
-                  color:"#f0eeff",
-                  textTransform:"uppercase",
-                  lineHeight:1.2,
+                {/* icône avec halo */}
+                <div style={{
+                  width:38,height:38,
+                  borderRadius:"50%",
+                  background:`radial-gradient(circle,${item.glow} 0%,rgba(0,0,0,0) 70%)`,
+                  border:`1px solid ${item.color}33`,
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  fontSize:"1.15rem",
+                  boxShadow:`0 0 12px ${item.glow}, inset 0 0 6px ${item.color}22`,
                 }}>
-                  {item.title}
-                </strong>
-                <small style={{
-                  display:"block",
-                  marginTop:3,
-                  fontSize:".68rem",
-                  fontFamily:"'Share Tech Mono',monospace",
-                  color:item.color,
-                  opacity:.85,
-                  letterSpacing:".04em",
-                }}>
-                  {item.sub}
-                </small>
+                  {item.icon}
+                </div>
+                {/* texte */}
+                <div style={{textAlign:"center"}}>
+                  <strong style={{
+                    display:"block",
+                    fontWeight:800,
+                    fontSize:".7rem",
+                    letterSpacing:".06em",
+                    color:"#f0eeff",
+                    textTransform:"uppercase",
+                    lineHeight:1.2,
+                  }}>
+                    {item.title}
+                  </strong>
+                  <small style={{
+                    display:"block",
+                    marginTop:2,
+                    fontSize:".65rem",
+                    fontFamily:"'Share Tech Mono',monospace",
+                    color:item.color,
+                    opacity:.9,
+                    letterSpacing:".04em",
+                  }}>
+                    {item.sub}
+                  </small>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
