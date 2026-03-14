@@ -15,8 +15,6 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWith
 import type { User } from "firebase/auth";
 import FlashDealBanner from "@/components/FlashDealBanner";
 import { isPromoActive, computePromoDiscount, getProductPromoPrice, type Promotion } from "@/utils/promoEngine";
-import AIChatWidget, { type AIChatContext } from "@/components/AIChatWidget";
-import VoiceOrderButton from "@/components/VoiceOrderButton";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -181,7 +179,7 @@ const translateAuthError = (code: string) => {
 type Product = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; isActive?: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
 type Pack = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiRecommendEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiStockEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type CartItem = { id: string; name: string; price: number; qty: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
 type NightPartenaire = { id: string; name: string; slug?: string; description?: string; address?: string; phone?: string; logoUrl?: string; coverUrl?: string; openHours?: string; isActive: boolean; };
@@ -199,10 +197,9 @@ const defaultSettings: Settings = {
   hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX",
   paymentOnlineEnabled: true, paymentCashEnabled: true,
   fulfillmentDeliveryEnabled: true, fulfillmentPickupEnabled: true,
-  aiChatEnabled: false, aiVoiceEnabled: true, aiRecommendEnabled: true,
-  aiDescEnabled: true, aiPredictEnabled: true, aiAnomalyEnabled: true,
-  aiBannerEnabled: true, aiStockEnabled: true, aiCoachingEnabled: true,
-  aiCouponEnabled: true, aiRouteEnabled: true,
+  aiRecommendEnabled: true,
+  aiPredictEnabled: true, aiAnomalyEnabled: true,
+  aiStockEnabled: true, aiCouponEnabled: true, aiRouteEnabled: true,
 };
 
 function useCountdownToDay() {
@@ -1669,12 +1666,6 @@ function NightHome() {
             🛒 <span style={{color:"#ff2d78",textShadow:"0 0 20px rgba(255,45,120,.6)"}}>CATALOGUE</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-            {settings.aiVoiceEnabled !== false && (
-              <VoiceOrderButton
-                products={products}
-                onAddItems={items => items.forEach(item => addToCart(item.id, item.name, item.price))}
-              />
-            )}
             {!loading && (
               <span style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#00f5ff",
                 letterSpacing:".1em",textTransform:"uppercase",
@@ -3719,22 +3710,6 @@ function NightHome() {
         </div>
       )}
 
-      {/* ── CHATBOT IA ── */}
-      {settings.aiChatEnabled !== false && (
-        <AIChatWidget context={{
-          shopOpen:    settings.shopOpen,
-          hours:       settings.hours ?? "20h–06h",
-          zone:        settings.zone  ?? "Cayenne",
-          deliveryMin: deliveryConfig.minimum_order_amount ?? 5,
-          freeDelivery: deliveryConfig.free_delivery_threshold ?? 30,
-          products: products.map(p => ({
-            name:  p.name,
-            price: p.price,
-            stock: p.stock ?? 0,
-            cat:   p.cat ?? "",
-          })),
-        }} />
-      )}
     </>
   );
 }
