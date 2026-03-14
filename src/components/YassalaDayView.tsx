@@ -1268,216 +1268,167 @@ export default function YassalaDayView() {
       {/* ── BOTTOM SHEET — ÉTABLISSEMENT SÉLECTIONNÉ ── */}
       {selectedEtab && (
         <>
-          {/* Backdrop — clic pour fermer */}
-          <div
-            onClick={() => { setSelectedEtab(null); setActiveCat("all"); }}
-            style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:100,animation:"fadeIn .2s both"}}
-          />
+          {/* Backdrop */}
+          <div onClick={() => { setSelectedEtab(null); setActiveCat("all"); setEtabSearch(""); }}
+            style={{position:"fixed",inset:0,background:"rgba(17,24,39,.3)",backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)",zIndex:100,animation:"fadeIn .2s both"}} />
 
-          {/* Fiche établissement — slide depuis le bas */}
-          <div style={{position:"fixed",bottom:0,left:0,right:0,height:"93vh",background:D.bg,
+          {/* Bottom sheet */}
+          <div style={{position:"fixed",bottom:0,left:0,right:0,height:"94vh",background:D.bg,
             borderRadius:"20px 20px 0 0",zIndex:101,overflow:"hidden",
             display:"flex",flexDirection:"column",
             animation:"slideUp .3s cubic-bezier(.32,.72,0,1) both",
-            boxShadow:"0 -4px 24px rgba(0,0,0,.12)"}}>
+            boxShadow:"0 -4px 32px rgba(0,0,0,.12)"}}>
 
-            {/* Barre de poignée */}
-            <div style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
-              padding:"10px 0 4px",background:D.bg}}>
-              <div style={{width:36,height:4,background:D.border,borderRadius:2}} />
+            {/* Drag handle */}
+            <div style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",padding:"10px 0 0",background:D.card}}>
+              <div style={{width:40,height:4,background:D.border,borderRadius:2}} />
             </div>
 
-            {/* Zone scrollable */}
+            {/* Scrollable area */}
             <div style={{flex:1,overflowY:"auto",scrollbarWidth:"none"}}>
 
-              {/* ── Cover hero ── */}
-              <div style={{position:"relative",height:200,overflow:"hidden",
-                background:"linear-gradient(135deg,#1a0033 0%,#3d0066 100%)"}}>
-                {selectedEtab.coverUrl ? (
-                  <img src={selectedEtab.coverUrl} alt={selectedEtab.name}
-                    style={{width:"100%",height:"100%",objectFit:"cover",filter:"brightness(.65)"}} />
-                ) : (
-                  <div style={{position:"absolute",inset:0,
-                    background:"linear-gradient(135deg,rgba(255,45,120,.35) 0%,rgba(58,191,248,.25) 100%)"}} />
-                )}
-                <div style={{position:"absolute",inset:0,
-                  background:"linear-gradient(to bottom,rgba(0,0,0,.18) 0%,rgba(0,0,0,.62) 100%)"}} />
+              {/* Cover */}
+              <div style={{position:"relative",height:172,overflow:"hidden",background:`linear-gradient(135deg,${D.pink}18,${D.cyan}18)`,flexShrink:0}}>
+                {selectedEtab.coverUrl && <img src={selectedEtab.coverUrl} alt={selectedEtab.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />}
+                <div style={{position:"absolute",inset:0,background:"linear-gradient(to bottom,rgba(0,0,0,.06) 0%,rgba(0,0,0,.32) 100%)"}} />
+                <button onClick={() => { setSelectedEtab(null); setActiveCat("all"); setEtabSearch(""); }}
+                  style={{position:"absolute",top:12,left:12,zIndex:3,width:36,height:36,borderRadius:"50%",
+                    background:"rgba(255,255,255,.92)",backdropFilter:"blur(8px)",border:"none",
+                    color:D.text,fontSize:"1rem",fontWeight:700,cursor:"pointer",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    boxShadow:"0 2px 8px rgba(0,0,0,.15)"}}>←</button>
+              </div>
 
-                {/* Bouton ✕ fermer */}
-                <button
-                  onClick={() => { setSelectedEtab(null); setActiveCat("all"); }}
-                  style={{position:"absolute",top:14,right:14,zIndex:3,
-                    width:36,height:36,borderRadius:"50%",
-                    background:"rgba(0,0,0,.45)",backdropFilter:"blur(8px)",
-                    border:"none",color:"#fff",fontSize:"1.1rem",cursor:"pointer",
-                    display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-
-                {/* Infos établissement */}
-                <div style={{position:"absolute",inset:0,zIndex:2,
-                  display:"flex",flexDirection:"column",alignItems:"center",
-                  justifyContent:"flex-end",padding:"0 20px 16px",textAlign:"center"}}>
-                  {selectedEtab.logoUrl && (
-                    <div style={{width:68,height:68,borderRadius:"50%",border:"3px solid #fff",
-                      overflow:"hidden",background:"#fff",flexShrink:0,
-                      boxShadow:"0 4px 20px rgba(0,0,0,.35)",marginBottom:10}}>
-                      <img src={selectedEtab.logoUrl} alt={selectedEtab.name}
-                        style={{width:"100%",height:"100%",objectFit:"cover"}} />
-                    </div>
-                  )}
-                  <h1 style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1.4rem",
-                    margin:"0 0 8px",color:"#fff",textShadow:"0 2px 8px rgba(0,0,0,.5)"}}>
-                    {selectedEtab.name}
-                  </h1>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",
-                    gap:10,flexWrap:"wrap",marginBottom:4}}>
-                    {selectedEtab.openHours && (
-                      <span style={{fontFamily:"'Inter',sans-serif",fontSize:".75rem",color:"rgba(255,255,255,.88)"}}>
-                        🕐 {selectedEtab.openHours}
-                      </span>
-                    )}
-                    {selectedEtab.address && (
-                      <span style={{fontFamily:"'Inter',sans-serif",fontSize:".75rem",color:"rgba(255,255,255,.82)"}}>
-                        📍 {selectedEtab.address}
-                      </span>
-                    )}
-                    {selectedEtab.phone && (
-                      <a href={`tel:${selectedEtab.phone}`}
-                        style={{fontFamily:"'Inter',sans-serif",fontSize:".75rem",
-                          color:"rgba(255,255,255,.92)",textDecoration:"none",fontWeight:600}}>
-                        📞 {selectedEtab.phone}
-                      </a>
-                    )}
+              {/* Info panel */}
+              <div style={{background:D.card,padding:"0 16px 14px",borderBottom:`1px solid ${D.border}`}}>
+                <div style={{display:"flex",gap:12,alignItems:"flex-end",marginTop:-26,position:"relative",zIndex:2,marginBottom:10}}>
+                  <div style={{width:56,height:56,borderRadius:14,overflow:"hidden",flexShrink:0,
+                    border:"3px solid #fff",background:"#fff",
+                    boxShadow:"0 2px 12px rgba(0,0,0,.1)",
+                    display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {selectedEtab.logoUrl
+                      ? <img src={selectedEtab.logoUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                      : <span style={{fontSize:"1.6rem"}}>🏪</span>}
+                  </div>
+                  <div style={{paddingBottom:2,flex:1,minWidth:0}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1.15rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{selectedEtab.name}</div>
                     <span style={{display:"inline-flex",alignItems:"center",gap:5,
-                      background: settings.shopOpen ? "rgba(34,197,94,.82)" : "rgba(120,120,120,.75)",
-                      color:"#fff",fontSize:".68rem",fontFamily:"'Inter',sans-serif",
-                      fontWeight:700,padding:"3px 10px",borderRadius:20}}>
-                      <span style={{width:6,height:6,borderRadius:"50%",background:"#fff",display:"inline-block"}} />
-                      {settings.shopOpen ? "OUVERT" : "FERMÉ"}
+                      background: settings.shopOpen ? "rgba(22,163,74,.1)" : "rgba(107,114,128,.1)",
+                      color: settings.shopOpen ? "#16a34a" : D.muted,
+                      fontSize:".7rem",fontFamily:"'Inter',sans-serif",fontWeight:700,
+                      padding:"3px 10px",borderRadius:20,marginTop:2}}>
+                      <span style={{width:6,height:6,borderRadius:"50%",background: settings.shopOpen ? "#16a34a" : D.muted,display:"inline-block"}} />
+                      {settings.shopOpen ? "Ouvert" : "Fermé"}
                     </span>
                   </div>
                 </div>
-              </div>
-
-              {/* ── Barre de recherche (sticky dans le scroll) ── */}
-              <div style={{position:"sticky",top:0,zIndex:10,padding:"12px 16px 10px",background:"#fff",
-                borderBottom:"1px solid #E6E8EC",boxShadow:"0 2px 8px rgba(0,0,0,.05)"}}>
-                <div style={{position:"relative"}}>
-                  <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",
-                    fontSize:".95rem",pointerEvents:"none",color:"#9ca3af"}}>🔍</span>
-                  <input
-                    value={etabSearch}
-                    onChange={e => setEtabSearch(e.target.value)}
-                    placeholder={`Rechercher dans ${selectedEtab.name}`}
-                    style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,
-                      borderRadius:14,padding:"13px 16px 13px 42px",
-                      fontFamily:"'Inter',sans-serif",fontSize:".9rem",
-                      color:"#111827",outline:"none",boxSizing:"border-box"}}
-                  />
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {selectedEtab.openHours && <span style={{display:"inline-flex",alignItems:"center",gap:5,background:D.cardDark,color:D.muted,fontSize:".75rem",fontFamily:"'Inter',sans-serif",padding:"5px 12px",borderRadius:20}}>⏱ {selectedEtab.openHours}</span>}
+                  {selectedEtab.address && <span style={{display:"inline-flex",alignItems:"center",gap:5,background:D.cardDark,color:D.muted,fontSize:".75rem",fontFamily:"'Inter',sans-serif",padding:"5px 12px",borderRadius:20}}>📍 {selectedEtab.address}</span>}
+                  {selectedEtab.phone && <a href={`tel:${selectedEtab.phone}`} style={{display:"inline-flex",alignItems:"center",gap:5,background:"rgba(27,169,255,.08)",color:D.cyan,fontSize:".75rem",fontFamily:"'Inter',sans-serif",fontWeight:600,padding:"5px 12px",borderRadius:20,textDecoration:"none"}}>📞 {selectedEtab.phone}</a>}
                 </div>
               </div>
 
-              {/* ── CATALOGUE ── */}
-              <section id="catalogue" style={{padding:"32px 16px 80px 16px",position:"relative",zIndex:1}}>
-                {activePromo && (
-                  <div style={{padding:"0 12px",marginBottom:8}}>
-                    <FlashDealBanner promo={activePromo} products={products} source="home" onAddToCart={addToCart} />
-                  </div>
-                )}
-
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,padding:"0 12px",flexWrap:"wrap",gap:10}}>
-                  <div className="section-title" style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1.4rem",color:D.text,letterSpacing:".01em"}}>
-                    Menu
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                    {!loading && (
-                      <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".78rem",color:D.muted,background:"#f5f5f7",borderRadius:20,padding:"4px 12px"}}>
-                        {etabProds.filter(p => p.stock > 0).length} articles
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* À la une — Populaire */}
-                {(() => {
-                  const featured = etabProds.filter(p => (p.badge === "HOT" || p.badge === "BEST") && p.stock > 0);
-                  if (!featured.length) return null;
-                  return (
-                    <div style={{marginBottom:28}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 12px",marginBottom:14}}>
-                        <span style={{fontSize:"1.2rem"}}>🔥</span>
-                        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>Populaire</div>
-                      </div>
-                      <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 12px 8px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
-                        {featured.map(p => (
-                          <div key={p.id} onClick={() => openProductModal(p)}
-                            style={{flexShrink:0,width:150,background:"#fff",borderRadius:18,overflow:"hidden",cursor:"pointer",position:"relative",boxShadow:D.shadow,border:`1px solid ${D.border}`}}>
-                            {p.image ? (
-                              <img src={p.image} alt={p.name} style={{width:"100%",height:100,objectFit:"cover",display:"block"}} />
-                            ) : (
-                              <div style={{width:"100%",height:100,display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f5f7",fontSize:"2.5rem",opacity:.3}}>🍽️</div>
-                            )}
-                            <div style={{padding:"8px 10px 10px"}}>
-                              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".9rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
-                              <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".88rem",color:D.pink,marginTop:3}}>{p.price.toFixed(2)}€</div>
-                            </div>
-                            <span style={{position:"absolute",top:8,left:8,background: p.badge==="HOT" ? D.pink : "#ffb400",color:"#fff",fontSize:".6rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"2px 8px",borderRadius:20}}>
-                              {p.badge==="HOT" ? "🔥" : "⭐"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Filtres catégories */}
-                <div className="cat-bar" style={{display:"flex",gap:10,marginBottom:20,padding:"0 12px 10px"}}>
+              {/* Sticky category tabs */}
+              <div style={{position:"sticky",top:0,zIndex:10,background:D.card,
+                borderBottom:`1px solid ${D.border}`,boxShadow:"0 1px 6px rgba(0,0,0,.04)"}}>
+                <div style={{display:"flex",gap:8,overflowX:"auto",padding:"10px 16px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
                   {cats.map(c => (
-                    <button key={c.key} className="cat-btn" onClick={() => setActiveCat(c.key)}
-                      style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,
-                        padding:"10px 14px",minWidth:72,cursor:"pointer",borderRadius:16,transition:"all .2s",border:"none",
-                        background: activeCat===c.key ? D.pink : "#f5f5f7",
+                    <button key={c.key} onClick={() => setActiveCat(c.key)}
+                      style={{flexShrink:0,padding:"7px 16px",borderRadius:30,
+                        border: activeCat===c.key ? "none" : `1px solid ${D.border}`,
+                        background: activeCat===c.key ? D.text : D.card,
                         color: activeCat===c.key ? "#fff" : D.muted,
-                        boxShadow: activeCat===c.key ? "0 4px 14px rgba(255,45,120,.28)" : "0 1px 3px rgba(0,0,0,.07)"}}>
-                      <span style={{fontSize:"1.5rem",lineHeight:1}}>{c.emoji || "🛍️"}</span>
-                      <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".65rem",letterSpacing:".05em",textTransform:"uppercase",lineHeight:1.2,textAlign:"center"}}>
-                        {c.emoji ? c.label.replace(c.emoji,"").trim() : c.label}
-                      </span>
+                        fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".82rem",
+                        cursor:"pointer",whiteSpace:"nowrap",transition:"all .15s"}}>
+                      {c.key==="all" ? "Tout" : c.emoji ? `${c.emoji} ${c.label.replace(c.emoji,"").trim()}` : c.label}
                     </button>
                   ))}
                 </div>
+              </div>
 
+              {/* Products */}
+              <div style={{paddingBottom: cartCount > 0 ? 90 : 32}}>
                 {loading ? (
-                  <div style={{textAlign:"center",color:D.muted,fontFamily:"'Inter',sans-serif",padding:"60px",fontSize:".9rem"}}>Chargement des produits...</div>
+                  <div style={{textAlign:"center",color:D.muted,padding:"60px 0",fontSize:".9rem"}}>Chargement...</div>
                 ) : filtered.length === 0 ? (
-                  <div style={{textAlign:"center",color:D.muted,fontFamily:"'Inter',sans-serif",padding:"60px",fontSize:".9rem",background:"#f9f9f9",borderRadius:12}}>Aucun produit disponible pour le moment.</div>
+                  <div style={{textAlign:"center",color:D.muted,padding:"60px 0",fontSize:".9rem",background:D.card,margin:16,borderRadius:12}}>Aucun produit disponible pour le moment.</div>
                 ) : activeCat !== "all" ? (
-                  <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
-                    {filtered.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
+                  <div style={{background:D.card,marginTop:8}}>
+                    {filtered.map(p => <EtabProductRow key={p.id} p={p} D={D} lastAddedId={lastAddedId} addToCart={addToCart} openProductModal={openProductModal} activePromo={activePromo} getProductPromoPrice={getProductPromoPrice} />)}
                   </div>
                 ) : (
-                  <div style={{display:"grid",gap:32}}>
-                    {cats.filter(c => c.key !== "all").map(cat => {
-                      const catProds = filtered.filter(p => p.cat === cat.key);
-                      if (catProds.length === 0) return null;
+                  <>
+                    {/* 🔥 Populaires */}
+                    {(() => {
+                      const pop = etabProds.filter(p => (p.badge==="HOT"||p.badge==="BEST") && p.stock>0).slice(0,6);
+                      if (!pop.length) return null;
                       return (
-                        <div key={cat.key}>
-                          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:10,borderBottom:`1px solid rgba(0,0,0,.08)`}}>
-                            <span style={{fontSize:"1.3rem"}}>{cat.emoji}</span>
-                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1.05rem",color:D.text}}>{cat.emoji ? cat.label.replace(cat.emoji,"").trim() : cat.label}</span>
-                            <span style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted,marginLeft:2}}>{catProds.length} produit{catProds.length > 1 ? "s" : ""}</span>
+                        <div style={{padding:"18px 0 8px",background:D.card,marginBottom:8}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 16px",marginBottom:12}}>
+                            <span style={{fontSize:"1rem"}}>🔥</span>
+                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".95rem",color:D.text}}>Populaires</span>
                           </div>
-                          <div className="products-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14}}>
-                            {catProds.map(p => <ProductCard key={p.id} p={p} D={D} lastAddedId={lastAddedId} likes={likes} activePromo={activePromo} catColor={catColor} catLabel={catLabel} getBadgeType={getBadgeType} getProductPromoPrice={getProductPromoPrice} openProductModal={openProductModal} toggleLike={toggleLike} shareProduct={shareProduct} addToCart={addToCart} />)}
+                          <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 16px 4px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+                            {pop.map(p => (
+                              <div key={p.id} onClick={() => openProductModal(p)}
+                                style={{flexShrink:0,width:138,background:D.card,borderRadius:14,overflow:"hidden",
+                                  cursor:"pointer",boxShadow:D.shadow,border:`1px solid ${D.border}`}}>
+                                <div style={{height:90,overflow:"hidden",background:D.cardDark,position:"relative"}}>
+                                  {p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover"}} /> : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem",opacity:.25}}>🍽️</div>}
+                                  <span style={{position:"absolute",top:6,left:6,background: p.badge==="HOT" ? D.pink : "#ffb400",color:"#fff",fontSize:".58rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"2px 7px",borderRadius:10}}>
+                                    {p.badge==="HOT" ? "🔥" : "⭐"}
+                                  </span>
+                                </div>
+                                <div style={{padding:"8px 10px 10px"}}>
+                                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".85rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+                                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".88rem",color:D.pink,marginTop:2}}>{p.price.toFixed(2)}€</div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       );
+                    })()}
+                    {/* Category sections */}
+                    {cats.filter(c => c.key !== "all").map(cat => {
+                      const catProds = filtered.filter(p => p.cat === cat.key);
+                      if (!catProds.length) return null;
+                      return (
+                        <div key={cat.key} style={{background:D.card,marginBottom:8}}>
+                          <div style={{padding:"16px 16px 8px",display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".95rem",color:D.text}}>
+                              {cat.emoji} {cat.emoji ? cat.label.replace(cat.emoji,"").trim() : cat.label}
+                            </span>
+                            <span style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted}}>{catProds.length}</span>
+                          </div>
+                          {catProds.map(p => <EtabProductRow key={p.id} p={p} D={D} lastAddedId={lastAddedId} addToCart={addToCart} openProductModal={openProductModal} activePromo={activePromo} getProductPromoPrice={getProductPromoPrice} />)}
+                        </div>
+                      );
                     })}
-                  </div>
+                  </>
                 )}
-              </section>
+              </div>
 
-            </div>{/* fin zone scrollable */}
+            </div>{/* fin scrollable */}
+
+            {/* Sticky cart bar */}
+            {cartCount > 0 && (
+              <div style={{flexShrink:0,padding:"10px 16px",
+                background:D.card,borderTop:`1px solid ${D.border}`,
+                boxShadow:"0 -4px 16px rgba(0,0,0,.06)"}}>
+                <button onClick={openCart}
+                  style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
+                    background:D.text,color:"#fff",border:"none",borderRadius:14,
+                    padding:"13px 18px",fontFamily:"'Inter',sans-serif",fontWeight:700,
+                    fontSize:".95rem",cursor:"pointer",letterSpacing:".01em"}}>
+                  <span style={{background:"rgba(255,255,255,.18)",borderRadius:8,padding:"2px 10px",fontSize:".82rem",fontWeight:700}}>{cartCount}</span>
+                  <span>Voir le panier</span>
+                  <span style={{fontWeight:800}}>{cartTotal.toFixed(2)}€</span>
+                </button>
+              </div>
+            )}
+
           </div>{/* fin bottom sheet */}
         </>
       )}
@@ -2247,6 +2198,67 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
             {p.stock===0 ? "✕" : lastAddedId===p.id ? "✓" : "+"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CARTE PRODUIT ÉTABLISSEMENT (layout horizontal Deliveroo) ──────────────
+function EtabProductRow({ p, D, lastAddedId, addToCart, openProductModal, activePromo, getProductPromoPrice }: {
+  p: { id:string; name:string; desc:string; price:number; image:string; cat:string; badge:string; stock:number; isActive?:boolean; };
+  D: any; lastAddedId: string|null;
+  addToCart:(id:string,name:string,price:number)=>void;
+  openProductModal:(p:any)=>void;
+  activePromo:any; getProductPromoPrice:(id:string,price:number,promo:any)=>number|null;
+}) {
+  const pp = getProductPromoPrice(p.id, p.price, activePromo);
+  const isAdded = lastAddedId === p.id;
+  const hasPromo = activePromo && activePromo.productIds?.includes(p.id);
+  const badgeLabel = hasPromo ? "PROMO" : p.badge;
+  const badgeBg = hasPromo ? D.pink : p.badge==="HOT" ? D.pink : p.badge==="BEST" ? "#ffb400" : p.badge==="NEW" ? "#22c55e" : D.cyan;
+  return (
+    <div onClick={() => openProductModal(p)}
+      style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",
+        borderBottom:`1px solid ${D.border}`,cursor:"pointer",
+        background: isAdded ? "rgba(34,197,94,.04)" : D.card,transition:"background .25s"}}>
+      <div style={{flex:1,minWidth:0}}>
+        {badgeLabel && (
+          <span style={{display:"inline-block",background:badgeBg,color:"#fff",
+            fontSize:".6rem",fontFamily:"'Inter',sans-serif",fontWeight:700,
+            padding:"1px 8px",borderRadius:10,marginBottom:4}}>
+            {badgeLabel}
+          </span>
+        )}
+        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".95rem",
+          color: p.stock===0 ? D.muted : D.text,
+          overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+        {p.desc && (
+          <div style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted,lineHeight:1.4,
+            display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",
+            marginTop:2}}>{p.desc}</div>
+        )}
+        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:5}}>
+          {pp !== null && <span style={{fontSize:".75rem",color:D.muted,textDecoration:"line-through"}}>{p.price.toFixed(2)}€</span>}
+          <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".95rem",color:D.text}}>{(pp ?? p.price).toFixed(2)}€</span>
+          {p.stock > 0 && p.stock < 10 && <span style={{fontSize:".68rem",color:"#ff6b35",fontWeight:600}}>· {p.stock} restant{p.stock>1?"s":""}</span>}
+        </div>
+      </div>
+      <div style={{position:"relative",flexShrink:0,width:96,height:96,borderRadius:12,overflow:"hidden",background:D.cardDark}}>
+        {p.image
+          ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",opacity: p.stock===0 ? 0.5 : 1}} />
+          : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem",opacity:.2}}>🍽️</div>}
+        <button onClick={e => { e.stopPropagation(); if (p.stock > 0) addToCart(p.id, p.name, p.price); }}
+          disabled={p.stock === 0}
+          style={{position:"absolute",bottom:5,right:5,width:32,height:32,borderRadius:"50%",
+            background: p.stock===0 ? "rgba(255,255,255,.6)" : isAdded ? "#22c55e" : D.pink,
+            border:"2.5px solid #fff",color:"#fff",
+            fontSize: isAdded ? ".85rem" : "1.2rem",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            cursor: p.stock===0 ? "not-allowed" : "pointer",
+            boxShadow:"0 2px 10px rgba(0,0,0,.2)",transition:"all .2s",
+            fontFamily:"'Inter',sans-serif",fontWeight:700}}>
+          {p.stock===0 ? "✕" : isAdded ? "✓" : "+"}
+        </button>
       </div>
     </div>
   );
