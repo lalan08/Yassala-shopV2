@@ -35,7 +35,7 @@ export type CartItem = { id: string; name: string; price: number; qty: number; }
 
 type EtabCat  = { id: string; key: string; label: string; emoji: string; order: number; };
 type EtabProd = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge?: string; stock?: number; isActive?: boolean; };
-type EtabSupp = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; };
+type EtabSupp = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; pricePetite?: number; priceGrande?: number; priceFamiliale?: number; };
 
 interface HomeNewProps {
   products:         Product[];
@@ -69,6 +69,19 @@ function parseSizes(desc: string): { label: string; price: number }[] | null {
 function getDisplayDesc(desc: string) {
   const idx = desc.indexOf(' • ');
   return idx === -1 ? desc : desc.slice(0, idx);
+}
+function getSuppPrice(s: EtabSupp, sizeLabel?: string | null): number {
+  if (!sizeLabel) return s.price;
+  const isCrevettes = /crevett/i.test(s.name);
+  if (s.pricePetite !== undefined || s.priceGrande !== undefined || s.priceFamiliale !== undefined) {
+    if (sizeLabel === 'Petite')    return s.pricePetite    ?? s.price;
+    if (sizeLabel === 'Grande')    return s.priceGrande    ?? s.price;
+    if (sizeLabel === 'Familiale') return s.priceFamiliale ?? s.price;
+  }
+  if (sizeLabel === 'Petite')    return isCrevettes ? 4 : 2;
+  if (sizeLabel === 'Grande')    return isCrevettes ? 5 : 3;
+  if (sizeLabel === 'Familiale') return isCrevettes ? 6 : 4;
+  return s.price;
 }
 function saveRecent(id: string) {
   if (typeof window === 'undefined') return;
@@ -396,7 +409,7 @@ function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onA
               overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</span>
           </div>
           {prod.desc && <div style={{ color: '#6b7280', fontSize: '.73rem', lineHeight: 1.45,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>}
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{getDisplayDesc(prod.desc)}</div>}
           <div style={{ marginTop: 6, fontWeight: 800, fontSize: '.9rem',
             color: disabled ? '#4b5563' : PINK }}>{fmtPrice(prod.price)}</div>
         </div>
@@ -419,7 +432,7 @@ function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onA
         <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '1rem',
           overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</div>
         {prod.desc && <div style={{ color: '#6b7280', fontSize: '.78rem', lineHeight: 1.45, marginTop: 4,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>}
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{getDisplayDesc(prod.desc)}</div>}
         <div style={{ marginTop: 8, fontWeight: 800, fontSize: '1rem',
           color: disabled ? '#4b5563' : PINK }}>{fmtPrice(prod.price)}</div>
       </div>
@@ -491,7 +504,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
     const size   = chosenSize ?? (sizes ? null : null);
     const suppTotal = selectedSupps.reduce((s, sid) => {
       const sp = supps.find(x => x.id === sid);
-      return s + (sp ? sp.price : 0);
+      return s + (sp ? getSuppPrice(sp, chosenSize?.label) : 0);
     }, 0);
     const suppNames = selectedSupps.map(sid => supps.find(x => x.id === sid)?.name).filter(Boolean).map(n => `+${n}`).join(', ');
     const notePart  = pickerNote.trim() ? ` · ${pickerNote.trim()}` : '';
@@ -698,7 +711,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
         const pizzasForHalf = isMixte
           ? prods.filter(p => p.id !== sizePickerProd.id && parseSizes(p.desc || '') && p.stock !== 0)
           : [];
-        const suppTotal = selectedSupps.reduce((s, sid) => { const sp = supps.find(x => x.id === sid); return s + (sp ? sp.price : 0); }, 0);
+        const suppTotal = selectedSupps.reduce((s, sid) => { const sp = supps.find(x => x.id === sid); return s + (sp ? getSuppPrice(sp, chosenSize?.label) : 0); }, 0);
         const basePrice = chosenSize ? chosenSize.price : sizePickerProd.price;
         const halfPrice = halfEnabled && halfProd && chosenSize ? (() => { const hs = parseSizes(halfProd.desc || ''); return Math.max(chosenSize.price, hs?.find(s => s.label === chosenSize.label)?.price ?? hs?.[0]?.price ?? halfProd.price); })() : basePrice;
         const total = (halfEnabled && halfProd ? halfPrice : basePrice) + suppTotal;
@@ -799,7 +812,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
                                 {s.emoji ? `${s.emoji} ` : ''}{s.name}
                               </span>
                               <span style={{ color: active ? PINK : '#9ca3af', fontSize: '.85rem', fontWeight: 700 }}>
-                                {s.price === 0 ? 'Gratuit' : `+${fmtPrice(s.price)}`}
+                                {getSuppPrice(s, chosenSize?.label) === 0 ? 'Gratuit' : `+${fmtPrice(getSuppPrice(s, chosenSize?.label))}`}
                               </span>
                             </button>
                           );

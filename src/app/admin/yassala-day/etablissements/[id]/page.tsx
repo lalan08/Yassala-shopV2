@@ -37,8 +37,10 @@ type DayCategory = { id?: string; key: string; label: string; emoji: string; ord
 type DayProduct = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; isActive?: boolean; etablissementId?: string; };
 type DayOffer = { id?: string; title: string; desc: string; emoji: string; discount: string; active: boolean; order: number; etablissementId?: string; };
 type DayPack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; etablissementId?: string; };
+type Suppl = { id?: string; name: string; emoji: string; isActive: boolean; etablissementId: string; price: number; };
+const blankSuppl: Omit<Suppl, "id" | "etablissementId" | "price"> = { name: "", emoji: "🧀", isActive: true };
 
-type Tab = "profil" | "produits" | "categories" | "offres" | "packs";
+type Tab = "profil" | "produits" | "categories" | "offres" | "packs" | "supplements";
 
 // ── Style helpers ──────────────────────────────────────────────────────────
 const base = { fontFamily: "'Inter',sans-serif" };
@@ -160,6 +162,12 @@ export default function EtablissementDetailPage() {
   const [products, setProducts] = useState<DayProduct[]>([]);
   const [offers, setOffers] = useState<DayOffer[]>([]);
   const [packs, setPacks] = useState<DayPack[]>([]);
+  const [supplements, setSupplements] = useState<Suppl[]>([]);
+
+  // Supplement form
+  const [supplForm, setSupplForm] = useState<Omit<Suppl,"id"|"etablissementId"|"price">>(blankSuppl);
+  const [editSupplId, setEditSupplId] = useState<string|null>(null);
+  const [showSupplForm, setShowSupplForm] = useState(false);
 
   // Forms
   const [catForm, setCatForm] = useState<DayCategory>({ key: "", label: "", emoji: "🛒", order: 0 });
@@ -201,8 +209,10 @@ export default function EtablissementDetailPage() {
       setOffers(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayOffer)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))));
     const unsubPacks = onSnapshot(q("day_packs"), snap =>
       setPacks(snap.docs.map(d => ({ id: d.id, ...d.data() } as DayPack))));
+    const unsubSupplements = onSnapshot(q("day_supplements"), snap =>
+      setSupplements(snap.docs.map(d => ({ id: d.id, ...d.data() } as Suppl)).sort((a, b) => a.name.localeCompare(b.name))));
 
-    return () => { unsubCats(); unsubProds(); unsubOffers(); unsubPacks(); };
+    return () => { unsubCats(); unsubProds(); unsubOffers(); unsubPacks(); unsubSupplements(); };
   }, [auth, etabId]);
 
   const showMsg = (msg: string, ok = true) => {
@@ -331,6 +341,33 @@ export default function EtablissementDetailPage() {
     showMsg("Pack supprimé");
   };
 
+  // ── Supplements CRUD ───────────────────────────────────────────────────
+  const saveSuppl = async () => {
+    if (!supplForm.name.trim()) { showMsg("Nom requis", false); return; }
+    const data = { ...supplForm, etablissementId: etabId, price: 2, updatedAt: new Date().toISOString() };
+    if (editSupplId) {
+      await updateDoc(doc(db, "day_supplements", editSupplId), data);
+      showMsg("Supplément mis à jour ✓");
+    } else {
+      await addDoc(collection(db, "day_supplements"), { ...data, createdAt: new Date().toISOString() });
+      showMsg("Supplément ajouté ✓");
+    }
+    setSupplForm(blankSuppl); setEditSupplId(null); setShowSupplForm(false);
+  };
+  const deleteSuppl = async (id: string) => {
+    if (!confirm("Supprimer ce supplément ?")) return;
+    await deleteDoc(doc(db, "day_supplements", id));
+    showMsg("Supplément supprimé");
+  };
+  const toggleSuppl = async (s: Suppl) => {
+    await updateDoc(doc(db, "day_supplements", s.id!), { isActive: !s.isActive });
+  };
+  const startEditSuppl = (s: Suppl) => {
+    setSupplForm({ name: s.name, emoji: s.emoji || "🧀", isActive: s.isActive });
+    setEditSupplId(s.id!);
+    setShowSupplForm(true);
+  };
+
   if (!auth) {
     return <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <span style={{ ...mono, color: "#5a5470" }}>Accès non autorisé. <a href="/admin" style={{ color: "#fbbf24" }}>→ Admin</a></span>
@@ -351,6 +388,7 @@ export default function EtablissementDetailPage() {
     { key: "categories", label: "CATÉGORIES", icon: "🗂️", count: categories.length },
     { key: "offres", label: "OFFRES", icon: "🎁", count: offers.length },
     { key: "packs", label: "PACKS", icon: "📦", count: packs.length },
+    { key: "supplements", label: "SUPPLÉMENTS", icon: "🧂", count: supplements.length },
   ];
 
   return (
@@ -846,6 +884,95 @@ export default function EtablissementDetailPage() {
                     </div>
                     <button onClick={() => setEditPack(p)} style={{ ...S.btnGhost, padding: "7px 14px", fontSize: ".75rem", color: "#fbbf24", borderColor: "rgba(251,191,36,.3)" }}>✏️</button>
                     <button onClick={() => deletePack(p.id!)} style={S.btnDanger}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── SUPPLÉMENTS ── */}
+        {tab === "supplements" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div>
+                <div style={{ ...mono, fontSize: ".72rem", color: "#5a5470", letterSpacing: ".12em", marginBottom: 4 }}>// SUPPLÉMENTS PIZZA</div>
+                <div style={{ ...mono, fontSize: ".65rem", color: "#4b4468" }}>
+                  Prix auto · Petite <span style={{ color: "#fbbf24" }}>2€</span> · Grande <span style={{ color: "#fbbf24" }}>3€</span> · Familiale <span style={{ color: "#fbbf24" }}>4€</span>
+                  &nbsp;·&nbsp; Crevettes <span style={{ color: "#ff2d78" }}>4€ / 5€ / 6€</span>
+                </div>
+              </div>
+              <button onClick={() => { setSupplForm(blankSuppl); setEditSupplId(null); setShowSupplForm(v => !v); }}
+                style={{ ...S.btnPrimary, padding: "8px 16px", fontSize: ".78rem" }}>
+                {showSupplForm && !editSupplId ? "✕ FERMER" : "+ AJOUTER"}
+              </button>
+            </div>
+
+            {/* Formulaire */}
+            {showSupplForm && (
+              <div style={{ ...S.card, marginBottom: 20 }}>
+                <div style={{ ...mono, fontSize: ".7rem", color: "#fbbf24", letterSpacing: ".12em", marginBottom: 16 }}>
+                  {editSupplId ? "// MODIFIER LE SUPPLÉMENT" : "// NOUVEAU SUPPLÉMENT"}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "60px 1fr", gap: 14, marginBottom: 14 }}>
+                  <div>
+                    <label style={S.label}>EMOJI</label>
+                    <input value={supplForm.emoji} onChange={e => setSupplForm(f => ({ ...f, emoji: e.target.value }))}
+                      style={{ ...S.input, fontSize: "1.3rem", textAlign: "center" as const }} placeholder="🧀" />
+                  </div>
+                  <div>
+                    <label style={S.label}>NOM *</label>
+                    <input value={supplForm.name} onChange={e => setSupplForm(f => ({ ...f, name: e.target.value }))}
+                      style={S.input} placeholder="Ex: Mozzarella, Jambon, Crevettes..." />
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <div onClick={() => setSupplForm(f => ({ ...f, isActive: !f.isActive }))}
+                    style={{ width: 40, height: 22, borderRadius: 11, position: "relative" as const, cursor: "pointer",
+                      background: supplForm.isActive ? "#fbbf24" : "rgba(255,255,255,.1)", transition: "background .2s", flexShrink: 0 }}>
+                    <div style={{ position: "absolute" as const, top: 2, left: supplForm.isActive ? 20 : 2,
+                      width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
+                  </div>
+                  <span style={{ ...mono, fontSize: ".75rem", color: supplForm.isActive ? "#fbbf24" : "#5a5470" }}>
+                    {supplForm.isActive ? "VISIBLE" : "MASQUÉ"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={saveSuppl} style={S.btnPrimary}>{editSupplId ? "✓ METTRE À JOUR" : "✓ CRÉER"}</button>
+                  <button onClick={() => { setSupplForm(blankSuppl); setEditSupplId(null); setShowSupplForm(false); }} style={S.btnGhost}>ANNULER</button>
+                </div>
+              </div>
+            )}
+
+            {/* Liste */}
+            {supplements.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "48px 0", border: "1px dashed rgba(251,191,36,.15)", borderRadius: 12 }}>
+                <div style={{ fontSize: "2.5rem", marginBottom: 10 }}>🧂</div>
+                <div style={{ ...mono, fontSize: ".82rem", color: "#5a5470", marginBottom: 16 }}>
+                  Aucun supplément — ajoute les ingrédients proposés en extra
+                </div>
+                <button onClick={() => setShowSupplForm(true)} style={S.btnPrimary}>+ AJOUTER LE PREMIER</button>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {supplements.map(s => (
+                  <div key={s.id} style={{ background: "rgba(255,255,255,.02)", border: `1px solid ${s.isActive ? "rgba(251,191,36,.15)" : "rgba(255,255,255,.05)"}`, borderRadius: 10, padding: "12px 18px", display: "flex", alignItems: "center", gap: 14, opacity: s.isActive ? 1 : 0.55, transition: "all .15s" }}>
+                    <span style={{ fontSize: "1.6rem", flexShrink: 0 }}>{s.emoji || "🧀"}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: ".95rem" }}>{s.name}</div>
+                      <div style={{ ...mono, fontSize: ".68rem", color: "#4b4468", marginTop: 2 }}>
+                        P: 2€ · G: 3€ · F: 4€
+                        {/crevett/i.test(s.name) && <span style={{ color: "#ff2d78" }}>&nbsp;(Crevettes : 4€/5€/6€)</span>}
+                      </div>
+                    </div>
+                    <div onClick={() => toggleSuppl(s)}
+                      style={{ width: 40, height: 22, borderRadius: 11, position: "relative" as const, cursor: "pointer",
+                        background: s.isActive ? "#fbbf24" : "rgba(255,255,255,.1)", transition: "background .2s", flexShrink: 0 }}>
+                      <div style={{ position: "absolute" as const, top: 2, left: s.isActive ? 20 : 2,
+                        width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
+                    </div>
+                    <button onClick={() => startEditSuppl(s)} style={{ ...S.btnGhost, padding: "6px 12px", fontSize: ".72rem", color: "#fbbf24", borderColor: "rgba(251,191,36,.3)" }}>✏️</button>
+                    <button onClick={() => deleteSuppl(s.id!)} style={S.btnDanger}>✕</button>
                   </div>
                 ))}
               </div>
