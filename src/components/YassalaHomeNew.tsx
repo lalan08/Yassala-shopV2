@@ -283,39 +283,42 @@ function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onA
   const isAdded = !!lastAdded;
   const badgeBg = prod.badge==="HOT" ? PINK : prod.badge==="BEST" ? "#ffb400" : prod.badge==="NEW" ? "#22c55e" : PINK;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-      borderBottom: '1px solid rgba(255,255,255,.06)',
-      background: isAdded ? 'rgba(34,197,94,.04)' : 'transparent',
-      transition: 'background .25s', cursor: 'pointer' }}>
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, margin: '0 12px 10px',
+      borderRadius: 16, overflow: 'hidden',
+      background: isAdded ? 'rgba(34,197,94,.08)' : CARD_BG,
+      border: isAdded ? '1px solid rgba(34,197,94,.3)' : `1px solid ${BORDER}`,
+      boxShadow: '0 2px 12px rgba(0,0,0,.35)',
+      transition: 'all .25s', cursor: 'pointer' }}>
       {/* Text */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, padding: '14px 14px 14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         {prod.badge && (
           <span style={{ display: 'inline-block', background: badgeBg, color: '#fff',
             fontSize: '.6rem', fontFamily: "'Inter',sans-serif", fontWeight: 700,
-            padding: '1px 8px', borderRadius: 10, marginBottom: 4 }}>{prod.badge}</span>
+            padding: '2px 9px', borderRadius: 10, marginBottom: 6, alignSelf: 'flex-start' }}>{prod.badge}</span>
         )}
-        <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.95rem',
+        <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '1rem',
           overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</div>
         {prod.desc && (
-          <div style={{ color: '#6b7280', fontSize: '.78rem', lineHeight: 1.4, marginTop: 2,
+          <div style={{ color: '#6b7280', fontSize: '.78rem', lineHeight: 1.45, marginTop: 4,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>
         )}
-        <div style={{ marginTop: 5, fontFamily: "'Inter',sans-serif", fontWeight: 800, fontSize: '.95rem', color: '#f0eeff' }}>{fmtPrice(prod.price)}</div>
+        <div style={{ marginTop: 8, fontFamily: "'Inter',sans-serif", fontWeight: 800, fontSize: '1rem',
+          color: disabled ? '#4b5563' : PINK }}>{fmtPrice(prod.price)}</div>
       </div>
       {/* Image + button */}
-      <div style={{ position: 'relative', flexShrink: 0, width: 96, height: 96, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,.04)' }}>
+      <div style={{ position: 'relative', flexShrink: 0, width: 110, height: 110, background: 'rgba(255,255,255,.04)' }}>
         {prod.image
-          ? <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.4 : 1 }} />
-          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', opacity: .2 }}>🍽️</div>}
+          ? <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.35 : 1 }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', opacity: .15 }}>🍽️</div>}
         <button onClick={e => { e.stopPropagation(); if (!disabled) onAdd(); }}
           disabled={disabled}
-          style={{ position: 'absolute', bottom: 5, right: 5, width: 32, height: 32, borderRadius: '50%',
-            background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
-            border: '2.5px solid rgba(8,5,15,.8)', color: '#fff',
-            fontSize: isAdded ? '.85rem' : '1.2rem',
+          style={{ position: 'absolute', bottom: 7, right: 7, width: 34, height: 34, borderRadius: '50%',
+            background: disabled ? 'rgba(255,255,255,.12)' : isAdded ? '#22c55e' : PINK,
+            border: '2.5px solid rgba(8,5,15,.85)', color: '#fff',
+            fontSize: isAdded ? '.85rem' : '1.25rem',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: disabled ? 'not-allowed' : 'pointer',
-            boxShadow: '0 2px 10px rgba(0,0,0,.4)', transition: 'all .2s',
+            boxShadow: '0 3px 12px rgba(0,0,0,.5)', transition: 'all .2s',
             fontFamily: "'Inter',sans-serif", fontWeight: 700 }}>
           {disabled ? '✕' : isAdded ? '✓' : '+'}
         </button>
@@ -489,24 +492,29 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
                       const isAdded = lastAddedId === p.id;
                       const disabled = !canOrder || p.stock === 0;
                       return (
-                        <div key={p.id} style={{ flexShrink: 0, width: 138, background: CARD_BG, borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, cursor: 'pointer' }} onClick={() => {}}>
-                          <div style={{ position: 'relative', height: 90, background: 'rgba(255,255,255,.04)' }}>
+                        <div key={p.id} onClick={() => { if (!disabled) addToCart(p); }}
+                          style={{ flexShrink: 0, width: 148, background: isAdded ? 'rgba(34,197,94,.08)' : CARD_BG,
+                            borderRadius: 16, overflow: 'hidden', cursor: disabled ? 'default' : 'pointer',
+                            border: isAdded ? '1px solid rgba(34,197,94,.3)' : `1px solid ${BORDER}`,
+                            boxShadow: '0 4px 18px rgba(0,0,0,.4)', transition: 'all .25s' }}>
+                          <div style={{ position: 'relative', height: 105, background: 'rgba(255,255,255,.04)' }}>
                             {p.image
-                              ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.4 : 1 }} />
-                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', opacity: .2 }}>🍽️</div>}
+                              ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.35 : 1 }} />
+                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', opacity: .15 }}>🍽️</div>}
+                            {p.badge && <span style={{ position: 'absolute', top: 7, left: 7, background: PINK, color: '#fff', fontSize: '.55rem', fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>{p.badge}</span>}
                           </div>
-                          <div style={{ padding: '8px 10px' }}>
-                            <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.8rem', lineHeight: 1.3,
+                          <div style={{ padding: '10px 11px 12px' }}>
+                            <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.84rem', lineHeight: 1.35,
                               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                              <span style={{ fontWeight: 800, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.85rem' }}>{fmtPrice(p.price)}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                              <span style={{ fontWeight: 800, color: disabled ? '#4b5563' : PINK, fontSize: '.88rem' }}>{fmtPrice(p.price)}</span>
                               <button onClick={e => { e.stopPropagation(); if (!disabled) addToCart(p); }} disabled={disabled}
-                                style={{ width: 28, height: 28, borderRadius: '50%', border: 'none',
+                                style={{ width: 30, height: 30, borderRadius: '50%', border: '2px solid rgba(8,5,15,.7)',
                                   background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
-                                  color: '#fff', fontSize: isAdded ? '.8rem' : '1rem',
+                                  color: '#fff', fontSize: isAdded ? '.8rem' : '1.1rem',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                                   cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all .2s',
-                                  boxShadow: '0 2px 8px rgba(0,0,0,.3)', fontWeight: 700 }}>
+                                  boxShadow: '0 2px 10px rgba(0,0,0,.4)', fontWeight: 700 }}>
                                 {disabled ? '✕' : isAdded ? '✓' : '+'}
                               </button>
                             </div>

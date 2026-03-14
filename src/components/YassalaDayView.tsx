@@ -2218,44 +2218,47 @@ function EtabProductRow({ p, D, lastAddedId, addToCart, openProductModal, active
   const badgeBg = hasPromo ? D.pink : p.badge==="HOT" ? D.pink : p.badge==="BEST" ? "#ffb400" : p.badge==="NEW" ? "#22c55e" : D.cyan;
   return (
     <div onClick={() => openProductModal(p)}
-      style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",
-        borderBottom:`1px solid ${D.border}`,cursor:"pointer",
-        background: isAdded ? "rgba(34,197,94,.04)" : D.card,transition:"background .25s"}}>
-      <div style={{flex:1,minWidth:0}}>
+      style={{display:"flex",alignItems:"stretch",gap:0,margin:"0 12px 10px",
+        borderRadius:16,overflow:"hidden",cursor:"pointer",
+        background: isAdded ? "rgba(34,197,94,.06)" : D.card,
+        border: isAdded ? "1px solid rgba(34,197,94,.3)" : `1px solid ${D.border}`,
+        boxShadow: isAdded ? "0 4px 16px rgba(34,197,94,.1)" : D.shadow,
+        transition:"all .25s"}}>
+      <div style={{flex:1,minWidth:0,padding:"14px 14px 14px 16px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
         {badgeLabel && (
           <span style={{display:"inline-block",background:badgeBg,color:"#fff",
             fontSize:".6rem",fontFamily:"'Inter',sans-serif",fontWeight:700,
-            padding:"1px 8px",borderRadius:10,marginBottom:4}}>
+            padding:"2px 9px",borderRadius:10,marginBottom:6,alignSelf:"flex-start"}}>
             {badgeLabel}
           </span>
         )}
-        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".95rem",
+        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",
           color: p.stock===0 ? D.muted : D.text,
           overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
         {p.desc && (
-          <div style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted,lineHeight:1.4,
+          <div style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted,lineHeight:1.45,
             display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",
-            marginTop:2}}>{p.desc}</div>
+            marginTop:4}}>{p.desc}</div>
         )}
-        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:5}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8}}>
           {pp !== null && <span style={{fontSize:".75rem",color:D.muted,textDecoration:"line-through"}}>{p.price.toFixed(2)}€</span>}
-          <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".95rem",color:D.text}}>{(pp ?? p.price).toFixed(2)}€</span>
+          <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1rem",color: p.stock===0 ? D.muted : D.pink}}>{(pp ?? p.price).toFixed(2)}€</span>
           {p.stock > 0 && p.stock < 10 && <span style={{fontSize:".68rem",color:"#ff6b35",fontWeight:600}}>· {p.stock} restant{p.stock>1?"s":""}</span>}
         </div>
       </div>
-      <div style={{position:"relative",flexShrink:0,width:96,height:96,borderRadius:12,overflow:"hidden",background:D.cardDark}}>
+      <div style={{position:"relative",flexShrink:0,width:110,height:110,background:D.cardDark}}>
         {p.image
-          ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",opacity: p.stock===0 ? 0.5 : 1}} />
-          : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem",opacity:.2}}>🍽️</div>}
+          ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",opacity: p.stock===0 ? 0.35 : 1}} />
+          : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",opacity:.15}}>🍽️</div>}
         <button onClick={e => { e.stopPropagation(); if (p.stock > 0) addToCart(p.id, p.name, p.price); }}
           disabled={p.stock === 0}
-          style={{position:"absolute",bottom:5,right:5,width:32,height:32,borderRadius:"50%",
-            background: p.stock===0 ? "rgba(255,255,255,.6)" : isAdded ? "#22c55e" : D.pink,
+          style={{position:"absolute",bottom:7,right:7,width:34,height:34,borderRadius:"50%",
+            background: p.stock===0 ? "rgba(0,0,0,.12)" : isAdded ? "#22c55e" : D.pink,
             border:"2.5px solid #fff",color:"#fff",
-            fontSize: isAdded ? ".85rem" : "1.2rem",
+            fontSize: isAdded ? ".85rem" : "1.25rem",
             display:"flex",alignItems:"center",justifyContent:"center",
             cursor: p.stock===0 ? "not-allowed" : "pointer",
-            boxShadow:"0 2px 10px rgba(0,0,0,.2)",transition:"all .2s",
+            boxShadow:"0 3px 12px rgba(0,0,0,.18)",transition:"all .2s",
             fontFamily:"'Inter',sans-serif",fontWeight:700}}>
           {p.stock===0 ? "✕" : isAdded ? "✓" : "+"}
         </button>
