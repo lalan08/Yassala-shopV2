@@ -35,7 +35,7 @@ export type CartItem = { id: string; name: string; price: number; qty: number; }
 
 type EtabCat  = { id: string; key: string; label: string; emoji: string; order: number; };
 type EtabProd = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge?: string; stock?: number; isActive?: boolean; };
-type EtabSupp = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; };
+type EtabSupp = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; pricePetite?: number; priceGrande?: number; priceFamiliale?: number; };
 
 interface HomeNewProps {
   products:         Product[];
@@ -69,6 +69,19 @@ function parseSizes(desc: string): { label: string; price: number }[] | null {
 function getDisplayDesc(desc: string) {
   const idx = desc.indexOf(' • ');
   return idx === -1 ? desc : desc.slice(0, idx);
+}
+function getSuppPrice(s: EtabSupp, sizeLabel?: string | null): number {
+  if (!sizeLabel) return s.price;
+  const isCrevettes = /crevett/i.test(s.name);
+  if (s.pricePetite !== undefined || s.priceGrande !== undefined || s.priceFamiliale !== undefined) {
+    if (sizeLabel === 'Petite')    return s.pricePetite    ?? s.price;
+    if (sizeLabel === 'Grande')    return s.priceGrande    ?? s.price;
+    if (sizeLabel === 'Familiale') return s.priceFamiliale ?? s.price;
+  }
+  if (sizeLabel === 'Petite')    return isCrevettes ? 4 : 2;
+  if (sizeLabel === 'Grande')    return isCrevettes ? 5 : 3;
+  if (sizeLabel === 'Familiale') return isCrevettes ? 6 : 4;
+  return s.price;
 }
 function saveRecent(id: string) {
   if (typeof window === 'undefined') return;
@@ -396,7 +409,7 @@ function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onA
               overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</span>
           </div>
           {prod.desc && <div style={{ color: '#6b7280', fontSize: '.73rem', lineHeight: 1.45,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>}
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{getDisplayDesc(prod.desc)}</div>}
           <div style={{ marginTop: 6, fontWeight: 800, fontSize: '.9rem',
             color: disabled ? '#4b5563' : PINK }}>{fmtPrice(prod.price)}</div>
         </div>
@@ -419,7 +432,7 @@ function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onA
         <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '1rem',
           overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</div>
         {prod.desc && <div style={{ color: '#6b7280', fontSize: '.78rem', lineHeight: 1.45, marginTop: 4,
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>}
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{getDisplayDesc(prod.desc)}</div>}
         <div style={{ marginTop: 8, fontWeight: 800, fontSize: '1rem',
           color: disabled ? '#4b5563' : PINK }}>{fmtPrice(prod.price)}</div>
       </div>
@@ -491,7 +504,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
     const size   = chosenSize ?? (sizes ? null : null);
     const suppTotal = selectedSupps.reduce((s, sid) => {
       const sp = supps.find(x => x.id === sid);
-      return s + (sp ? sp.price : 0);
+      return s + (sp ? getSuppPrice(sp, chosenSize?.label) : 0);
     }, 0);
     const suppNames = selectedSupps.map(sid => supps.find(x => x.id === sid)?.name).filter(Boolean).map(n => `+${n}`).join(', ');
     const notePart  = pickerNote.trim() ? ` · ${pickerNote.trim()}` : '';
@@ -616,55 +629,8 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
             ))}
           </div>
         ) : (
-          /* All categories — Populaires + per-category sections */
+          /* All categories — per-category sections */
           <>
-            {/* 🔥 Populaires horizontal scroll */}
-            {(() => {
-              const popular = prods.filter(p => p.badge === 'HOT' || p.badge === 'BEST' || p.badge === 'PROMO').slice(0, 6);
-              if (popular.length === 0) return null;
-              return (
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.9rem', padding: '16px 16px 8px' }}>🔥 Populaires</div>
-                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 16px 12px', scrollbarWidth: 'none' }}>
-                    {popular.map(p => {
-                      const isAdded = lastAddedId === p.id;
-                      const disabled = !canOrder || p.stock === 0;
-                      return (
-                        <div key={p.id} onClick={() => { if (!disabled) pickOrAdd(p); }}
-                          style={{ flexShrink: 0, width: 148, background: isAdded ? 'rgba(34,197,94,.08)' : CARD_BG,
-                            borderRadius: 16, overflow: 'hidden', cursor: disabled ? 'default' : 'pointer',
-                            border: isAdded ? '1px solid rgba(34,197,94,.3)' : `1px solid ${BORDER}`,
-                            boxShadow: '0 4px 18px rgba(0,0,0,.4)', transition: 'all .25s' }}>
-                          <div style={{ position: 'relative', height: 105, background: 'rgba(255,255,255,.04)' }}>
-                            {p.image
-                              ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.35 : 1 }} />
-                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', opacity: .15 }}>🍽️</div>}
-                            {p.badge && <span style={{ position: 'absolute', top: 7, left: 7, background: PINK, color: '#fff', fontSize: '.55rem', fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>{p.badge}</span>}
-                          </div>
-                          <div style={{ padding: '10px 11px 12px' }}>
-                            <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.84rem', lineHeight: 1.35,
-                              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                              <span style={{ fontWeight: 800, color: disabled ? '#4b5563' : PINK, fontSize: '.88rem' }}>{fmtPrice(p.price)}</span>
-                              <button onClick={e => { e.stopPropagation(); if (!disabled) pickOrAdd(p); }} disabled={disabled}
-                                style={{ width: 30, height: 30, borderRadius: '50%', border: '2px solid rgba(8,5,15,.7)',
-                                  background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
-                                  color: '#fff', fontSize: isAdded ? '.8rem' : '1.1rem',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all .2s',
-                                  boxShadow: '0 2px 10px rgba(0,0,0,.4)', fontWeight: 700 }}>
-                                {disabled ? '✕' : isAdded ? '✓' : '+'}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
             {/* Per-category sections */}
             {cats.length > 0 ? cats.map(cat => {
               const catProds = prods.filter(p => p.cat === cat.key || p.cat === cat.id);
@@ -698,7 +664,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
         const pizzasForHalf = isMixte
           ? prods.filter(p => p.id !== sizePickerProd.id && parseSizes(p.desc || '') && p.stock !== 0)
           : [];
-        const suppTotal = selectedSupps.reduce((s, sid) => { const sp = supps.find(x => x.id === sid); return s + (sp ? sp.price : 0); }, 0);
+        const suppTotal = selectedSupps.reduce((s, sid) => { const sp = supps.find(x => x.id === sid); return s + (sp ? getSuppPrice(sp, chosenSize?.label) : 0); }, 0);
         const basePrice = chosenSize ? chosenSize.price : sizePickerProd.price;
         const halfPrice = halfEnabled && halfProd && chosenSize ? (() => { const hs = parseSizes(halfProd.desc || ''); return Math.max(chosenSize.price, hs?.find(s => s.label === chosenSize.label)?.price ?? hs?.[0]?.price ?? halfProd.price); })() : basePrice;
         const total = (halfEnabled && halfProd ? halfPrice : basePrice) + suppTotal;
@@ -799,7 +765,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
                                 {s.emoji ? `${s.emoji} ` : ''}{s.name}
                               </span>
                               <span style={{ color: active ? PINK : '#9ca3af', fontSize: '.85rem', fontWeight: 700 }}>
-                                {s.price === 0 ? 'Gratuit' : `+${fmtPrice(s.price)}`}
+                                {getSuppPrice(s, chosenSize?.label) === 0 ? 'Gratuit' : `+${fmtPrice(getSuppPrice(s, chosenSize?.label))}`}
                               </span>
                             </button>
                           );
