@@ -430,23 +430,18 @@ function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onA
   );
 }
 
-function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
+function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onAddItem, onOpenCart }: {
   etab: Etablissement;
   service: 'day' | 'night';
   canOrder: boolean;
   serviceCountdown: string;
   onClose: () => void;
+  onAddItem: (id: string, name: string, price: number) => void;
+  onOpenCart: () => void;
 }) {
   const [cats,  setCats]  = useState<EtabCat[]>([]);
   const [prods, setProds] = useState<EtabProd[]>([]);
   const [activeCat, setActiveCat] = useState('all');
-  const [cart, setCart]   = useState<CartItem[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [step, setStep]   = useState<'cart' | 'form' | 'done'>('cart');
-  const [name, setName]   = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [sizePickerProd, setSizePickerProd] = useState<EtabProd | null>(null);
@@ -476,45 +471,13 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
     const price = sizeSuffix ? sizeSuffix.price : prod.price;
     setLastAddedId(prod.id);
     setTimeout(() => setLastAddedId(null), 1200);
-    setCart(prev => {
-      const existing = prev.find(i => i.id === id);
-      if (existing) return prev.map(i => i.id === id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id, name, price, qty: 1 }];
-    });
+    onAddItem(id, name, price);
   };
   const pickOrAdd = (prod: EtabProd) => {
     if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
     const sizes = parseSizes(prod.desc || '');
     if (sizes) { setSizePickerProd(prod); return; }
     addToCart(prod);
-  };
-  const inc = (id: string) => setCart(prev => prev.map(i => i.id === id ? { ...i, qty: i.qty + 1 } : i));
-  const dec = (id: string) => setCart(prev => {
-    const item = prev.find(i => i.id === id);
-    if (!item) return prev;
-    if (item.qty <= 1) return prev.filter(i => i.id !== id);
-    return prev.map(i => i.id === id ? { ...i, qty: i.qty - 1 } : i);
-  });
-
-  const totalQty = cart.reduce((s, i) => s + i.qty, 0);
-  const total    = cartTotal(cart);
-
-  const submitOrder = async () => {
-    if (!name.trim() || !phone.trim()) { setToast('Nom et téléphone requis'); return; }
-    if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
-    setSubmitting(true);
-    try {
-      await addDoc(collection(db, 'orders'), {
-        items: cart.map(i => `${i.qty}x ${i.name} (${fmtPrice(i.price)})`).join(', '),
-        total, status: 'nouveau',
-        createdAt: new Date().toISOString(),
-        phone: phone.trim(), name: name.trim(), address: address.trim(),
-        fulfillmentType: 'delivery', paidOnline: false,
-        etablissementId: etab.id, etablissementName: etab.name, service: coll,
-      });
-      setCart([]); setStep('done');
-    } catch { setToast('Erreur, réessayez'); }
-    finally { setSubmitting(false); }
   };
 
   return (
@@ -716,6 +679,7 @@ export default function YassalaHomeNew({
   settings,
   cart,
   onOpenCart,
+  onAddToCart,
 }: HomeNewProps) {
   const { resolvedTheme, setTheme, serviceMode } = useTheme();
 
@@ -861,6 +825,8 @@ export default function YassalaHomeNew({
           canOrder={canOrder}
           serviceCountdown={currentStatus.countdown}
           onClose={() => setSelectedEtab(null)}
+          onAddItem={(id, name, price) => onAddToCart({ id, name, price, qty: 1, desc: '', image: '', cat: '', badge: '', stock: 99 } as unknown as Product)}
+          onOpenCart={onOpenCart}
         />
       )}
     </>
