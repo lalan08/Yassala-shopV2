@@ -279,6 +279,63 @@ const DARK   = '#08050f';
 const CARD_BG = '#0e0a1a';
 const BORDER = 'rgba(255,45,120,.18)';
 
+/* ─── Carte établissement — Uber Eats style, snap horizontal ────────── */
+function EtabSnapCard({ etab, onClick, isNight }: { etab: Etablissement; onClick: () => void; isNight: boolean }) {
+  const isOpen = etab.isOpen ?? etab.isActive;
+  return (
+    <button onClick={onClick} style={{ flexShrink: 0, width: 200, scrollSnapAlign: 'start',
+      background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
+      <div style={{ borderRadius: 18, overflow: 'hidden',
+        background: isNight ? CARD_BG : '#fff',
+        border: isNight ? `1px solid ${BORDER}` : '1px solid rgba(0,0,0,.07)',
+        boxShadow: isNight ? '0 6px 24px rgba(0,0,0,.5)' : '0 4px 16px rgba(0,0,0,.08)' }}>
+        {/* Cover */}
+        <div style={{ position: 'relative', height: 130, overflow: 'hidden',
+          background: isNight ? 'rgba(255,255,255,.04)' : '#f3f4f6' }}>
+          {etab.coverUrl
+            ? <img src={etab.coverUrl} alt={etab.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover',
+                  opacity: (!isOpen && !etab.isComingSoon) ? 0.5 : 1 }} />
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '2.5rem', opacity: isNight ? .12 : .25 }}>
+                {etab.emoji || '🏪'}
+              </div>}
+          {!isOpen && !etab.isComingSoon && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.28)' }} />
+          )}
+          {/* Badge statut */}
+          <span style={{ position: 'absolute', top: 8, left: 8,
+            background: etab.isComingSoon ? '#6366f1' : isOpen ? '#22c55e' : 'rgba(0,0,0,.55)',
+            color: '#fff', fontSize: '.6rem', fontWeight: 700, padding: '3px 9px', borderRadius: 8,
+            backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+            {etab.isComingSoon ? 'Bientôt' : isOpen ? 'Ouvert' : 'Fermé'}
+          </span>
+          {etab.deliveryFee === 0 && (
+            <span style={{ position: 'absolute', bottom: 8, left: 8,
+              background: PINK, color: '#fff', fontSize: '.58rem', fontWeight: 700,
+              padding: '2px 7px', borderRadius: 6 }}>0 € livraison</span>
+          )}
+        </div>
+        {/* Info */}
+        <div style={{ padding: '11px 13px 14px' }}>
+          <div style={{ fontWeight: 700, fontSize: '.9rem',
+            color: isNight ? '#f0eeff' : '#111827',
+            overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{etab.name}</div>
+          <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+            {etab.category && <span style={{ fontSize: '.7rem', color: isNight ? '#9ca3af' : '#6b7280' }}>{etab.category}</span>}
+            {etab.deliveryMin != null && <span style={{ fontSize: '.7rem', color: isNight ? '#6b7280' : '#9ca3af' }}>· {etab.deliveryMin}–{etab.deliveryMax} min</span>}
+          </div>
+          {etab.rating != null && (
+            <div style={{ marginTop: 5, fontSize: '.7rem', color: isNight ? '#9ca3af' : '#6b7280', fontWeight: 600 }}>
+              ⭐ {etab.rating.toFixed(1)}{etab.reviewCount ? ` (${etab.reviewCount})` : ''}
+            </div>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onAdd: () => void; disabled: boolean; lastAdded?: boolean }) {
   const isAdded = !!lastAdded;
   const badgeBg = prod.badge==="HOT" ? PINK : prod.badge==="BEST" ? "#ffb400" : prod.badge==="NEW" ? "#22c55e" : PINK;
@@ -668,8 +725,9 @@ export default function YassalaHomeNew({
   const otherMode: 'day' | 'night' = resolvedTheme === 'day' ? 'night' : 'day';
   const otherServiceIsOpen = resolvedTheme === 'day' ? serviceMode.canOrderNight : serviceMode.canOrderDay;
 
-  const [dayBanners, setDayBanners] = useState<Banner[]>([]);
-  const [dayEtabs,   setDayEtabs]   = useState<Etablissement[]>([]);
+  const [dayBanners,  setDayBanners]  = useState<Banner[]>([]);
+  const [dayEtabs,    setDayEtabs]    = useState<Etablissement[]>([]);
+  const [nightEtabs,  setNightEtabs]  = useState<Etablissement[]>([]);
   const [selectedEtab, setSelectedEtab] = useState<Etablissement | null>(null);
 
   useEffect(() => {
@@ -679,7 +737,10 @@ export default function YassalaHomeNew({
     const u2 = onSnapshot(collection(db, 'day_etablissements'), snap => {
       setDayEtabs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Etablissement)).filter(e => e.isActive).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
     });
-    return () => { u1(); u2(); };
+    const u3 = onSnapshot(collection(db, 'night_etablissements'), snap => {
+      setNightEtabs(snap.docs.map(d => ({ id: d.id, ...d.data() } as Etablissement)).filter(e => e.isActive).sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+    });
+    return () => { u1(); u2(); u3(); };
   }, []);
 
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -695,7 +756,7 @@ export default function YassalaHomeNew({
   }, [selectedEtab]);
 
   const displayBanners = resolvedTheme === 'day' ? (dayBanners.length > 0 ? dayBanners : banners) : banners;
-  const allEtabs = resolvedTheme === 'day' ? dayEtabs : (merchants as Etablissement[]);
+  const allEtabs = resolvedTheme === 'day' ? dayEtabs : (nightEtabs.length > 0 ? nightEtabs : (merchants as Etablissement[]));
   const service: 'day' | 'night' = resolvedTheme;
 
   const openNow    = allEtabs.filter(e => (e.isOpen ?? e.isActive) && !e.isComingSoon);
@@ -758,20 +819,35 @@ export default function YassalaHomeNew({
             </div>
           )}
 
-          {/* ── ÉTABLISSEMENTS ── */}
-          {allEtabs.length === 0 ? (
-            <div className="yn-empty">
-              <span style={{ fontSize: '3rem' }}>🏪</span>
-              <p style={{ marginTop: 12, color: 'var(--yn-text-muted,#9ca3af)' }}>Aucun établissement disponible</p>
+          {/* ── AUTOUR DE TOI ── */}
+          <section className="yn-section">
+            <div style={{ padding: '0 16px 10px' }}>
+              <h2 style={{ fontFamily: "'Inter',sans-serif", fontWeight: 800, fontSize: '1.2rem',
+                color: 'var(--yn-text,#111827)', margin: 0, letterSpacing: '-.01em' }}>
+                📍 Autour de toi
+              </h2>
+              {allEtabs.length > 0 && (
+                <p style={{ fontFamily: "'Inter',sans-serif", fontSize: '.8rem',
+                  color: 'var(--yn-text-muted,#9ca3af)', margin: '4px 0 0' }}>
+                  {allEtabs.filter(e => (e.isOpen ?? e.isActive) && !e.isComingSoon).length} établissement{allEtabs.filter(e => (e.isOpen ?? e.isActive) && !e.isComingSoon).length !== 1 ? 's' : ''} ouvert{allEtabs.filter(e => (e.isOpen ?? e.isActive) && !e.isComingSoon).length !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
-          ) : (
-            <>
-              {openNow.length > 0 && <EtabSlider title="🟢 Ouverts maintenant" etabs={openNow} service={service} onSelect={handleSelectEtab} />}
-              {recentEtabs.length > 0 && <EtabSlider title="🕐 Récemment consultés" etabs={recentEtabs} service={service} onSelect={handleSelectEtab} />}
-              <EtabGrid title={resolvedTheme === 'day' ? '🏪 Tous les restaurants' : '🌙 Partenaires nuit'} etabs={allEtabs} service={service} onSelect={handleSelectEtab} />
-              {comingSoon.length > 0 && <EtabSlider title="🔜 Bientôt disponibles" etabs={comingSoon} service={service} onSelect={handleSelectEtab} />}
-            </>
-          )}
+            {allEtabs.length === 0 ? (
+              <div className="yn-empty">
+                <span style={{ fontSize: '3rem' }}>🏪</span>
+                <p style={{ marginTop: 12, color: 'var(--yn-text-muted,#9ca3af)' }}>Aucun établissement disponible</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 14, overflowX: 'auto',
+                padding: '6px 16px 20px', scrollSnapType: 'x mandatory',
+                scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+                {allEtabs.map(e => (
+                  <EtabSnapCard key={e.id} etab={e} onClick={() => handleSelectEtab(e)} isNight={resolvedTheme === 'night'} />
+                ))}
+              </div>
+            )}
+          </section>
 
           <div style={{ height: 32 }} />
         </main>
