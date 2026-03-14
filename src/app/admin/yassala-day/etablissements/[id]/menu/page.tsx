@@ -27,6 +27,19 @@ type Etab = { id?: string; name: string; logoUrl?: string; isActive: boolean };
 type Cat  = { id?: string; key: string; label: string; emoji: string; order: number };
 type Prod = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; isActive?: boolean };
 
+function extractSizePrices(desc: string) {
+  const idx = desc.indexOf(' • ');
+  if (idx === -1) return { baseDesc: desc, petite: '', grande: '', familiale: '' };
+  const base = desc.slice(0, idx);
+  const parts = desc.slice(idx + 3).split(/\s*·\s*/);
+  const res: Record<string, string> = {};
+  for (const p of parts) {
+    const m = p.trim().match(/^(Petite|Grande|Familiale)\s+([\d,]+)\s*€/);
+    if (m) res[m[1].toLowerCase()] = m[2];
+  }
+  return { baseDesc: base, petite: res['petite'] || '', grande: res['grande'] || '', familiale: res['familiale'] || '' };
+}
+
 // ── Design tokens (Yassala Night style) ─────────────────────────────────────
 const PINK   = "#ff2d78";
 const BG     = "#08050f";
@@ -76,6 +89,7 @@ export default function MenuPage() {
 
   // Product drawer
   const [drawer,    setDrawer]    = useState<(Prod & { id?: string }) | null>(null);
+  const [drawerSizes, setDrawerSizes] = useState({ petite: '', grande: '', familiale: '' });
   const [catFilter, setCatFilter] = useState("all");
 
   // Upload
@@ -152,6 +166,11 @@ export default function MenuPage() {
   const saveProd = async () => {
     if (!drawer?.name.trim()) { showMsg("Nom requis", false); return; }
     const { id, ...data } = { ...drawer, etablissementId: etabId, updatedAt: new Date().toISOString() };
+    const sizeParts: string[] = [];
+    if (drawerSizes.petite)    sizeParts.push(`Petite ${drawerSizes.petite}€`);
+    if (drawerSizes.grande)    sizeParts.push(`Grande ${drawerSizes.grande}€`);
+    if (drawerSizes.familiale) sizeParts.push(`Familiale ${drawerSizes.familiale}€`);
+    if (sizeParts.length > 0) data.desc = `${data.desc} • ${sizeParts.join(' · ')}`;
     if (id) {
       await updateDoc(doc(db, "day_products", id), data);
       showMsg("Produit mis à jour ✓");
@@ -368,7 +387,7 @@ export default function MenuPage() {
               <span style={{ color: "#3a2850", marginLeft: 8 }}>({filtered.length})</span>
             </div>
             <button
-              onClick={() => setDrawer({ ...blankProd, cat: catFilter !== "all" ? catFilter : (cats[0]?.key ?? "") })}
+              onClick={() => { setDrawer({ ...blankProd, cat: catFilter !== "all" ? catFilter : (cats[0]?.key ?? "") }); setDrawerSizes({ petite: '', grande: '', familiale: '' }); }}
               style={{
                 background: PINK, color: "#fff", border: "none", borderRadius: 8,
                 padding: "9px 20px", ...MONO, fontSize: ".78rem", cursor: "pointer", fontWeight: 700,
@@ -392,7 +411,7 @@ export default function MenuPage() {
               </div>
               {prods.length === 0 && (
                 <button
-                  onClick={() => setDrawer({ ...blankProd, cat: cats[0]?.key ?? "" })}
+                  onClick={() => { setDrawer({ ...blankProd, cat: cats[0]?.key ?? "" }); setDrawerSizes({ petite: '', grande: '', familiale: '' }); }}
                   style={{ background: PINK, color: "#fff", border: "none", borderRadius: 8, padding: "11px 24px", ...MONO, fontSize: ".8rem", cursor: "pointer", fontWeight: 700 }}>
                   + AJOUTER LE 1ER PRODUIT
                 </button>
@@ -444,7 +463,11 @@ export default function MenuPage() {
 
                   {/* Actions */}
                   <div style={{ padding: "8px 10px", borderTop: `1px solid ${BORDER_DIM}`, display: "flex", gap: 5 }}>
-                    <button onClick={() => setDrawer(p as Prod & { id?: string })}
+                    <button onClick={() => {
+                      const { baseDesc, petite, grande, familiale } = extractSizePrices(p.desc || '');
+                      setDrawer({ ...(p as Prod & { id?: string }), desc: baseDesc });
+                      setDrawerSizes({ petite, grande, familiale });
+                    }}
                       style={{ flex: 1, background: "rgba(255,45,120,.08)", border: `1px solid ${BORDER}`, color: PINK, borderRadius: 6, padding: "6px", ...MONO, fontSize: ".7rem", cursor: "pointer" }}>
                       ✏️ ÉDITER
                     </button>
@@ -552,6 +575,30 @@ export default function MenuPage() {
                   placeholder="Courte description"
                   style={inp()}
                 />
+              </div>
+
+              {/* Tailles */}
+              <div>
+                <label style={{ ...MONO, fontSize: ".68rem", color: "#7a7490", letterSpacing: ".1em", display: "block", marginBottom: 6 }}>
+                  TAILLES & PRIX <span style={{ color: "#4a4060" }}>(optionnel)</span>
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  {(["petite", "grande", "familiale"] as const).map(size => (
+                    <div key={size}>
+                      <div style={{ ...MONO, fontSize: ".62rem", color: "#5a5470", marginBottom: 4, textTransform: "uppercase" }}>{size}</div>
+                      <div style={{ position: "relative" }}>
+                        <input
+                          type="number" min={0} step={0.5}
+                          value={drawerSizes[size]}
+                          onChange={e => setDrawerSizes(s => ({ ...s, [size]: e.target.value }))}
+                          placeholder="0"
+                          style={inp({ paddingRight: "26px" })}
+                        />
+                        <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#5a5470", fontSize: ".82rem", pointerEvents: "none" }}>€</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Price & Stock */}
