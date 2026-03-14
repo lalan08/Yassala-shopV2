@@ -1257,49 +1257,46 @@ export default function YassalaDayView() {
               {etablissements.map(etab => {
                 const isOpen = etab.isOpen ?? etab.isActive;
                 return (
-                <div key={etab.id}
+                <button key={etab.id}
                   onClick={() => { setSelectedEtab(etab); setActiveCat("all"); setEtabSearch(""); }}
-                  style={{
-                    minWidth:200, width:200, flexShrink:0, scrollSnapAlign:"start",
-                    background:D.card, borderRadius:18, overflow:"hidden", cursor:"pointer",
-                    boxShadow:D.shadow, border:`1px solid ${D.border}`, transition:"transform .15s",
-                  }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(0.97)";}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(1)";}}
-                  onMouseDown={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(0.97)";}}
-                  onMouseUp={e=>{(e.currentTarget as HTMLDivElement).style.transform="scale(1)";}}
+                  style={{ flexShrink:0, width:200, scrollSnapAlign:"start",
+                    background:"none", border:"none", padding:0, cursor:"pointer", textAlign:"left" }}
                 >
-                  {/* Cover */}
-                  <div style={{position:"relative",height:130,overflow:"hidden",background:D.cardDark}}>
-                    {etab.coverUrl
-                      ? <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:!isOpen&&!etab.isComingSoon?0.5:1}} />
-                      : <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",opacity:.15}}>{etab.emoji||"🏪"}</div>}
-                    {!isOpen && !etab.isComingSoon && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.28)"}} />}
-                    {/* Badge statut */}
-                    <span style={{position:"absolute",top:8,left:8,
-                      background:etab.isComingSoon?"#6366f1":isOpen?"#22c55e":"rgba(0,0,0,.55)",
-                      color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 9px",borderRadius:8,
-                      backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)",
-                      fontFamily:"'Inter',system-ui,sans-serif"}}>
-                      {etab.isComingSoon?"Bientôt":isOpen?"Ouvert":"Fermé"}
-                    </span>
-                    {etab.deliveryFee===0 && (
-                      <span style={{position:"absolute",bottom:8,left:8,background:D.pink,color:"#fff",fontSize:".58rem",fontWeight:700,padding:"2px 7px",borderRadius:6}}>0 € livraison</span>
-                    )}
-                  </div>
-                  {/* Info */}
-                  <div style={{padding:"11px 13px 14px"}}>
-                    <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:700,fontSize:".9rem",
-                      color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
-                      {etab.name}
+                  <div style={{ borderRadius:18, overflow:"hidden",
+                    background:"#0e0a1a",
+                    border:"1px solid rgba(255,45,120,.18)",
+                    boxShadow:"0 6px 24px rgba(0,0,0,.5)" }}>
+                    {/* Cover */}
+                    <div style={{position:"relative",height:130,overflow:"hidden",background:"rgba(255,255,255,.04)"}}>
+                      {etab.coverUrl
+                        ? <img src={etab.coverUrl} alt={etab.name} style={{width:"100%",height:"100%",objectFit:"cover",display:"block",opacity:!isOpen&&!etab.isComingSoon?0.5:1}} />
+                        : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",opacity:.12}}>{etab.emoji||"🏪"}</div>}
+                      {!isOpen && !etab.isComingSoon && <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.28)"}} />}
+                      {/* Badge statut */}
+                      <span style={{position:"absolute",top:8,left:8,
+                        background:etab.isComingSoon?"#6366f1":isOpen?"#22c55e":"rgba(0,0,0,.55)",
+                        color:"#fff",fontSize:".6rem",fontWeight:700,padding:"3px 9px",borderRadius:8,
+                        backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)"}}>
+                        {etab.isComingSoon?"Bientôt":isOpen?"Ouvert":"Fermé"}
+                      </span>
+                      {etab.deliveryFee===0 && (
+                        <span style={{position:"absolute",bottom:8,left:8,background:"#ff2d78",color:"#fff",fontSize:".58rem",fontWeight:700,padding:"2px 7px",borderRadius:6}}>0 € livraison</span>
+                      )}
                     </div>
-                    <div style={{marginTop:4,display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
-                      {etab.category&&<span style={{fontSize:".7rem",color:D.muted}}>{etab.category}</span>}
-                      {etab.deliveryMin!=null&&<span style={{fontSize:".7rem",color:D.muted}}>· {etab.deliveryMin}–{etab.deliveryMax} min</span>}
+                    {/* Info */}
+                    <div style={{padding:"11px 13px 14px"}}>
+                      <div style={{fontWeight:700,fontSize:".9rem",
+                        color:"#f0eeff",overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>
+                        {etab.name}
+                      </div>
+                      <div style={{marginTop:4,display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+                        {etab.category&&<span style={{fontSize:".7rem",color:"#9ca3af"}}>{etab.category}</span>}
+                        {etab.deliveryMin!=null&&<span style={{fontSize:".7rem",color:"#6b7280"}}>· {etab.deliveryMin}–{etab.deliveryMax} min</span>}
+                      </div>
+                      {etab.rating!=null&&<div style={{marginTop:5,fontSize:".7rem",color:"#9ca3af",fontWeight:600}}>⭐ {etab.rating.toFixed(1)}{etab.reviewCount?` (${etab.reviewCount})`:""}</div>}
                     </div>
-                    {etab.rating!=null&&<div style={{marginTop:4,fontSize:".7rem",color:D.muted,fontWeight:600}}>⭐ {etab.rating.toFixed(1)}{etab.reviewCount?` (${etab.reviewCount})`:""}</div>}
                   </div>
-                </div>
+                </button>
                 );
               })}
             </div>
