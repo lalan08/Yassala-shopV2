@@ -177,10 +177,10 @@ function useCountdownToNight() {
 function parseSizesEtab(desc: string): { label: string; price: number }[] | null {
   const idx = desc.indexOf(' • ');
   if (idx === -1) return null;
-  const parts = desc.slice(idx + 3).split(' · ');
+  const parts = desc.slice(idx + 3).split(/\s*[·•]\s*/);
   const sizes = parts.map(p => {
-    const m = p.match(/^(.+?)\s+([\d]+)€$/);
-    return m ? { label: m[1], price: parseFloat(m[2]) } : null;
+    const m = p.trim().match(/^(.+?)\s+([\d]+(?:[.,]\d{1,2})?)\s*€/);
+    return m ? { label: m[1].trim(), price: parseFloat(m[2].replace(',', '.')) } : null;
   }).filter(Boolean) as { label: string; price: number }[];
   return sizes.length > 1 ? sizes : null;
 }
