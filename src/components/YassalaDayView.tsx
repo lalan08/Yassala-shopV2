@@ -125,7 +125,8 @@ type Product = { id: string; name: string; desc: string; price: number; image: s
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
 type Pack = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiRecommendEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiStockEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
-type CartItem = { id: string; name: string; price: number; qty: number; };
+type CartItem = { id: string; name: string; price: number; qty: number; note?: string; };
+type Supplement = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
 type Etablissement = { id: string; name: string; slug?: string; description?: string; address?: string; phone?: string; logoUrl?: string; coverUrl?: string; openHours?: string; isActive: boolean; isOpen?: boolean; emoji?: string; bgColor?: string; category?: string; isComingSoon?: boolean; deliveryMin?: number; deliveryMax?: number; deliveryFee?: number; rating?: number; reviewCount?: number; };
 
@@ -186,6 +187,10 @@ function parseSizesEtab(desc: string): { label: string; price: number }[] | null
 function getDisplayDescEtab(desc: string) {
   const idx = desc.indexOf(' • ');
   return idx === -1 ? desc : desc.slice(0, idx);
+}
+function getBaseProductId(id: string) {
+  const m = id.match(/^(.+)_(Petite|Grande|Familiale)(?:_half_.+)?$/);
+  return m ? m[1] : id;
 }
 
 export default function YassalaDayView() {
@@ -260,6 +265,13 @@ export default function YassalaDayView() {
   const [cashSmsError, setCashSmsError]           = useState('');
   const [lastAddedId, setLastAddedId]     = useState<string|null>(null);
   const [sizePickerProd, setSizePickerProd] = useState<any>(null);
+  const [supplements, setSupplements]     = useState<Supplement[]>([]);
+  const [sizePickerStep, setSizePickerStep] = useState<'size'|'extras'>('size');
+  const [sizePickerChosenSize, setSizePickerChosenSize] = useState<{label:string;price:number}|null>(null);
+  const [sizePickerSelectedSupps, setSizePickerSelectedSupps] = useState<Supplement[]>([]);
+  const [sizePickerNote, setSizePickerNote] = useState('');
+  const [halfHalfMode, setHalfHalfMode]   = useState(false);
+  const [halfHalfProd2, setHalfHalfProd2] = useState<any>(null);
   const [likes, setLikes]                 = useState<Set<string>>(new Set());
   const [showDriverForm, setShowDriverForm] = useState(false);
   const [driverForm, setDriverForm]         = useState({name:"",phone:"",email:"",zone:"",vehicle:"moto",message:""});
@@ -324,7 +336,12 @@ export default function YassalaDayView() {
   };
 
   const etabCats = selectedEtab
-    ? dbCats.filter((c: any) => c.etablissementId === selectedEtab.id)
+    ? (() => {
+        const withId = dbCats.filter((c: any) => c.etablissementId === selectedEtab.id);
+        if (withId.length > 0) return withId;
+        const withoutId = dbCats.filter((c: any) => !c.etablissementId);
+        return withoutId.length > 0 ? withoutId : dbCats;
+      })()
     : (dbCats.length > 0 ? dbCats : DEFAULT_DAY_CATS);
   const cats = [
     { key:"all", label:"TOUT", emoji:"", order:0 },
@@ -392,7 +409,10 @@ export default function YassalaDayView() {
     const unsubPromos = onSnapshot(collection(db, "promotions"), snap => {
       setPromotions(snap.docs.map(d => ({ id:d.id, ...d.data() } as Promotion)));
     });
-    return () => { unsubEtabs(); unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPromos(); };
+    const unsubSupplements = onSnapshot(collection(db, "day_supplements"), snap => {
+      setSupplements(snap.docs.map(d => ({ id:d.id, ...d.data() } as Supplement)).filter(s => s.isActive !== false));
+    });
+    return () => { unsubEtabs(); unsubProducts(); unsubPacks(); unsubSettings(); unsubDeliveryConfig(); unsubBanners(); unsubCats(); unsubAuth(); unsubPromos(); unsubSupplements(); };
   }, []);
 
   useEffect(() => {
@@ -446,20 +466,21 @@ export default function YassalaDayView() {
     setTimeout(() => setToast(t => ({ ...t, show:false })), 2800);
   };
 
-  const addToCart = (id: string, name: string, price: number) => {
-    const product = products.find(p => p.id === id);
+  const addToCart = (id: string, name: string, price: number, note?: string) => {
+    const baseId = getBaseProductId(id);
+    const product = products.find(p => p.id === baseId);
     if (product && product.stock === 0) { showToast("Produit en rupture de stock !"); return; }
     setCart(prev => {
       const existing = prev.find(item => item.id === id);
       const currentQty = existing ? existing.qty : 0;
       if (product && currentQty >= product.stock) { showToast(`Stock limité à ${product.stock} unité(s) !`); return prev; }
-      if (existing) return prev.map(item => item.id === id ? { ...item, qty:item.qty+1 } : item);
-      return [...prev, { id, name, price, qty:1 }];
+      if (existing && !note) return prev.map(item => item.id === id ? { ...item, qty:item.qty+1 } : item);
+      return [...prev, { id, name, price, qty:1, note }];
     });
-    setLastAddedId(id);
+    setLastAddedId(baseId);
     setTimeout(() => setLastAddedId(null), 600);
     showToast(`${name} ajouté · ${price.toFixed(2)}€`);
-    if (activePromo && activePromo.productIds.includes(id)) {
+    if (activePromo && activePromo.productIds.includes(baseId)) {
       addDoc(collection(db, "promotion_events"), { promoId:activePromo.id, eventType:"add_to_cart", userId:currentUser?.uid||null, createdAt:new Date().toISOString() }).catch(() => {});
     }
   };
@@ -488,7 +509,6 @@ export default function YassalaDayView() {
 
   const openCart = () => {
     if (cart.length === 0) { showToast("Panier vide — commande quelque chose !"); return; }
-    setSelectedEtab(null);
     setShowCart(true);
   };
 
@@ -566,7 +586,7 @@ export default function YassalaDayView() {
 
     try {
       const orderRef = doc(collection(db, "orders"));
-      const orderItems = cart.map(item => `${item.qty}× ${item.name} (${item.price.toFixed(2)}€)`).join("\n");
+      const orderItems = cart.map(item => `${item.qty}× ${item.name} (${item.price.toFixed(2)}€)${item.note ? ` [${item.note}]` : ""}`).join("\n");
       const deliveryFee = deliveryFeeDisplay;
       const totalWithDelivery = discountedTotal + deliveryFee;
       const discount = getDiscount();
@@ -580,7 +600,7 @@ export default function YassalaDayView() {
       const counterRef = doc(db, "settings", "orderCounter");
 
       await runTransaction(db, async (transaction) => {
-        const prodRefs = cart.map(item => doc(db, "day_products", item.id));
+        const prodRefs = cart.map(item => doc(db, "day_products", getBaseProductId(item.id)));
         const prodDocs = await Promise.all(prodRefs.map(ref => transaction.get(ref)));
         const counterSnap = await transaction.get(counterRef);
         orderNum = (counterSnap.exists() ? (counterSnap.data().count as number) : 0) + 1;
@@ -607,7 +627,7 @@ export default function YassalaDayView() {
         }
         transaction.set(counterRef, { count:orderNum });
         transaction.set(orderRef, {
-          items:orderItems, cartItems:cart.map(i => ({ name:i.name, qty:i.qty, price:i.price })),
+          items:orderItems, cartItems:cart.map(i => ({ name:i.name, qty:i.qty, price:i.price, note:i.note||null })),
           total:totalWithDelivery, subtotal:cartTotal, discount,
           promoDiscount:promoDiscountSnap > 0 ? promoDiscountSnap : null, promoId:validatedPromoId,
           coupon:coupon?.code||null, deliveryFee,
@@ -677,12 +697,25 @@ export default function YassalaDayView() {
   const handlePaymentCancel = useCallback(() => { setStripeClientSecret(null); }, []);
 
   const etabProds = selectedEtab
-    ? products.filter((p: any) => p.etablissementId === selectedEtab.id)
+    ? (() => {
+        const withId = products.filter((p: any) => p.etablissementId === selectedEtab.id);
+        if (withId.length > 0) return withId;
+        return products.filter((p: any) => !p.etablissementId);
+      })()
     : products.filter((p: any) => !p.etablissementId);
 
   const pickOrAddEtab = (p: any) => {
     const sizes = parseSizesEtab(p.desc || '');
-    if (sizes) { setSizePickerProd(p); return; }
+    if (sizes) {
+      setSizePickerProd(p);
+      setSizePickerStep('size');
+      setSizePickerChosenSize(null);
+      setSizePickerSelectedSupps([]);
+      setSizePickerNote('');
+      setHalfHalfMode(false);
+      setHalfHalfProd2(null);
+      return;
+    }
     addToCart(p.id, p.name, p.price);
   };
   const searchQ = etabSearch.toLowerCase().trim();
@@ -1441,49 +1474,164 @@ export default function YassalaDayView() {
 
           </div>{/* fin bottom sheet */}
 
-          {/* Size picker — sélection taille pizza */}
-          {sizePickerProd && (
-            <div style={{position:"fixed",inset:0,zIndex:900}} onClick={() => setSizePickerProd(null)}>
-              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)"}} />
+          {/* Size picker — sélection taille + suppléments + moitié-moitié */}
+          {sizePickerProd && (() => {
+            const sizes = parseSizesEtab(sizePickerProd.desc||"") || [];
+            const etabSupps = supplements.filter(s => !s.etablissementId || (selectedEtab && s.etablissementId === selectedEtab.id));
+            const suppTotal = sizePickerSelectedSupps.reduce((s,x) => s+x.price, 0);
+            const chosenPrice = sizePickerChosenSize ? sizePickerChosenSize.price + suppTotal : 0;
+            const pizzasWithSizes = etabProds.filter(p => p.id !== sizePickerProd.id && parseSizesEtab(p.desc||"") && p.stock > 0);
+            const confirmAdd = () => {
+              if (!sizePickerChosenSize) return;
+              let id: string;
+              let name: string;
+              let price: number;
+              if (halfHalfMode && halfHalfProd2) {
+                const sizes2 = parseSizesEtab(halfHalfProd2.desc||"") || [];
+                const size2 = sizes2.find(s => s.label === sizePickerChosenSize.label) || sizes2[0];
+                price = Math.max(sizePickerChosenSize.price, size2?.price||0) + suppTotal;
+                id = `${sizePickerProd.id}_${sizePickerChosenSize.label}_half_${halfHalfProd2.id}`;
+                name = `½ ${sizePickerProd.name} / ½ ${halfHalfProd2.name} (${sizePickerChosenSize.label})`;
+              } else {
+                price = chosenPrice;
+                id = `${sizePickerProd.id}_${sizePickerChosenSize.label}`;
+                name = `${sizePickerProd.name} (${sizePickerChosenSize.label})`;
+              }
+              const noteParts: string[] = [];
+              if (sizePickerSelectedSupps.length > 0) noteParts.push(sizePickerSelectedSupps.map(s=>`+ ${s.name}`).join(', '));
+              if (sizePickerNote.trim()) noteParts.push(sizePickerNote.trim());
+              const note = noteParts.length > 0 ? noteParts.join(' · ') : undefined;
+              addToCart(id, name, price, note);
+              setSizePickerProd(null);
+            };
+            return (
+            <div style={{position:"fixed",inset:0,zIndex:950}} onClick={() => setSizePickerProd(null)}>
+              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)"}} />
               <div style={{position:"absolute",bottom:0,left:0,right:0,background:D.card,
-                borderTop:`1px solid ${D.border}`,borderRadius:"22px 22px 0 0",padding:"0 20px 36px"}}
+                borderTop:`1px solid ${D.border}`,borderRadius:"22px 22px 0 0",padding:"0 20px 0",
+                maxHeight:"85vh",overflowY:"auto"}}
                 onClick={e => e.stopPropagation()}>
-                <div style={{display:"flex",justifyContent:"center",padding:"14px 0 8px"}}>
-                  <div style={{width:38,height:4,background:`${D.border}`,borderRadius:2}} />
+                <div style={{display:"flex",justifyContent:"center",padding:"14px 0 8px",position:"sticky",top:0,background:D.card,zIndex:1}}>
+                  <div style={{width:38,height:4,background:D.border,borderRadius:2}} />
                 </div>
                 <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,color:D.text,fontSize:"1.05rem",marginBottom:2}}>{sizePickerProd.name}</div>
-                <div style={{fontFamily:"'Inter',sans-serif",color:D.muted,fontSize:".8rem",marginBottom:18}}>{getDisplayDescEtab(sizePickerProd.desc||"")}</div>
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                  {parseSizesEtab(sizePickerProd.desc||"")?.map((size:{label:string;price:number}) => (
-                    <button key={size.label} onClick={() => {
-                      const sizedId = `${sizePickerProd.id}_${size.label}`;
-                      const sizedName = `${sizePickerProd.name} (${size.label})`;
-                      addToCart(sizedId, sizedName, size.price);
-                      setLastAddedId(sizePickerProd.id);
-                      setTimeout(() => setLastAddedId(null), 1200);
-                      setSizePickerProd(null);
-                    }}
-                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                        padding:"15px 18px",borderRadius:14,border:`1px solid ${D.border}`,
-                        background:D.cardDark,cursor:"pointer",textAlign:"left",transition:"background .15s"}}>
-                      <div>
-                        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:D.text,fontSize:".95rem"}}>{size.label}</div>
-                        <div style={{fontFamily:"'Inter',sans-serif",fontSize:".72rem",color:D.muted,marginTop:2}}>
-                          {size.label==="Petite"?"~1 pers.":size.label==="Grande"?"~2-3 pers.":"~4-6 pers."}
+                <div style={{fontFamily:"'Inter',sans-serif",color:D.muted,fontSize:".8rem",marginBottom:16}}>{getDisplayDescEtab(sizePickerProd.desc||"")}</div>
+
+                {/* — Tailles — */}
+                <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",fontWeight:700,color:D.muted,letterSpacing:".1em",textTransform:"uppercase",marginBottom:8}}>Choisir la taille *</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+                  {sizes.map((size:{label:string;price:number}) => {
+                    const isChosen = sizePickerChosenSize?.label === size.label;
+                    return (
+                      <button key={size.label} onClick={() => { setSizePickerChosenSize(size); setHalfHalfProd2(null); setHalfHalfMode(false); }}
+                        style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                          padding:"13px 16px",borderRadius:12,cursor:"pointer",textAlign:"left",transition:"all .15s",
+                          border: isChosen ? `2px solid ${D.pink}` : `1px solid ${D.border}`,
+                          background: isChosen ? `rgba(255,45,120,.06)` : D.cardDark}}>
+                        <div>
+                          <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:D.text,fontSize:".95rem"}}>{size.label}</div>
+                          <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",color:D.muted,marginTop:1}}>
+                            {size.label==="Petite"?"~1 pers.":size.label==="Grande"?"~2-3 pers.":"~4-6 pers."}
+                          </div>
                         </div>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:12}}>
-                        <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,color:D.pink,fontSize:"1rem"}}>{size.price.toFixed(2)}€</span>
-                        <div style={{width:32,height:32,borderRadius:"50%",background:D.pink,
-                          display:"flex",alignItems:"center",justifyContent:"center",
-                          color:"#fff",fontSize:"1.1rem",fontWeight:700}}>+</div>
-                      </div>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,color:D.pink,fontSize:".95rem"}}>{size.price.toFixed(2)}€</span>
+                          <div style={{width:22,height:22,borderRadius:"50%",border:`2px solid ${isChosen?D.pink:D.border}`,background:isChosen?D.pink:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            {isChosen && <div style={{width:8,height:8,borderRadius:"50%",background:"#fff"}} />}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* — Moitié-Moitié — */}
+                {pizzasWithSizes.length > 0 && sizePickerChosenSize && (
+                  <div style={{marginBottom:16}}>
+                    <button onClick={() => { setHalfHalfMode(m => !m); setHalfHalfProd2(null); }}
+                      style={{width:"100%",padding:"11px 16px",borderRadius:12,cursor:"pointer",textAlign:"left",
+                        border: halfHalfMode ? `2px solid ${D.cyan}` : `1px solid ${D.border}`,
+                        background: halfHalfMode ? `rgba(58,191,248,.06)` : D.cardDark,
+                        fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",
+                        color: halfHalfMode ? D.cyan : D.text,display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:"1.1rem"}}>½</span> Moitié-Moitié
+                      <span style={{marginLeft:"auto",fontSize:".72rem",fontWeight:500,color:D.muted}}>2 saveurs sur 1 pizza</span>
                     </button>
-                  ))}
+                    {halfHalfMode && (
+                      <div style={{marginTop:8,borderRadius:12,border:`1px solid ${D.border}`,overflow:"hidden"}}>
+                        <div style={{padding:"10px 14px",background:D.cardDark,fontFamily:"'Inter',sans-serif",fontSize:".7rem",color:D.muted,fontWeight:600}}>
+                          Choisir la 2e moitié :
+                        </div>
+                        {pizzasWithSizes.slice(0,8).map((pp:any) => (
+                          <button key={pp.id} onClick={() => setHalfHalfProd2(halfHalfProd2?.id===pp.id ? null : pp)}
+                            style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
+                              background: halfHalfProd2?.id===pp.id ? `rgba(58,191,248,.07)` : D.card,
+                              border:"none",borderTop:`1px solid ${D.border}`,cursor:"pointer",textAlign:"left",
+                              borderLeft: halfHalfProd2?.id===pp.id ? `3px solid ${D.cyan}` : "3px solid transparent"}}>
+                            {pp.image && <img src={pp.image} alt={pp.name} style={{width:36,height:36,borderRadius:6,objectFit:"cover",flexShrink:0}} />}
+                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".88rem",color:D.text,flex:1,textAlign:"left"}}>{pp.name}</span>
+                            {halfHalfProd2?.id===pp.id && <span style={{color:D.cyan,fontSize:".8rem"}}>✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* — Suppléments — */}
+                {etabSupps.length > 0 && (
+                  <div style={{marginBottom:16}}>
+                    <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",fontWeight:700,color:D.muted,letterSpacing:".1em",textTransform:"uppercase",marginBottom:8}}>Suppléments</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {etabSupps.map(s => {
+                        const isOn = sizePickerSelectedSupps.some(x => x.id===s.id);
+                        return (
+                          <button key={s.id} onClick={() => setSizePickerSelectedSupps(prev => isOn ? prev.filter(x=>x.id!==s.id) : [...prev,s])}
+                            style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,cursor:"pointer",
+                              border: isOn ? `2px solid ${D.pink}` : `1px solid ${D.border}`,
+                              background: isOn ? `rgba(255,45,120,.05)` : D.cardDark}}>
+                            {s.emoji && <span style={{fontSize:"1.1rem"}}>{s.emoji}</span>}
+                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".9rem",color:D.text,flex:1,textAlign:"left"}}>{s.name}</span>
+                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",color:D.pink}}>
+                              {s.price > 0 ? `+${s.price.toFixed(2)}€` : "Gratuit"}
+                            </span>
+                            <div style={{width:20,height:20,borderRadius:4,border:`2px solid ${isOn?D.pink:D.border}`,background:isOn?D.pink:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                              {isOn && <span style={{color:"#fff",fontSize:".7rem",fontWeight:900}}>✓</span>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* — Note / Instruction — */}
+                <div style={{marginBottom:20}}>
+                  <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",fontWeight:700,color:D.muted,letterSpacing:".1em",textTransform:"uppercase",marginBottom:8}}>Instructions spéciales (optionnel)</div>
+                  <input
+                    value={sizePickerNote}
+                    onChange={e => setSizePickerNote(e.target.value)}
+                    placeholder="Ex: sans oignon, bien cuit, avec du miel…"
+                    style={{width:"100%",background:D.cardDark,border:`1px solid ${D.border}`,borderRadius:10,
+                      padding:"11px 14px",color:D.text,fontFamily:"'Inter',sans-serif",fontSize:".88rem",
+                      boxSizing:"border-box",outline:"none"}}
+                  />
+                </div>
+
+                {/* — Bouton Ajouter — */}
+                <div style={{position:"sticky",bottom:0,background:D.card,paddingBottom:28,paddingTop:8}}>
+                  <button onClick={confirmAdd} disabled={!sizePickerChosenSize || (halfHalfMode && !halfHalfProd2)}
+                    style={{width:"100%",padding:"16px",borderRadius:14,border:"none",cursor:(!sizePickerChosenSize||(halfHalfMode&&!halfHalfProd2))?"not-allowed":"pointer",
+                      background:(!sizePickerChosenSize||(halfHalfMode&&!halfHalfProd2))?"rgba(0,0,0,.1)":D.pink,
+                      color:"#fff",fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1rem",
+                      display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all .15s"}}>
+                    {!sizePickerChosenSize ? "Choisir une taille" : (halfHalfMode && !halfHalfProd2) ? "Choisir la 2e moitié" : `Ajouter · ${chosenPrice.toFixed(2)}€`}
+                  </button>
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
         </>
       )}
 
@@ -1608,7 +1756,8 @@ export default function YassalaDayView() {
                     {cart.map(item => (
                       <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"12px",background:D.cardDark,borderRadius:6,marginBottom:8}}>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontWeight:700,fontSize:"1rem",fontFamily:"'Inter',sans-serif",marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",color:D.text}}>{item.name}</div>
+                          <div style={{fontWeight:700,fontSize:"1rem",fontFamily:"'Inter',sans-serif",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",color:D.text,whiteSpace:"nowrap"}}>{item.name}</div>
+                          {item.note && <div style={{fontSize:".72rem",color:D.muted,fontFamily:"'Inter',sans-serif",marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.note}</div>}
                           <div style={{fontSize:".88rem",color:D.pink,fontFamily:"'Inter',sans-serif",fontWeight:700}}>{item.price.toFixed(2)}€</div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
@@ -2071,7 +2220,7 @@ export default function YassalaDayView() {
       )}
 
       {/* ── BOTTOM NAV ── */}
-      <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:800,background:`rgba(255,255,255,0.97)`,backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",paddingTop:10,paddingBottom:"max(14px, env(safe-area-inset-bottom))",paddingLeft:12,paddingRight:12,borderTop:`1px solid ${D.border}`,boxShadow:"0 -4px 20px rgba(17,24,39,.06)"}}>
+      <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:200,background:`rgba(255,255,255,0.97)`,backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",paddingTop:10,paddingBottom:"max(14px, env(safe-area-inset-bottom))",paddingLeft:12,paddingRight:12,borderTop:`1px solid ${D.border}`,boxShadow:"0 -4px 20px rgba(17,24,39,.06)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-evenly",maxWidth:520,margin:"0 auto"}}>
           <button onClick={() => window.scrollTo({top:0,behavior:"smooth"})} style={{width:54,height:54,borderRadius:"50%",background:"rgba(58,191,248,.06)",border:`1px solid rgba(58,191,248,.2)`,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:D.cyan}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
@@ -2289,7 +2438,7 @@ function EtabProductRow({ p, D, lastAddedId, addToCart, openProductModal, active
           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8}}>
             {pp!==null&&<span style={{fontSize:".75rem",color:D.muted,textDecoration:"line-through"}}>{p.price.toFixed(2)}€</span>}
             <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1rem",color:p.stock===0?D.muted:D.pink}}>{(pp??p.price).toFixed(2)}€</span>
-            {sizes && <span style={{fontSize:".68rem",color:D.pink,fontWeight:600}}>3 tailles</span>}
+            {sizes && <span style={{fontSize:".68rem",color:D.pink,fontWeight:600}}>{sizes.length} taille{sizes.length>1?"s":""}</span>}
             {p.stock>0&&p.stock<10&&<span style={{fontSize:".68rem",color:"#ff6b35",fontWeight:600}}>· {p.stock} restant{p.stock>1?"s":""}</span>}
           </div>
         </div>
@@ -2326,7 +2475,7 @@ function EtabProductRow({ p, D, lastAddedId, addToCart, openProductModal, active
             <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".9rem",color:p.stock===0?D.muted:D.pink}}>
               {sizes ? `À partir de ${Math.min(...sizes.map(s=>s.price))}€` : `${(pp??p.price).toFixed(2)}€`}
             </span>
-            {sizes && <span style={{fontSize:".68rem",color:D.pink,fontWeight:600}}>· 3 tailles</span>}
+            {sizes && <span style={{fontSize:".68rem",color:D.pink,fontWeight:600}}>· {sizes.length} taille{sizes.length>1?"s":""}</span>}
             {!sizes&&p.stock>0&&p.stock<10&&<span style={{fontSize:".68rem",color:"#ff6b35",fontWeight:600}}>· {p.stock} restant{p.stock>1?"s":""}</span>}
           </div>
         </div>
