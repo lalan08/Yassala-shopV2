@@ -1544,7 +1544,8 @@ export default function YassalaDayView() {
       </footer>
 
       {/* TOAST */}
-      <div style={{position:"fixed",top:18,right:18,background:D.card,border:`1px solid ${D.border}`,borderRadius:14,padding:"14px 20px",display:"flex",alignItems:"center",gap:10,zIndex:9998,maxWidth:280,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".82rem",color:D.text,boxShadow:"0 4px 20px rgba(0,0,0,.1)",transform: toast.show ? "translateX(0)" : "translateX(130%)",transition:"transform .4s cubic-bezier(.34,1.56,.64,1)"}}>
+      <div style={{position:"fixed",top:18,right:18,background:"#fff",borderLeft:`4px solid ${D.pink}`,borderTop:`1px solid rgba(255,45,120,.15)`,borderRight:`1px solid rgba(255,45,120,.15)`,borderBottom:`1px solid rgba(255,45,120,.15)`,borderRadius:10,padding:"12px 18px",display:"flex",alignItems:"center",gap:10,zIndex:9998,maxWidth:280,fontFamily:"'Inter',system-ui,sans-serif",fontSize:".82rem",color:D.text,boxShadow:"0 4px 24px rgba(255,45,120,.12), 0 1px 4px rgba(0,0,0,.06)",transform: toast.show ? "translateX(0)" : "translateX(130%)",transition:"transform .4s cubic-bezier(.34,1.56,.64,1)"}}>
+        <span style={{color:D.pink,fontSize:"1rem",flexShrink:0}}>✓</span>
         {toast.msg}
       </div>
 
@@ -1922,7 +1923,7 @@ export default function YassalaDayView() {
       {/* ── AUTH MODAL ── */}
       {showAuthModal && (
         <div onClick={() => { setShowAuthModal(false); setAuthError(""); setPhoneAuthStep("input"); setPhoneInput(""); setPhoneAuthCode(""); setPhoneAuthError(""); setShowForgotPassword(false); setForgotSuccess(false); setForgotEmail(""); setForgotError(""); }}
-          style={{position:"fixed",inset:0,background:D.overlay,zIndex:1600,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:20,paddingLeft:16,paddingRight:16,paddingBottom:90,overflowY:"auto"}}>
+          style={{position:"fixed",inset:0,background:"rgba(17,24,39,.2)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",zIndex:1600,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:20,paddingLeft:16,paddingRight:16,paddingBottom:90,overflowY:"auto"}}>
           <div onClick={e => e.stopPropagation()} style={{background:D.card,border:`1px solid rgba(255,45,120,.2)`,borderRadius:14,width:"100%",maxWidth:420,animation:"fadeUp .3s both",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.1)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"22px 24px 18px",borderBottom:`1px solid ${D.border}`}}>
               <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.3rem",color:D.pink,letterSpacing:".04em"}}>🔑 CONNEXION</div>
@@ -2017,7 +2018,7 @@ export default function YassalaDayView() {
 
       {/* ── PROFIL / HISTORIQUE ── */}
       {showHistory && currentUser && (
-        <div onClick={() => { setShowHistory(false); setHistoryOrders(null); }} style={{position:"fixed",inset:0,background:D.overlay,zIndex:1500,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:16,paddingLeft:16,paddingRight:16,paddingBottom:90,overflowY:"auto"}}>
+        <div onClick={() => { setShowHistory(false); setHistoryOrders(null); }} style={{position:"fixed",inset:0,background:"rgba(17,24,39,.2)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",zIndex:1500,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:16,paddingLeft:16,paddingRight:16,paddingBottom:90,overflowY:"auto"}}>
           <div onClick={e => e.stopPropagation()} style={{background:D.card,border:`1px solid rgba(58,191,248,.15)`,borderRadius:14,width:"100%",maxWidth:480,animation:"fadeUp .3s both",maxHeight:"calc(100vh - 106px)",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 8px 40px rgba(0,0,0,.1)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 24px 16px",flexShrink:0,borderBottom:`1px solid ${D.border}`,background:D.card}}>
               <div style={{fontFamily:"'Inter',system-ui,sans-serif",fontWeight:800,fontSize:"1.3rem",color:D.cyan,letterSpacing:".04em"}}>👤 MON PROFIL</div>

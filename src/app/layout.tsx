@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
-import ChatWidgetLoader from "@/components/ChatWidgetLoader";
 
 export const viewport: Viewport = {
   themeColor: "#ff2d78",
@@ -58,7 +57,6 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        <ChatWidgetLoader />
         <SpeedInsights />
         <script dangerouslySetInnerHTML={{__html:`
           if('serviceWorker' in navigator){
