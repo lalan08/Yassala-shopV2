@@ -694,10 +694,9 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
       {/* Size + Extras picker */}
       {sizePickerProd && (() => {
         const sizes = parseSizes(sizePickerProd.desc || '');
-        const prodCat = cats.find(c => c.key === sizePickerProd.cat || c.id === sizePickerProd.cat);
-        const isPizza = prodCat ? /pizza/i.test(prodCat.key + ' ' + prodCat.label) : false;
-        const pizzasForHalf = isPizza
-          ? prods.filter(p => p.id !== sizePickerProd.id && (p.cat === sizePickerProd.cat || (prodCat && p.cat === prodCat.id)) && parseSizes(p.desc || '') && p.stock !== 0)
+        const isMixte = /mixte/i.test(sizePickerProd.name);
+        const pizzasForHalf = isMixte
+          ? prods.filter(p => p.id !== sizePickerProd.id && parseSizes(p.desc || '') && p.stock !== 0)
           : [];
         const suppTotal = selectedSupps.reduce((s, sid) => { const sp = supps.find(x => x.id === sid); return s + (sp ? sp.price : 0); }, 0);
         const basePrice = chosenSize ? chosenSize.price : sizePickerProd.price;
