@@ -688,7 +688,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: '#1a1028', border: `1px solid ${BORDER}`, color: '#f0eeff', padding: '9px 18px', borderRadius: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: '.78rem', zIndex: 800, whiteSpace: 'nowrap' }}>{toast}</div>
+        <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: '#1a1028', border: `1px solid ${BORDER}`, color: '#f0eeff', padding: '9px 18px', borderRadius: 10, fontFamily: "'Inter',sans-serif", fontWeight: 500, fontSize: '.82rem', zIndex: 800, whiteSpace: 'nowrap' }}>{toast}</div>
       )}
 
       {/* Size + Extras picker */}
@@ -705,42 +705,42 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.65)' }} />
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#120d22',
               borderTop: `1px solid ${BORDER}`, borderRadius: '22px 22px 0 0',
-              maxHeight: '85vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+              maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
               onClick={e => e.stopPropagation()}>
               {/* Handle */}
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 4px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
                 <div style={{ width: 38, height: 4, background: 'rgba(255,255,255,.15)', borderRadius: 2 }} />
               </div>
               {/* Header */}
-              <div style={{ padding: '0 20px 12px', flexShrink: 0 }}>
+              <div style={{ padding: '0 20px 10px', flexShrink: 0 }}>
                 {pickerStep === 'extras' && sizes && (
-                  <button onClick={() => setPickerStep('size')} style={{ background: 'none', border: 'none', color: PINK, fontSize: '.8rem', cursor: 'pointer', padding: '0 0 8px', fontFamily: "'Share Tech Mono',monospace" }}>← Changer de taille</button>
+                  <button onClick={() => setPickerStep('size')} style={{ background: 'none', border: 'none', color: PINK, fontSize: '.82rem', fontWeight: 600, cursor: 'pointer', padding: '0 0 6px', fontFamily: "'Inter',sans-serif" }}>← Changer de taille</button>
                 )}
-                <div style={{ fontWeight: 800, color: '#f0eeff', fontSize: '1.05rem', marginBottom: 2 }}>{sizePickerProd.name}</div>
-                <div style={{ color: '#6b7280', fontSize: '.8rem' }}>{getDisplayDesc(sizePickerProd.desc || '')}</div>
+                <div style={{ fontWeight: 800, color: '#f0eeff', fontSize: '1.1rem', marginBottom: 3, fontFamily: "'Inter',sans-serif" }}>{sizePickerProd.name}</div>
+                <div style={{ color: '#9ca3af', fontSize: '.82rem', lineHeight: 1.4, fontFamily: "'Inter',sans-serif" }}>{getDisplayDesc(sizePickerProd.desc || '')}</div>
               </div>
 
               {/* STEP 1 — Taille */}
               {pickerStep === 'size' && sizes && (
-                <div style={{ padding: '0 20px 8px', flexShrink: 0 }}>
-                  <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 10 }}>CHOISIR UNE TAILLE</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ padding: '0 20px 12px', flexShrink: 0 }}>
+                  <div style={{ fontSize: '.7rem', fontWeight: 600, color: '#6b7280', letterSpacing: '.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", marginBottom: 10 }}>Choisir une taille</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {sizes.map(size => (
                       <button key={size.label} onClick={() => { setChosenSize(size); setPickerStep('extras'); }}
                         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '15px 18px', borderRadius: 14,
-                          border: `1px solid ${chosenSize?.label === size.label ? PINK : BORDER}`,
-                          background: chosenSize?.label === size.label ? 'rgba(255,45,120,.1)' : 'rgba(255,255,255,.04)',
-                          cursor: 'pointer', transition: 'all .15s' }}>
+                          padding: '12px 16px', borderRadius: 14,
+                          border: `1.5px solid ${chosenSize?.label === size.label ? PINK : BORDER}`,
+                          background: chosenSize?.label === size.label ? 'rgba(255,45,120,.08)' : 'rgba(255,255,255,.04)',
+                          cursor: 'pointer', transition: 'all .15s', fontFamily: "'Inter',sans-serif" }}>
                         <div style={{ textAlign: 'left' }}>
                           <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.95rem' }}>{size.label}</div>
-                          <div style={{ fontSize: '.72rem', color: '#6b7280', marginTop: 2 }}>
-                            {size.label === 'Petite' ? '~1 pers.' : size.label === 'Grande' ? '~2-3 pers.' : '~4-6 pers.'}
+                          <div style={{ fontSize: '.73rem', color: '#6b7280', marginTop: 2 }}>
+                            {size.label === 'Petite' ? '~1 pers.' : size.label === 'Grande' ? '~2-3 pers.' : size.label === 'Familiale' ? '~4-6 pers.' : ''}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={{ fontWeight: 800, color: PINK, fontSize: '1rem' }}>{fmtPrice(size.price)}</span>
-                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.1rem', fontWeight: 700 }}>→</div>
+                          <div style={{ width: 30, height: 30, borderRadius: '50%', background: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1rem', fontWeight: 700 }}>→</div>
                         </div>
                       </button>
                     ))}
@@ -754,7 +754,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
                   {/* Moitié-moitié */}
                   {sizes && pizzasForHalf.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
-                      <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 10 }}>PIZZA MIXTE</div>
+                      <div style={{ fontSize: '.7rem', fontWeight: 600, color: '#6b7280', letterSpacing: '.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", marginBottom: 10 }}>Pizza mixte</div>
                       <button onClick={() => { setHalfEnabled(h => !h); setHalfProd(null); }}
                         style={{ width: '100%', padding: '13px 18px', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                           border: `1px solid ${halfEnabled ? PINK : BORDER}`, background: halfEnabled ? 'rgba(255,45,120,.1)' : 'rgba(255,255,255,.04)', cursor: 'pointer' }}>
@@ -763,7 +763,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
                       </button>
                       {halfEnabled && (
                         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <div style={{ fontSize: '.72rem', color: '#6b7280', marginBottom: 4 }}>Choisir la 2e moitié :</div>
+                          <div style={{ fontSize: '.75rem', fontWeight: 600, color: '#6b7280', marginBottom: 4, fontFamily: "'Inter',sans-serif" }}>Choisir la 2e moitié :</div>
                           {pizzasForHalf.map(p => (
                             <button key={p.id} onClick={() => setHalfProd(p)}
                               style={{ padding: '11px 16px', borderRadius: 12, border: `1px solid ${halfProd?.id === p.id ? PINK : BORDER}`,
@@ -781,7 +781,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
                   {/* Suppléments */}
                   {supps.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
-                      <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 10 }}>SUPPLÉMENTS</div>
+                      <div style={{ fontSize: '.7rem', fontWeight: 600, color: '#6b7280', letterSpacing: '.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", marginBottom: 10 }}>Suppléments</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {supps.map(s => {
                           const active = selectedSupps.includes(s.id);
@@ -807,7 +807,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
 
                   {/* Note */}
                   <div style={{ marginBottom: 100 }}>
-                    <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 8 }}>INSTRUCTION SPÉCIALE (optionnel)</div>
+                    <div style={{ fontSize: '.7rem', fontWeight: 600, color: '#6b7280', letterSpacing: '.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", marginBottom: 8 }}>Instruction spéciale (optionnel)</div>
                     <textarea value={pickerNote} onChange={e => setPickerNote(e.target.value)}
                       placeholder="Ex: sans oignons, bien cuit..."
                       style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: `1px solid ${BORDER}`, borderRadius: 12,
@@ -819,12 +819,12 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
 
               {/* Sticky add button */}
               {pickerStep === 'extras' && (
-                <div style={{ padding: '12px 20px 28px', flexShrink: 0, background: '#120d22', borderTop: `1px solid ${BORDER}` }}>
+                <div style={{ padding: '12px 20px', paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))', flexShrink: 0, background: '#120d22', borderTop: `1px solid ${BORDER}` }}>
                   <button onClick={confirmAddToCart} disabled={!canConfirm}
-                    style={{ width: '100%', padding: '16px', borderRadius: 14, background: canConfirm ? PINK : 'rgba(255,255,255,.1)',
+                    style={{ width: '100%', padding: '15px', borderRadius: 14, background: canConfirm ? PINK : 'rgba(255,255,255,.1)',
                       border: 'none', color: '#fff', fontSize: '1rem', fontWeight: 800, cursor: canConfirm ? 'pointer' : 'not-allowed',
-                      fontFamily: "'Share Tech Mono',monospace" }}>
-                    Ajouter — {fmtPrice(total)}
+                      fontFamily: "'Inter',sans-serif", letterSpacing: '.01em' }}>
+                    Ajouter · {fmtPrice(total)}
                   </button>
                 </div>
               )}
