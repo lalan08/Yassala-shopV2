@@ -1431,6 +1431,37 @@ export default function YassalaDayView() {
                   </div>
                 ) : (
                   <>
+                    {/* 🔥 Populaires */}
+                    {(() => {
+                      const pop = etabProds.filter(p => (p.badge==="HOT"||p.badge==="BEST") && p.stock>0).slice(0,6);
+                      if (!pop.length) return null;
+                      return (
+                        <div style={{padding:"18px 0 8px",background:D.card,marginBottom:8}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 16px",marginBottom:12}}>
+                            <span style={{fontSize:"1rem"}}>🔥</span>
+                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".95rem",color:D.text}}>Populaires</span>
+                          </div>
+                          <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 16px 4px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+                            {pop.map(p => (
+                              <div key={p.id} onClick={() => openProductModal(p)}
+                                style={{flexShrink:0,width:138,background:D.card,borderRadius:14,overflow:"hidden",
+                                  cursor:"pointer",boxShadow:D.shadow,border:`1px solid ${D.border}`}}>
+                                <div style={{height:90,overflow:"hidden",background:D.cardDark,position:"relative"}}>
+                                  {p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover"}} /> : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem",opacity:.25}}>🍽️</div>}
+                                  <span style={{position:"absolute",top:6,left:6,background: p.badge==="HOT" ? D.pink : "#ffb400",color:"#fff",fontSize:".58rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"2px 7px",borderRadius:10}}>
+                                    {p.badge==="HOT" ? "🔥" : "⭐"}
+                                  </span>
+                                </div>
+                                <div style={{padding:"8px 10px 10px"}}>
+                                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".85rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+                                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".88rem",color:D.pink,marginTop:2}}>{p.price.toFixed(2)}€</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {/* Category sections */}
                     {cats.filter(c => c.key !== "all").map(cat => {
                       const catProds = filtered.filter(p => p.cat === cat.key);

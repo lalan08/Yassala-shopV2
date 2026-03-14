@@ -629,8 +629,55 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
             ))}
           </div>
         ) : (
-          /* All categories — per-category sections */
+          /* All categories — Populaires + per-category sections */
           <>
+            {/* 🔥 Populaires horizontal scroll */}
+            {(() => {
+              const popular = prods.filter(p => p.badge === 'HOT' || p.badge === 'BEST' || p.badge === 'PROMO').slice(0, 6);
+              if (popular.length === 0) return null;
+              return (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.9rem', padding: '16px 16px 8px' }}>🔥 Populaires</div>
+                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 16px 12px', scrollbarWidth: 'none' }}>
+                    {popular.map(p => {
+                      const isAdded = lastAddedId === p.id;
+                      const disabled = !canOrder || p.stock === 0;
+                      return (
+                        <div key={p.id} onClick={() => { if (!disabled) pickOrAdd(p); }}
+                          style={{ flexShrink: 0, width: 148, background: isAdded ? 'rgba(34,197,94,.08)' : CARD_BG,
+                            borderRadius: 16, overflow: 'hidden', cursor: disabled ? 'default' : 'pointer',
+                            border: isAdded ? '1px solid rgba(34,197,94,.3)' : `1px solid ${BORDER}`,
+                            boxShadow: '0 4px 18px rgba(0,0,0,.4)', transition: 'all .25s' }}>
+                          <div style={{ position: 'relative', height: 105, background: 'rgba(255,255,255,.04)' }}>
+                            {p.image
+                              ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.35 : 1 }} />
+                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', opacity: .15 }}>🍽️</div>}
+                            {p.badge && <span style={{ position: 'absolute', top: 7, left: 7, background: PINK, color: '#fff', fontSize: '.55rem', fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>{p.badge}</span>}
+                          </div>
+                          <div style={{ padding: '10px 11px 12px' }}>
+                            <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.84rem', lineHeight: 1.35,
+                              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                              <span style={{ fontWeight: 800, color: disabled ? '#4b5563' : PINK, fontSize: '.88rem' }}>{fmtPrice(p.price)}</span>
+                              <button onClick={e => { e.stopPropagation(); if (!disabled) pickOrAdd(p); }} disabled={disabled}
+                                style={{ width: 30, height: 30, borderRadius: '50%', border: '2px solid rgba(8,5,15,.7)',
+                                  background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
+                                  color: '#fff', fontSize: isAdded ? '.8rem' : '1.1rem',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all .2s',
+                                  boxShadow: '0 2px 10px rgba(0,0,0,.4)', fontWeight: 700 }}>
+                                {disabled ? '✕' : isAdded ? '✓' : '+'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Per-category sections */}
             {cats.length > 0 ? cats.map(cat => {
               const catProds = prods.filter(p => p.cat === cat.key || p.cat === cat.id);
