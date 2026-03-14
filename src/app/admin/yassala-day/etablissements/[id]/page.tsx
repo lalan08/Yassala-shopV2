@@ -359,7 +359,7 @@ export default function EtablissementDetailPage() {
 
       {/* Topbar */}
       <div style={S.topbar}>
-        <a href="/admin/yassala-day/etablissements" style={{ ...mono, fontSize: ".78rem", color: "#5a5470", textDecoration: "none" }}>← ÉTABLISSEMENTS</a>
+        <a href="/admin/yassala-day" style={{ ...mono, fontSize: ".78rem", color: "#5a5470", textDecoration: "none" }}>← SERVICE DAY</a>
         <span style={{ color: "#3a3450" }}>|</span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {etab.logoUrl && <img src={etab.logoUrl} alt="" style={{ width: 26, height: 26, borderRadius: 4, objectFit: "cover" }} />}
