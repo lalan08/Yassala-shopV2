@@ -173,6 +173,21 @@ function useCountdownToNight() {
   };
 }
 
+function parseSizesEtab(desc: string): { label: string; price: number }[] | null {
+  const idx = desc.indexOf(' • ');
+  if (idx === -1) return null;
+  const parts = desc.slice(idx + 3).split(' · ');
+  const sizes = parts.map(p => {
+    const m = p.match(/^(.+?)\s+([\d]+)€$/);
+    return m ? { label: m[1], price: parseFloat(m[2]) } : null;
+  }).filter(Boolean) as { label: string; price: number }[];
+  return sizes.length > 1 ? sizes : null;
+}
+function getDisplayDescEtab(desc: string) {
+  const idx = desc.indexOf(' • ');
+  return idx === -1 ? desc : desc.slice(0, idx);
+}
+
 export default function YassalaDayView() {
   const countdown = useCountdownToNight();
 
@@ -244,6 +259,7 @@ export default function YassalaDayView() {
   const [cashSmsLoading, setCashSmsLoading]       = useState(false);
   const [cashSmsError, setCashSmsError]           = useState('');
   const [lastAddedId, setLastAddedId]     = useState<string|null>(null);
+  const [sizePickerProd, setSizePickerProd] = useState<any>(null);
   const [likes, setLikes]                 = useState<Set<string>>(new Set());
   const [showDriverForm, setShowDriverForm] = useState(false);
   const [driverForm, setDriverForm]         = useState({name:"",phone:"",email:"",zone:"",vehicle:"moto",message:""});
@@ -472,6 +488,7 @@ export default function YassalaDayView() {
 
   const openCart = () => {
     if (cart.length === 0) { showToast("Panier vide — commande quelque chose !"); return; }
+    setSelectedEtab(null);
     setShowCart(true);
   };
 
@@ -662,6 +679,12 @@ export default function YassalaDayView() {
   const etabProds = selectedEtab
     ? products.filter((p: any) => p.etablissementId === selectedEtab.id)
     : products.filter((p: any) => !p.etablissementId);
+
+  const pickOrAddEtab = (p: any) => {
+    const sizes = parseSizesEtab(p.desc || '');
+    if (sizes) { setSizePickerProd(p); return; }
+    addToCart(p.id, p.name, p.price);
+  };
   const searchQ = etabSearch.toLowerCase().trim();
   const filtered = etabProds.filter(p =>
     p.isActive !== false &&
@@ -1352,14 +1375,14 @@ export default function YassalaDayView() {
               </div>
 
               {/* Products */}
-              <div style={{paddingBottom: cartCount > 0 ? 90 : 32}}>
+              <div style={{paddingBottom: 90}}>
                 {loading ? (
                   <div style={{textAlign:"center",color:D.muted,padding:"60px 0",fontSize:".9rem"}}>Chargement...</div>
                 ) : filtered.length === 0 ? (
                   <div style={{textAlign:"center",color:D.muted,padding:"60px 0",fontSize:".9rem",background:D.card,margin:16,borderRadius:12}}>Aucun produit disponible pour le moment.</div>
                 ) : activeCat !== "all" ? (
                   <div style={{background:D.card,marginTop:8}}>
-                    {filtered.map(p => <EtabProductRow key={p.id} p={p} D={D} lastAddedId={lastAddedId} addToCart={addToCart} openProductModal={openProductModal} activePromo={activePromo} getProductPromoPrice={getProductPromoPrice} />)}
+                    {filtered.map(p => <EtabProductRow key={p.id} p={p} D={D} lastAddedId={lastAddedId} addToCart={pickOrAddEtab} openProductModal={openProductModal} activePromo={activePromo} getProductPromoPrice={getProductPromoPrice} />)}
                   </div>
                 ) : (
                   <>
@@ -1406,7 +1429,7 @@ export default function YassalaDayView() {
                             </span>
                             <span style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted}}>{catProds.length}</span>
                           </div>
-                          {catProds.map(p => <EtabProductRow key={p.id} p={p} D={D} lastAddedId={lastAddedId} addToCart={addToCart} openProductModal={openProductModal} activePromo={activePromo} getProductPromoPrice={getProductPromoPrice} />)}
+                          {catProds.map(p => <EtabProductRow key={p.id} p={p} D={D} lastAddedId={lastAddedId} addToCart={pickOrAddEtab} openProductModal={openProductModal} activePromo={activePromo} getProductPromoPrice={getProductPromoPrice} />)}
                         </div>
                       );
                     })}
@@ -1416,24 +1439,51 @@ export default function YassalaDayView() {
 
             </div>{/* fin scrollable */}
 
-            {/* Sticky cart bar */}
-            {cartCount > 0 && (
-              <div style={{flexShrink:0,padding:"10px 16px",
-                background:D.card,borderTop:`1px solid ${D.border}`,
-                boxShadow:"0 -4px 16px rgba(0,0,0,.06)"}}>
-                <button onClick={openCart}
-                  style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",
-                    background:D.text,color:"#fff",border:"none",borderRadius:14,
-                    padding:"13px 18px",fontFamily:"'Inter',sans-serif",fontWeight:700,
-                    fontSize:".95rem",cursor:"pointer",letterSpacing:".01em"}}>
-                  <span style={{background:"rgba(255,255,255,.18)",borderRadius:8,padding:"2px 10px",fontSize:".82rem",fontWeight:700}}>{cartCount}</span>
-                  <span>Voir le panier</span>
-                  <span style={{fontWeight:800}}>{cartTotal.toFixed(2)}€</span>
-                </button>
-              </div>
-            )}
-
           </div>{/* fin bottom sheet */}
+
+          {/* Size picker — sélection taille pizza */}
+          {sizePickerProd && (
+            <div style={{position:"fixed",inset:0,zIndex:900}} onClick={() => setSizePickerProd(null)}>
+              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.5)"}} />
+              <div style={{position:"absolute",bottom:0,left:0,right:0,background:D.card,
+                borderTop:`1px solid ${D.border}`,borderRadius:"22px 22px 0 0",padding:"0 20px 36px"}}
+                onClick={e => e.stopPropagation()}>
+                <div style={{display:"flex",justifyContent:"center",padding:"14px 0 8px"}}>
+                  <div style={{width:38,height:4,background:`${D.border}`,borderRadius:2}} />
+                </div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,color:D.text,fontSize:"1.05rem",marginBottom:2}}>{sizePickerProd.name}</div>
+                <div style={{fontFamily:"'Inter',sans-serif",color:D.muted,fontSize:".8rem",marginBottom:18}}>{getDisplayDescEtab(sizePickerProd.desc||"")}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {parseSizesEtab(sizePickerProd.desc||"")?.map((size:{label:string;price:number}) => (
+                    <button key={size.label} onClick={() => {
+                      const sizedId = `${sizePickerProd.id}_${size.label}`;
+                      const sizedName = `${sizePickerProd.name} (${size.label})`;
+                      addToCart(sizedId, sizedName, size.price);
+                      setLastAddedId(sizePickerProd.id);
+                      setTimeout(() => setLastAddedId(null), 1200);
+                      setSizePickerProd(null);
+                    }}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                        padding:"15px 18px",borderRadius:14,border:`1px solid ${D.border}`,
+                        background:D.cardDark,cursor:"pointer",textAlign:"left",transition:"background .15s"}}>
+                      <div>
+                        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,color:D.text,fontSize:".95rem"}}>{size.label}</div>
+                        <div style={{fontFamily:"'Inter',sans-serif",fontSize:".72rem",color:D.muted,marginTop:2}}>
+                          {size.label==="Petite"?"~1 pers.":size.label==="Grande"?"~2-3 pers.":"~4-6 pers."}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,color:D.pink,fontSize:"1rem"}}>{size.price.toFixed(2)}€</span>
+                        <div style={{width:32,height:32,borderRadius:"50%",background:D.pink,
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          color:"#fff",fontSize:"1.1rem",fontWeight:700}}>+</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -2211,7 +2261,7 @@ function ProductCard({ p, D, lastAddedId, likes, activePromo, catColor, catLabel
 function EtabProductRow({ p, D, lastAddedId, addToCart, openProductModal, activePromo, getProductPromoPrice }: {
   p: { id:string; name:string; desc:string; price:number; image:string; cat:string; badge:string; stock:number; isActive?:boolean; };
   D: any; lastAddedId: string|null;
-  addToCart:(id:string,name:string,price:number)=>void;
+  addToCart:(p:any)=>void;
   openProductModal:(p:any)=>void;
   activePromo:any; getProductPromoPrice:(id:string,price:number,promo:any)=>number|null;
 }) {
@@ -2220,54 +2270,79 @@ function EtabProductRow({ p, D, lastAddedId, addToCart, openProductModal, active
   const hasPromo = activePromo && activePromo.productIds?.includes(p.id);
   const badgeLabel = hasPromo ? "PROMO" : p.badge;
   const badgeBg = hasPromo ? D.pink : p.badge==="HOT" ? D.pink : p.badge==="BEST" ? "#ffb400" : p.badge==="NEW" ? "#22c55e" : D.cyan;
+  const sizes = parseSizesEtab(p.desc || '');
+  const displayDesc = getDisplayDescEtab(p.desc || '');
   return (
-    <div onClick={() => openProductModal(p)}
-      style={{display:"flex",alignItems:"stretch",gap:0,margin:"0 12px 10px",
-        borderRadius:16,overflow:"hidden",cursor:"pointer",
-        background: isAdded ? "rgba(34,197,94,.06)" : D.card,
-        border: isAdded ? "1px solid rgba(34,197,94,.3)" : `1px solid ${D.border}`,
-        boxShadow: isAdded ? "0 4px 16px rgba(34,197,94,.1)" : D.shadow,
-        transition:"all .25s"}}>
-      <div style={{flex:1,minWidth:0,padding:"14px 14px 14px 16px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
-        {badgeLabel && (
-          <span style={{display:"inline-block",background:badgeBg,color:"#fff",
-            fontSize:".6rem",fontFamily:"'Inter',sans-serif",fontWeight:700,
-            padding:"2px 9px",borderRadius:10,marginBottom:6,alignSelf:"flex-start"}}>
-            {badgeLabel}
-          </span>
-        )}
-        <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",
-          color: p.stock===0 ? D.muted : D.text,
-          overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
-        {p.desc && (
-          <div style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted,lineHeight:1.45,
-            display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",
-            marginTop:4}}>{p.desc}</div>
-        )}
-        <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8}}>
-          {pp !== null && <span style={{fontSize:".75rem",color:D.muted,textDecoration:"line-through"}}>{p.price.toFixed(2)}€</span>}
-          <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1rem",color: p.stock===0 ? D.muted : D.pink}}>{(pp ?? p.price).toFixed(2)}€</span>
-          {p.stock > 0 && p.stock < 10 && <span style={{fontSize:".68rem",color:"#ff6b35",fontWeight:600}}>· {p.stock} restant{p.stock>1?"s":""}</span>}
+    <>{p.image ? (
+      /* ── Avec image (Deliveroo) ── */
+      <div onClick={() => openProductModal(p)}
+        style={{display:"flex",alignItems:"stretch",gap:0,margin:"0 12px 10px",
+          borderRadius:16,overflow:"hidden",cursor:"pointer",
+          background: isAdded ? "rgba(34,197,94,.06)" : D.card,
+          border: isAdded ? "1px solid rgba(34,197,94,.3)" : `1px solid ${D.border}`,
+          boxShadow: isAdded ? "0 4px 16px rgba(34,197,94,.1)" : D.shadow,
+          transition:"all .25s"}}>
+        <div style={{flex:1,minWidth:0,padding:"14px 14px 14px 16px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+          {badgeLabel && <span style={{display:"inline-block",background:badgeBg,color:"#fff",fontSize:".6rem",fontWeight:700,padding:"2px 9px",borderRadius:10,marginBottom:6,alignSelf:"flex-start"}}>{badgeLabel}</span>}
+          <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:"1rem",color:p.stock===0?D.muted:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
+          {displayDesc && <div style={{fontFamily:"'Inter',sans-serif",fontSize:".78rem",color:D.muted,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginTop:4}}>{displayDesc}</div>}
+          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:8}}>
+            {pp!==null&&<span style={{fontSize:".75rem",color:D.muted,textDecoration:"line-through"}}>{p.price.toFixed(2)}€</span>}
+            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:"1rem",color:p.stock===0?D.muted:D.pink}}>{(pp??p.price).toFixed(2)}€</span>
+            {sizes && <span style={{fontSize:".68rem",color:D.pink,fontWeight:600}}>3 tailles</span>}
+            {p.stock>0&&p.stock<10&&<span style={{fontSize:".68rem",color:"#ff6b35",fontWeight:600}}>· {p.stock} restant{p.stock>1?"s":""}</span>}
+          </div>
+        </div>
+        <div style={{position:"relative",flexShrink:0,width:110,height:110}}>
+          <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",opacity:p.stock===0?0.35:1}} />
+          <button onClick={e=>{e.stopPropagation();if(p.stock>0)addToCart(p);}} disabled={p.stock===0}
+            style={{position:"absolute",bottom:7,right:7,width:34,height:34,borderRadius:"50%",
+              background:p.stock===0?"rgba(0,0,0,.12)":isAdded?"#22c55e":D.pink,
+              border:"2.5px solid #fff",color:"#fff",fontSize:isAdded?".85rem":"1.25rem",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              cursor:p.stock===0?"not-allowed":"pointer",
+              boxShadow:"0 3px 12px rgba(0,0,0,.18)",transition:"all .2s",fontFamily:"'Inter',sans-serif",fontWeight:700}}>
+            {p.stock===0?"✕":isAdded?"✓":sizes?"›":"+"}
+          </button>
         </div>
       </div>
-      <div style={{position:"relative",flexShrink:0,width:110,height:110,background:D.cardDark}}>
-        {p.image
-          ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover",opacity: p.stock===0 ? 0.35 : 1}} />
-          : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2.5rem",opacity:.15}}>🍽️</div>}
-        <button onClick={e => { e.stopPropagation(); if (p.stock > 0) addToCart(p.id, p.name, p.price); }}
-          disabled={p.stock === 0}
-          style={{position:"absolute",bottom:7,right:7,width:34,height:34,borderRadius:"50%",
-            background: p.stock===0 ? "rgba(0,0,0,.12)" : isAdded ? "#22c55e" : D.pink,
-            border:"2.5px solid #fff",color:"#fff",
-            fontSize: isAdded ? ".85rem" : "1.25rem",
+    ) : (
+      /* ── Sans image — style menu texte ── */
+      <div onClick={() => addToCart(p)}
+        style={{display:"flex",alignItems:"center",gap:12,margin:"0 12px 6px",
+          padding:"13px 14px 13px 16px",borderRadius:14,cursor:"pointer",
+          background: isAdded ? `rgba(34,197,94,.05)` : D.card,
+          borderLeft:`3px solid ${isAdded?"#22c55e":D.pink}`,
+          border: isAdded ? "1px solid rgba(34,197,94,.2)" : `1px solid ${D.border}`,
+          borderLeftWidth:3, boxShadow:D.shadow, transition:"all .2s"}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
+            {badgeLabel&&<span style={{background:badgeBg,color:"#fff",fontSize:".55rem",fontWeight:700,padding:"1px 7px",borderRadius:8}}>{badgeLabel}</span>}
+            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".95rem",color:p.stock===0?D.muted:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</span>
+          </div>
+          {displayDesc&&<div style={{fontFamily:"'Inter',sans-serif",fontSize:".73rem",color:D.muted,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{displayDesc}</div>}
+          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6}}>
+            {pp!==null&&<span style={{fontSize:".73rem",color:D.muted,textDecoration:"line-through"}}>{p.price.toFixed(2)}€</span>}
+            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".9rem",color:p.stock===0?D.muted:D.pink}}>
+              {sizes ? `À partir de ${Math.min(...sizes.map(s=>s.price))}€` : `${(pp??p.price).toFixed(2)}€`}
+            </span>
+            {sizes && <span style={{fontSize:".68rem",color:D.pink,fontWeight:600}}>· 3 tailles</span>}
+            {!sizes&&p.stock>0&&p.stock<10&&<span style={{fontSize:".68rem",color:"#ff6b35",fontWeight:600}}>· {p.stock} restant{p.stock>1?"s":""}</span>}
+          </div>
+        </div>
+        <button onClick={e=>{e.stopPropagation();if(p.stock>0)addToCart(p);}} disabled={p.stock===0}
+          style={{flexShrink:0,width:34,height:34,borderRadius:"50%",
+            background:p.stock===0?"rgba(0,0,0,.08)":isAdded?"#22c55e":D.pink,
+            border:`1.5px solid ${p.stock===0?"rgba(0,0,0,.08)":isAdded?"#22c55e":D.pink}`,
+            color:"#fff",fontSize:isAdded?".85rem":"1.2rem",
             display:"flex",alignItems:"center",justifyContent:"center",
-            cursor: p.stock===0 ? "not-allowed" : "pointer",
-            boxShadow:"0 3px 12px rgba(0,0,0,.18)",transition:"all .2s",
-            fontFamily:"'Inter',sans-serif",fontWeight:700}}>
-          {p.stock===0 ? "✕" : isAdded ? "✓" : "+"}
+            cursor:p.stock===0?"not-allowed":"pointer",
+            boxShadow:isAdded?"0 0 0 3px rgba(34,197,94,.2)":`0 0 0 3px ${D.pink}22`,
+            transition:"all .2s",fontFamily:"'Inter',sans-serif",fontWeight:700}}>
+          {p.stock===0?"✕":isAdded?"✓":"+"}
         </button>
       </div>
-    </div>
+    )}</>
   );
 }
 
