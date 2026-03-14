@@ -35,6 +35,7 @@ export type CartItem = { id: string; name: string; price: number; qty: number; }
 
 type EtabCat  = { id: string; key: string; label: string; emoji: string; order: number; };
 type EtabProd = { id: string; name: string; desc: string; price: number; image: string; cat: string; badge?: string; stock?: number; isActive?: boolean; };
+type EtabSupp = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; };
 
 interface HomeNewProps {
   products:         Product[];
@@ -441,10 +442,17 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
 }) {
   const [cats,  setCats]  = useState<EtabCat[]>([]);
   const [prods, setProds] = useState<EtabProd[]>([]);
+  const [supps, setSupps] = useState<EtabSupp[]>([]);
   const [activeCat, setActiveCat] = useState('all');
   const [toast, setToast] = useState('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [sizePickerProd, setSizePickerProd] = useState<EtabProd | null>(null);
+  const [pickerStep, setPickerStep] = useState<'size' | 'extras'>('size');
+  const [chosenSize, setChosenSize] = useState<{ label: string; price: number } | null>(null);
+  const [selectedSupps, setSelectedSupps] = useState<string[]>([]);
+  const [halfEnabled, setHalfEnabled] = useState(false);
+  const [halfProd, setHalfProd] = useState<EtabProd | null>(null);
+  const [pickerNote, setPickerNote] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const coll = service === 'day' ? 'day' : 'night';
@@ -455,7 +463,10 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
     const q2 = query(collection(db, `${coll}_products`),   where('etablissementId', '==', etab.id));
     const u1 = onSnapshot(q1, snap => setCats(snap.docs.map(d => ({ id: d.id, ...d.data() } as EtabCat)).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))));
     const u2 = onSnapshot(q2, snap => setProds(snap.docs.map(d => ({ id: d.id, ...d.data() } as EtabProd)).filter(p => p.isActive !== false)));
-    return () => { u1(); u2(); };
+    const u3 = onSnapshot(collection(db, `${coll}_supplements`), snap => {
+      setSupps(snap.docs.map(d => ({ id: d.id, ...d.data() } as EtabSupp)).filter(s => s.isActive !== false && (!s.etablissementId || s.etablissementId === etab.id)));
+    });
+    return () => { u1(); u2(); u3(); };
   }, [etab.id, coll]);
 
   useEffect(() => {
@@ -464,20 +475,68 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
     return () => clearTimeout(t);
   }, [toast]);
 
-  const addToCart = (prod: EtabProd, sizeSuffix?: { label: string; price: number }) => {
-    if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
-    const id    = sizeSuffix ? `${prod.id}_${sizeSuffix.label}` : prod.id;
-    const name  = sizeSuffix ? `${prod.name} (${sizeSuffix.label})` : prod.name;
-    const price = sizeSuffix ? sizeSuffix.price : prod.price;
-    setLastAddedId(prod.id);
+  const resetPicker = () => {
+    setSizePickerProd(null);
+    setPickerStep('size');
+    setChosenSize(null);
+    setSelectedSupps([]);
+    setHalfEnabled(false);
+    setHalfProd(null);
+    setPickerNote('');
+  };
+
+  const confirmAddToCart = () => {
+    if (!sizePickerProd || !canOrder) return;
+    const sizes  = parseSizes(sizePickerProd.desc || '');
+    const size   = chosenSize ?? (sizes ? null : null);
+    const suppTotal = selectedSupps.reduce((s, sid) => {
+      const sp = supps.find(x => x.id === sid);
+      return s + (sp ? sp.price : 0);
+    }, 0);
+    const suppNames = selectedSupps.map(sid => supps.find(x => x.id === sid)?.name).filter(Boolean).map(n => `+${n}`).join(', ');
+    const notePart  = pickerNote.trim() ? ` · ${pickerNote.trim()}` : '';
+    const noteSuffix = suppNames || notePart ? ` [${[suppNames, notePart.replace(' · ', '')].filter(Boolean).join(' · ')}]` : '';
+
+    let id: string, name: string, price: number;
+    if (halfEnabled && halfProd && size) {
+      const halfSizes = parseSizes(halfProd.desc || '');
+      const halfSize  = halfSizes?.find(s => s.label === size.label) ?? halfSizes?.[0] ?? { price: halfProd.price };
+      price = Math.max(size.price, halfSize.price) + suppTotal;
+      id    = `${sizePickerProd.id}_${size.label}_half_${halfProd.id}`;
+      name  = `½ ${sizePickerProd.name} / ½ ${halfProd.name} (${size.label})${noteSuffix}`;
+    } else if (size) {
+      price = size.price + suppTotal;
+      id    = `${sizePickerProd.id}_${size.label}`;
+      name  = `${sizePickerProd.name} (${size.label})${noteSuffix}`;
+    } else {
+      price = sizePickerProd.price + suppTotal;
+      id    = sizePickerProd.id;
+      name  = `${sizePickerProd.name}${noteSuffix}`;
+    }
+    setLastAddedId(sizePickerProd.id);
     setTimeout(() => setLastAddedId(null), 1200);
     onAddItem(id, name, price);
+    setToast(`${sizePickerProd.name} ajouté · ${fmtPrice(price)}`);
+    resetPicker();
   };
+
+  const addDirectToCart = (prod: EtabProd) => {
+    if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
+    setLastAddedId(prod.id);
+    setTimeout(() => setLastAddedId(null), 1200);
+    onAddItem(prod.id, prod.name, prod.price);
+    setToast(`${prod.name} ajouté · ${fmtPrice(prod.price)}`);
+  };
+
   const pickOrAdd = (prod: EtabProd) => {
     if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
     const sizes = parseSizes(prod.desc || '');
-    if (sizes) { setSizePickerProd(prod); return; }
-    addToCart(prod);
+    if (sizes || supps.length > 0) {
+      setSizePickerProd(prod);
+      setPickerStep(sizes ? 'size' : 'extras');
+      return;
+    }
+    addDirectToCart(prod);
   };
 
   return (
@@ -549,7 +608,10 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
         ) : activeCat !== 'all' ? (
           /* Single category view */
           <div>
-            {prods.filter(p => p.cat === activeCat).map(p => (
+            {prods.filter(p => {
+              const cat = cats.find(c => c.key === activeCat || c.id === activeCat);
+              return cat ? (p.cat === cat.key || p.cat === cat.id) : p.cat === activeCat;
+            }).map(p => (
               <ProductCard key={p.id} prod={p} onAdd={() => pickOrAdd(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
             ))}
           </div>
@@ -629,45 +691,147 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
         <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: '#1a1028', border: `1px solid ${BORDER}`, color: '#f0eeff', padding: '9px 18px', borderRadius: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: '.78rem', zIndex: 800, whiteSpace: 'nowrap' }}>{toast}</div>
       )}
 
-      {/* Size picker */}
-      {sizePickerProd && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 900 }} onClick={() => setSizePickerProd(null)}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.65)' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#120d22',
-            borderTop: `1px solid ${BORDER}`, borderRadius: '22px 22px 0 0', padding: '0 20px 36px' }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 8px' }}>
-              <div style={{ width: 38, height: 4, background: 'rgba(255,255,255,.15)', borderRadius: 2 }} />
-            </div>
-            <div style={{ fontWeight: 800, color: '#f0eeff', fontSize: '1.05rem', marginBottom: 2 }}>{sizePickerProd.name}</div>
-            <div style={{ color: '#6b7280', fontSize: '.8rem', marginBottom: 18 }}>
-              {getDisplayDesc(sizePickerProd.desc || '')}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {parseSizes(sizePickerProd.desc || '')?.map(size => (
-                <button key={size.label} onClick={() => { addToCart(sizePickerProd, size); setSizePickerProd(null); }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '15px 18px', borderRadius: 14,
-                    border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.04)',
-                    cursor: 'pointer', transition: 'background .15s' }}>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.95rem' }}>{size.label}</div>
-                    <div style={{ fontSize: '.72rem', color: '#6b7280', marginTop: 2 }}>
-                      {size.label === 'Petite' ? '~1 pers.' : size.label === 'Grande' ? '~2-3 pers.' : '~4-6 pers.'}
+      {/* Size + Extras picker */}
+      {sizePickerProd && (() => {
+        const sizes = parseSizes(sizePickerProd.desc || '');
+        const pizzasForHalf = prods.filter(p => p.id !== sizePickerProd.id && parseSizes(p.desc || '') && p.stock !== 0);
+        const suppTotal = selectedSupps.reduce((s, sid) => { const sp = supps.find(x => x.id === sid); return s + (sp ? sp.price : 0); }, 0);
+        const basePrice = chosenSize ? chosenSize.price : sizePickerProd.price;
+        const halfPrice = halfEnabled && halfProd && chosenSize ? (() => { const hs = parseSizes(halfProd.desc || ''); return Math.max(chosenSize.price, hs?.find(s => s.label === chosenSize.label)?.price ?? hs?.[0]?.price ?? halfProd.price); })() : basePrice;
+        const total = (halfEnabled && halfProd ? halfPrice : basePrice) + suppTotal;
+        const canConfirm = (!sizes || chosenSize) && (!halfEnabled || halfProd);
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 900 }} onClick={resetPicker}>
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.65)' }} />
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#120d22',
+              borderTop: `1px solid ${BORDER}`, borderRadius: '22px 22px 0 0',
+              maxHeight: '85vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+              onClick={e => e.stopPropagation()}>
+              {/* Handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 4px', flexShrink: 0 }}>
+                <div style={{ width: 38, height: 4, background: 'rgba(255,255,255,.15)', borderRadius: 2 }} />
+              </div>
+              {/* Header */}
+              <div style={{ padding: '0 20px 12px', flexShrink: 0 }}>
+                {pickerStep === 'extras' && sizes && (
+                  <button onClick={() => setPickerStep('size')} style={{ background: 'none', border: 'none', color: PINK, fontSize: '.8rem', cursor: 'pointer', padding: '0 0 8px', fontFamily: "'Share Tech Mono',monospace" }}>← Changer de taille</button>
+                )}
+                <div style={{ fontWeight: 800, color: '#f0eeff', fontSize: '1.05rem', marginBottom: 2 }}>{sizePickerProd.name}</div>
+                <div style={{ color: '#6b7280', fontSize: '.8rem' }}>{getDisplayDesc(sizePickerProd.desc || '')}</div>
+              </div>
+
+              {/* STEP 1 — Taille */}
+              {pickerStep === 'size' && sizes && (
+                <div style={{ padding: '0 20px 8px', flexShrink: 0 }}>
+                  <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 10 }}>CHOISIR UNE TAILLE</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {sizes.map(size => (
+                      <button key={size.label} onClick={() => { setChosenSize(size); setPickerStep('extras'); }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '15px 18px', borderRadius: 14,
+                          border: `1px solid ${chosenSize?.label === size.label ? PINK : BORDER}`,
+                          background: chosenSize?.label === size.label ? 'rgba(255,45,120,.1)' : 'rgba(255,255,255,.04)',
+                          cursor: 'pointer', transition: 'all .15s' }}>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.95rem' }}>{size.label}</div>
+                          <div style={{ fontSize: '.72rem', color: '#6b7280', marginTop: 2 }}>
+                            {size.label === 'Petite' ? '~1 pers.' : size.label === 'Grande' ? '~2-3 pers.' : '~4-6 pers.'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ fontWeight: 800, color: PINK, fontSize: '1rem' }}>{fmtPrice(size.price)}</span>
+                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.1rem', fontWeight: 700 }}>→</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2 — Extras */}
+              {pickerStep === 'extras' && (
+                <div style={{ padding: '0 20px', overflowY: 'auto', flex: 1 }}>
+                  {/* Moitié-moitié */}
+                  {sizes && pizzasForHalf.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 10 }}>PIZZA MIXTE</div>
+                      <button onClick={() => { setHalfEnabled(h => !h); setHalfProd(null); }}
+                        style={{ width: '100%', padding: '13px 18px', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          border: `1px solid ${halfEnabled ? PINK : BORDER}`, background: halfEnabled ? 'rgba(255,45,120,.1)' : 'rgba(255,255,255,.04)', cursor: 'pointer' }}>
+                        <span style={{ fontWeight: 700, color: halfEnabled ? PINK : '#f0eeff', fontSize: '.9rem' }}>½ Moitié-Moitié</span>
+                        <span style={{ fontSize: '1rem' }}>{halfEnabled ? '✓' : '+'}</span>
+                      </button>
+                      {halfEnabled && (
+                        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <div style={{ fontSize: '.72rem', color: '#6b7280', marginBottom: 4 }}>Choisir la 2e moitié :</div>
+                          {pizzasForHalf.map(p => (
+                            <button key={p.id} onClick={() => setHalfProd(p)}
+                              style={{ padding: '11px 16px', borderRadius: 12, border: `1px solid ${halfProd?.id === p.id ? PINK : BORDER}`,
+                                background: halfProd?.id === p.id ? 'rgba(255,45,120,.1)' : 'rgba(255,255,255,.04)',
+                                color: halfProd?.id === p.id ? PINK : '#f0eeff', fontWeight: halfProd?.id === p.id ? 700 : 400,
+                                cursor: 'pointer', textAlign: 'left', fontSize: '.88rem' }}>
+                              {p.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
+                  )}
+
+                  {/* Suppléments */}
+                  {supps.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 10 }}>SUPPLÉMENTS</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {supps.map(s => {
+                          const active = selectedSupps.includes(s.id);
+                          return (
+                            <button key={s.id} onClick={() => setSelectedSupps(prev => active ? prev.filter(x => x !== s.id) : [...prev, s.id])}
+                              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '12px 16px', borderRadius: 12,
+                                border: `1px solid ${active ? PINK : BORDER}`,
+                                background: active ? 'rgba(255,45,120,.1)' : 'rgba(255,255,255,.04)',
+                                cursor: 'pointer' }}>
+                              <span style={{ color: active ? PINK : '#f0eeff', fontWeight: active ? 700 : 400, fontSize: '.9rem' }}>
+                                {s.emoji ? `${s.emoji} ` : ''}{s.name}
+                              </span>
+                              <span style={{ color: active ? PINK : '#9ca3af', fontSize: '.85rem', fontWeight: 700 }}>
+                                {s.price === 0 ? 'Gratuit' : `+${fmtPrice(s.price)}`}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Note */}
+                  <div style={{ marginBottom: 100 }}>
+                    <div style={{ fontSize: '.72rem', color: '#9ca3af', letterSpacing: '.08em', fontFamily: "'Share Tech Mono',monospace", marginBottom: 8 }}>INSTRUCTION SPÉCIALE (optionnel)</div>
+                    <textarea value={pickerNote} onChange={e => setPickerNote(e.target.value)}
+                      placeholder="Ex: sans oignons, bien cuit..."
+                      style={{ width: '100%', background: 'rgba(255,255,255,.04)', border: `1px solid ${BORDER}`, borderRadius: 12,
+                        color: '#f0eeff', padding: '12px 14px', fontSize: '.85rem', resize: 'none', rows: 2,
+                        fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' } as React.CSSProperties} rows={2} />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontWeight: 800, color: PINK, fontSize: '1rem' }}>{fmtPrice(size.price)}</span>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: PINK,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: '1.1rem', fontWeight: 700 }}>+</div>
-                  </div>
-                </button>
-              ))}
+                </div>
+              )}
+
+              {/* Sticky add button */}
+              {pickerStep === 'extras' && (
+                <div style={{ padding: '12px 20px 28px', flexShrink: 0, background: '#120d22', borderTop: `1px solid ${BORDER}` }}>
+                  <button onClick={confirmAddToCart} disabled={!canConfirm}
+                    style={{ width: '100%', padding: '16px', borderRadius: 14, background: canConfirm ? PINK : 'rgba(255,255,255,.1)',
+                      border: 'none', color: '#fff', fontSize: '1rem', fontWeight: 800, cursor: canConfirm ? 'pointer' : 'not-allowed',
+                      fontFamily: "'Share Tech Mono',monospace" }}>
+                    Ajouter — {fmtPrice(total)}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
