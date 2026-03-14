@@ -11,10 +11,7 @@ export async function POST(req: NextRequest) {
     let prompt = "";
     let parseJson = false;
 
-    if (action === "description") {
-      const { name, cat, price } = body;
-      prompt = `Tu génères des descriptions courtes pour une boutique de livraison nocturne "YASSALA" en Guyane française (alcools, snacks, fête). Produit : "${name}", catégorie : "${cat}", prix : ${price}€. Génère UNE description percutante (1 phrase, max 70 caractères), style nuit festive. Réponds UNIQUEMENT avec la description, sans guillemets.`;
-    } else if (action === "predict") {
+    if (action === "predict") {
       const { weekData } = body;
       prompt = `Tu es un analyste business pour YASSALA Night Shop, boutique de livraison nocturne en Guyane française. Données des 7 derniers jours (label=jour, count=nb commandes, ca=chiffre affaires€) : ${JSON.stringify(weekData)}. Analyse et réponds UNIQUEMENT avec ce JSON valide (sans markdown, sans commentaires) : {"peakHour":"heure de pointe probable ex: 23h","bestDay":"meilleur jour semaine","promoSuggestion":"suggestion promo courte en 1 phrase","openRecommendation":"conseil horaire ouverture en 1 phrase","insight":"1 insight business clé en 1 phrase"}`;
       parseJson = true;
@@ -32,17 +29,10 @@ export async function POST(req: NextRequest) {
       const { orders } = body;
       prompt = `Tu détectes les fraudes pour YASSALA Night Shop (livraison nocturne, paiement cash ou online). Analyse ces commandes et identifie anomalies suspectes (même téléphone commandes multiples rapprochées, montants inhabituels, adresses identiques avec noms différents, patterns suspects) :\n${JSON.stringify(orders)}\nRéponds UNIQUEMENT avec ce JSON valide (sans markdown) : {"suspicious":[{"orderId":"id exact","reason":"raison courte","severity":"low|medium|high"}]}. Si rien de suspect : {"suspicious":[]}.`;
       parseJson = true;
-    } else if (action === "banner") {
-      const { promo } = body;
-      prompt = `Tu es un copywriter pour YASSALA Night Shop (livraison nocturne festive Guyane française, alcools, snacks, fête). ${promo ? `Contexte de la promo : "${promo}".` : "Crée une bannière promotionnelle générale."} Génère du texte marketing percutant pour une bannière. Réponds UNIQUEMENT avec ce JSON valide (sans markdown) : {"title":"TITRE COURT EN MAJUSCULES max 28 chars","subtitle":"tagline percutante max 35 chars","desc":"description courte max 70 chars","cta":"TEXTE BOUTON max 20 chars"}`;
-      parseJson = true;
     } else if (action === "stock_predict") {
       const { products } = body;
       prompt = `Tu analyses les stocks pour YASSALA Night Shop (livraison nocturne). Voici les produits avec leur stock actuel et leurs ventes de la semaine : ${JSON.stringify(products)}. Identifie les produits à risque de rupture prochaine. Réponds UNIQUEMENT avec ce JSON valide (sans markdown) : {"at_risk":[{"name":"nom produit","risk":"high|medium|low","estimatedDaysLeft":3,"action":"action recommandée courte"}]}. Ne liste que les produits avec risk high ou medium, max 6 produits. Si tout va bien : {"at_risk":[]}.`;
       parseJson = true;
-    } else if (action === "coaching") {
-      const { driverName, vehicle, zone, message, status, deliveries } = body;
-      prompt = `Tu es un coach bienveillant et motivant pour livreurs nocturnes chez YASSALA Night Shop en Guyane. Profil du livreur : Nom: ${driverName}, Véhicule: ${vehicle || "non précisé"}, Zone: ${zone || "non précisée"}, Livraisons effectuées: ${deliveries || 0}, Statut: ${status}, Message candidature: "${message || "aucun"}". Rédige un coaching personnalisé de 3-4 phrases en français : valorise les points forts, donne 1-2 conseils pratiques pour la livraison nocturne en Guyane, termine par une phrase d'encouragement. Style direct et chaleureux. Réponds UNIQUEMENT avec le texte du coaching.`;
     } else if (action === "coupon_suggest") {
       const { topProducts, totalOrders, avgBasket, period } = body;
       prompt = `Tu suggères des offres promotionnelles pour YASSALA Night Shop (livraison nocturne Guyane). Données de la période (${period || "7 derniers jours"}) : ${totalOrders} commandes, panier moyen ${avgBasket}€, produits populaires : ${topProducts}. Suggère 1 coupon promotionnel percutant et adapté à la situation actuelle. Réponds UNIQUEMENT avec ce JSON valide (sans markdown) : {"code":"CODE_SANS_ESPACES","type":"percent|fixed","value":10,"minOrder":20,"reason":"pourquoi cette offre est pertinente en 1 phrase"}`;

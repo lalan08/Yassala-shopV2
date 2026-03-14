@@ -26,7 +26,7 @@ const storage = getStorage(app);
 type Product = { id?: string; name: string; desc: string; price: number; image: string; cat: string; badge: string; stock: number; order?: number; isActive?: boolean; };
 type Pack = { id?: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Order = { id?: string; items: string; total: number; status: string; createdAt: string; phone: string; orderNumber?: number; name?: string; address?: string; paidOnline?: boolean; fulfillmentType?: 'delivery'|'pickup'; pickupType?: 'stock'|'relay'; pickupLocationSnapshot?: {name:string;address:string;city:string;instructions:string}; pickupTime?: string; isRush?: boolean; rushFee?: number; };
-type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiChatEnabled: boolean; aiVoiceEnabled: boolean; aiRecommendEnabled: boolean; aiDescEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiBannerEnabled: boolean; aiStockEnabled: boolean; aiCoachingEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; themeOverride: "auto" | "day" | "night"; nightBannerText: string; dayBannerText: string; };
+type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiRecommendEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiStockEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; themeOverride: "auto" | "day" | "night"; nightBannerText: string; dayBannerText: string; };
 type Banner = { id?: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness: number; active: boolean; order: number; };
 type Coupon = { id?: string; code: string; type: "percent"|"fixed"; value: number; active: boolean; };
 type Category = { id?: string; key: string; label: string; emoji: string; order: number; };
@@ -63,10 +63,9 @@ const defaultSettings: Settings = {
   hours: "22:00–06:00", zone: "Cayenne & alentours", whatsapp: "+594 XXX XXX",
   paymentOnlineEnabled: true, paymentCashEnabled: true,
   fulfillmentDeliveryEnabled: true, fulfillmentPickupEnabled: true,
-  aiChatEnabled: false, aiVoiceEnabled: true, aiRecommendEnabled: true,
-  aiDescEnabled: true, aiPredictEnabled: true, aiAnomalyEnabled: true,
-  aiBannerEnabled: true, aiStockEnabled: true, aiCoachingEnabled: true,
-  aiCouponEnabled: true, aiRouteEnabled: true,
+  aiRecommendEnabled: true,
+  aiPredictEnabled: true, aiAnomalyEnabled: true,
+  aiStockEnabled: true, aiCouponEnabled: true, aiRouteEnabled: true,
   themeOverride: "auto",
   nightBannerText: "LIVRAISON NOCTURNE DE 21H À 00H00 · CLICK & COLLECT JUSQU'À 6H · MATOURY UNIQUEMENT",
   dayBannerText: "LIVRAISON JOURNÉE DE 8H À 21H · MATOURY UNIQUEMENT",
@@ -156,9 +155,6 @@ export default function AdminPage() {
   const [aiAnomalyLoading, setAiAnomalyLoading] = useState(false);
   const [aiStock, setAiStock]                   = useState<{name:string;risk:string;estimatedDaysLeft:number;action:string}[]>([]);
   const [aiStockLoading, setAiStockLoading]     = useState(false);
-  const [aiCoachId, setAiCoachId]               = useState<string|null>(null);
-  const [aiCoachText, setAiCoachText]           = useState("");
-  const [aiCoachLoading, setAiCoachLoading]     = useState(false);
   const [aiCoupon, setAiCoupon]                 = useState<{code:string;type:string;value:number;minOrder:number;reason:string}|null>(null);
   const [aiCouponLoading, setAiCouponLoading]   = useState(false);
 
@@ -3318,45 +3314,7 @@ export default function AdminPage() {
                           )}
                         </div>
 
-                        {/* ── Coaching IA ── */}
-                        {aiCoachId === d.id && aiCoachText && (
-                          <div style={{marginTop:12,padding:"12px 16px",background:"rgba(168,85,247,.06)",
-                            border:"1px solid rgba(168,85,247,.25)",borderRadius:8}}>
-                            <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".68rem",color:"#a855f7",
-                              letterSpacing:".12em",marginBottom:6}}>🤖 COACHING IA PERSONNALISÉ</div>
-                            <div style={{fontFamily:"'Inter',sans-serif",fontSize:".87rem",color:"#d0d0e0",lineHeight:1.7}}>
-                              {aiCoachText}
-                            </div>
-                          </div>
-                        )}
-
                         <div style={{display:"flex",gap:8,flexShrink:0,flexWrap:"wrap",marginTop:8}}>
-                          {d.status === "accepte" && (
-                            <button
-                              disabled={(aiCoachLoading && aiCoachId === d.id) || settings.aiCoachingEnabled === false}
-                              title={settings.aiCoachingEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
-                              onClick={async () => {
-                                setAiCoachId(d.id); setAiCoachText(""); setAiCoachLoading(true);
-                                try {
-                                  const result = await callAI("coaching", {
-                                    driverName: (d as any).name || "Livreur",
-                                    vehicle: (d as any).transport || (d as any).vehicle,
-                                    zone: (d as any).zone,
-                                    message: (d as any).message,
-                                    status: d.status,
-                                    deliveries: (d as any).deliveryCount || 0,
-                                  });
-                                  setAiCoachText(result);
-                                } catch { showToast("Erreur IA","err"); }
-                                setAiCoachLoading(false);
-                              }}
-                              style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.3)",
-                                color:"#a855f7",padding:"8px 14px",borderRadius:8,cursor:"pointer",
-                                fontFamily:"'Share Tech Mono',monospace",fontSize:".78rem",letterSpacing:".06em",
-                                opacity:(aiCoachLoading && aiCoachId===d.id)?0.5:1}}>
-                              {aiCoachLoading && aiCoachId===d.id ? "..." : "🤖 COACHING IA"}
-                            </button>
-                          )}
                           {d.status !== "accepte" && (
                             <button onClick={async () => {
                               const pwd = Math.random().toString(36).slice(-6).toUpperCase();
@@ -4034,44 +3992,12 @@ export default function AdminPage() {
                   <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#3a3454",
                     letterSpacing:".06em",marginBottom:12}}>// Désactiver stoppe les appels Claude sans supprimer le code</div>
 
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",
-                    letterSpacing:".08em",marginBottom:8,marginTop:4}}>— CLIENT —</div>
-                  <div style={{display:"grid",gap:10,marginBottom:14}}>
-                    {([
-                      { key:"aiChatEnabled",      label:"💬 Chatbot IA",              color:"#00f5ff" },
-                      { key:"aiVoiceEnabled",      label:"🎙️ Commande vocale",         color:"#b8ff00" },
-                      { key:"aiRecommendEnabled",  label:"✨ Recommandations produits", color:"#ff9500" },
-                    ] as const).map(opt => (
-                      <label key={opt.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                        background:"#080514",border:`1px solid ${settings[opt.key] !== false ? opt.color + "44" : "rgba(255,255,255,.06)"}`,
-                        borderRadius:6,padding:"10px 16px",cursor:"pointer",transition:"all .2s"}}>
-                        <span style={{fontFamily:"'Rajdhani',sans-serif",fontWeight:600,fontSize:".9rem",
-                          color: settings[opt.key] !== false ? "#f0eeff" : "#5a5470",letterSpacing:".04em"}}>
-                          {opt.label}
-                        </span>
-                        <div onClick={() => setSettings(s => ({...s, [opt.key]: s[opt.key] === false ? true : false}))}
-                          style={{width:44,height:24,borderRadius:12,position:"relative",cursor:"pointer",flexShrink:0,
-                            background: settings[opt.key] !== false ? opt.color : "rgba(255,255,255,.1)",
-                            transition:"background .2s",border:`1px solid ${settings[opt.key] !== false ? opt.color : "rgba(255,255,255,.1)"}`}}>
-                          <div style={{position:"absolute",top:2,
-                            left: settings[opt.key] !== false ? 22 : 2,
-                            width:18,height:18,borderRadius:"50%",background:"#fff",
-                            transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.4)"}} />
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-
-                  <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".75rem",color:"#5a5470",
-                    letterSpacing:".08em",marginBottom:8}}>— ADMIN —</div>
                   <div style={{display:"grid",gap:10}}>
                     {([
-                      { key:"aiDescEnabled",    label:"📝 Génération de descriptions", color:"#b8ff00" },
+                      { key:"aiRecommendEnabled",  label:"✨ Recommandations produits", color:"#ff9500" },
                       { key:"aiPredictEnabled", label:"🔮 Prédictions & analytics",    color:"#00f5ff" },
                       { key:"aiAnomalyEnabled", label:"🔍 Détection d'anomalies",      color:"#ff9500" },
-                      { key:"aiBannerEnabled",  label:"🖼️ Génération de bannières",    color:"#ff2d78" },
                       { key:"aiStockEnabled",   label:"📦 Prédiction des stocks",      color:"#b8ff00" },
-                      { key:"aiCoachingEnabled",label:"🏆 Coaching livreurs",          color:"#00f5ff" },
                       { key:"aiCouponEnabled",  label:"🎟️ Suggestion de coupons",      color:"#ff9500" },
                       { key:"aiRouteEnabled",   label:"🗺️ Optimisation de routes",     color:"#ff2d78" },
                     ] as const).map(opt => (
@@ -4982,43 +4908,7 @@ function ProductForm({ prod, cats, onSave, onClose, showToast, settings }: { pro
 
           <Field label="NOM" value={p.name} onChange={v => setP(s=>({...s,name:v}))} />
 
-          {/* DESCRIPTION + bouton IA */}
-          <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".85rem",color:"#7a7490",letterSpacing:".1em"}}>DESCRIPTION</div>
-              <button
-                type="button"
-                disabled={settings.aiDescEnabled === false}
-                title={settings.aiDescEnabled === false ? "Désactivé dans Paramètres → IA" : undefined}
-                onClick={async () => {
-                  if (!p.name) { showToast("Entre le nom du produit d'abord", "err"); return; }
-                  try {
-                    const res = await fetch("/api/ai", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ action: "description", name: p.name, cat: p.cat, price: p.price }),
-                    });
-                    const json = await res.json();
-                    if (json.ok) setP(s => ({ ...s, desc: json.result }));
-                    else showToast("Erreur IA", "err");
-                  } catch { showToast("Erreur IA", "err"); }
-                }}
-                style={{background:"rgba(184,255,0,.12)",border:"1px solid rgba(184,255,0,.35)",color:"#b8ff00",
-                  padding:"3px 10px",borderRadius:4,cursor:"pointer",fontFamily:"'Share Tech Mono',monospace",
-                  fontSize:".72rem",letterSpacing:".06em"}}>
-                ✨ IA
-              </button>
-            </div>
-            <input
-              type="text"
-              value={p.desc}
-              onChange={e => setP(s => ({ ...s, desc: e.target.value }))}
-              placeholder="ou génère avec ✨ IA"
-              style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.12)",
-                borderRadius:6,padding:"12px 14px",color:"#f0eeff",fontSize:"1rem",
-                fontFamily:"'Rajdhani',sans-serif"}}
-            />
-          </div>
+          <Field label="DESCRIPTION" value={p.desc} onChange={v => setP(s => ({ ...s, desc: v }))} />
           <Field label="PRIX (€)" value={String(p.price)} type="number" onChange={v => setP(s=>({...s,price:Number(v)}))} />
           <Field label="STOCK INITIAL" value={String(p.stock)} type="number" onChange={v => setP(s=>({...s,stock:Number(v)}))} />
           <div>
@@ -5274,11 +5164,6 @@ function BannerForm({ banner, onSave, onClose, showToast, settings }: { banner:B
             )}
           </div>
 
-          {/* ── Génération IA ── */}
-          {settings.aiBannerEnabled !== false && (
-            <BannerAIGenerator onApply={(vals) => setB(s => ({...s, ...vals}))} showToast={showToast} />
-          )}
-
           <Field label="TITRE (grand texte)" value={b.title} onChange={v => setB(s=>({...s,title:v}))} />
           <Field label="TAGLINE (petit texte au-dessus)" value={b.subtitle} onChange={v => setB(s=>({...s,subtitle:v}))} />
           <div>
@@ -5386,54 +5271,6 @@ function PackForm({ pack, onSave, onClose }: { pack:Pack; onSave:(p:Pack)=>void;
   );
 }
 
-
-function BannerAIGenerator({ onApply, showToast }: { onApply:(v:{title?:string;subtitle?:string;desc?:string;cta?:string})=>void; showToast:(m:string,t?:string)=>void }) {
-  const [promo, setPromo]     = useState("");
-  const [loading, setLoading] = useState(false);
-  return (
-    <div style={{background:"rgba(184,255,0,.04)",border:"1px solid rgba(184,255,0,.2)",borderRadius:8,padding:"12px 16px"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-        <div style={{fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",color:"#b8ff00",letterSpacing:".12em"}}>
-          ✨ GÉNÉRATION IA — titre, tagline, description, bouton
-        </div>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={async () => {
-            setLoading(true);
-            try {
-              const res = await fetch("/api/ai", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "banner", promo }),
-              });
-              const json = await res.json();
-              if (json.ok && typeof json.result === "object") {
-                onApply(json.result);
-                showToast("Textes IA générés ✓");
-              } else { showToast("Erreur IA", "err"); }
-            } catch { showToast("Erreur IA", "err"); }
-            setLoading(false);
-          }}
-          style={{background:"rgba(184,255,0,.15)",border:"1px solid rgba(184,255,0,.35)",color:"#b8ff00",
-            padding:"4px 12px",borderRadius:4,cursor:loading?"not-allowed":"pointer",
-            fontFamily:"'Share Tech Mono',monospace",fontSize:".72rem",letterSpacing:".06em",
-            opacity:loading?0.5:1}}>
-          {loading ? "..." : "✨ GÉNÉRER"}
-        </button>
-      </div>
-      <input
-        type="text"
-        value={promo}
-        onChange={e => setPromo(e.target.value)}
-        placeholder="Contexte promo (ex: Soirée Saint-Valentin, -20% alcools)…"
-        style={{width:"100%",background:"#080514",border:"1px solid rgba(255,255,255,.1)",
-          borderRadius:4,padding:"8px 12px",color:"#f0eeff",fontSize:".85rem",
-          fontFamily:"'Rajdhani',sans-serif",boxSizing:"border-box"}}
-      />
-    </div>
-  );
-}
 
 // ── FORMULAIRE PRODUIT JOUR ──────────────────────────────────────────────────
 function DayProductForm({ prod, cats, onSave, onClose, showToast }: { prod:DayProduct; cats:Category[]; onSave:(p:DayProduct)=>void; onClose:()=>void; showToast:(msg:string,type?:string)=>void }) {
