@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { initializeApp, getApps } from "firebase/app";
 import {
   getFirestore, collection, addDoc, updateDoc, deleteDoc,
-  doc, onSnapshot, query, where,
+  doc, onSnapshot, query, where, getDocs,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -34,7 +34,7 @@ function extractSizePrices(desc: string) {
   const parts = desc.slice(idx + 3).split(/\s*·\s*/);
   const res: Record<string, string> = {};
   for (const p of parts) {
-    const m = p.trim().match(/^(Petite|Grande|Familiale)\s+([\d,]+)\s*€/);
+    const m = p.trim().match(/^(Petite|Grande|Familiale)\s+([\d.,]+)\s*€/);
     if (m) res[m[1].toLowerCase()] = m[2];
   }
   return { baseDesc: base, petite: res['petite'] || '', grande: res['grande'] || '', familiale: res['familiale'] || '' };
@@ -91,6 +91,13 @@ export default function MenuPage() {
   const [drawer,    setDrawer]    = useState<(Prod & { id?: string }) | null>(null);
   const [drawerSizes, setDrawerSizes] = useState({ petite: '', grande: '', familiale: '' });
   const [catFilter, setCatFilter] = useState("all");
+
+  // Import from Yassala Store
+  const [showImport,  setShowImport]  = useState(false);
+  const [storeProds,  setStoreProds]  = useState<Prod[]>([]);
+  const [storeSearch, setStoreSearch] = useState("");
+  const [importing,   setImporting]   = useState(false);
+  const [importSel,   setImportSel]   = useState<Set<string>>(new Set());
 
   // Upload
   const [uploading, setUploading] = useState(false);
@@ -190,6 +197,44 @@ export default function MenuPage() {
   const toggleProd = async (p: Prod & { id?: string }) => {
     if (!p.id) return;
     await updateDoc(doc(db, "day_products", p.id), { isActive: p.isActive === false ? true : false });
+  };
+
+  // ── Import from Yassala Store ─────────────────────────────────────────────
+  const openImport = async () => {
+    setShowImport(true);
+    setImportSel(new Set());
+    setStoreSearch("");
+    const snap = await getDocs(collection(db, "day_products"));
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Prod));
+    setStoreProds(all.filter(p => !(p as any).etablissementId));
+  };
+
+  const toggleImportSel = (id: string) =>
+    setImportSel(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const doImport = async () => {
+    if (importSel.size === 0) return;
+    setImporting(true);
+    try {
+      for (const pid of importSel) {
+        const prod = storeProds.find(p => p.id === pid);
+        if (!prod) continue;
+        const { id: _id, ...data } = prod as Prod & { id?: string };
+        await addDoc(collection(db, "day_products"), {
+          ...data,
+          etablissementId: etabId,
+          importedFrom: pid,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      showMsg(`${importSel.size} produit(s) importé(s) ✓`);
+      setShowImport(false);
+    } catch { showMsg("Erreur lors de l'import", false); }
+    finally { setImporting(false); }
   };
 
   // ── Image upload ──────────────────────────────────────────────────────────
@@ -395,6 +440,13 @@ export default function MenuPage() {
               }}>
               + NOUVEAU PRODUIT
             </button>
+            <button onClick={openImport}
+              style={{
+                background: "transparent", border: `1px solid ${BORDER}`, color: PINK, borderRadius: 8,
+                padding: "9px 16px", ...MONO, fontSize: ".75rem", cursor: "pointer",
+              }}>
+              📥 IMPORTER
+            </button>
           </div>
 
           {/* Empty state */}
@@ -487,6 +539,107 @@ export default function MenuPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Import from Yassala Store Modal ── */}
+      {showImport && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 110, display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+          onClick={e => { if (e.target === e.currentTarget) setShowImport(false); }}>
+          <div style={{
+            width: "100%", maxWidth: 600, background: CARD,
+            borderTop: `1px solid ${BORDER}`, borderRadius: "18px 18px 0 0",
+            maxHeight: "85vh", display: "flex", flexDirection: "column",
+          }}>
+            {/* Header */}
+            <div style={{ padding: "18px 22px 14px", borderBottom: `1px solid ${BORDER_DIM}`, flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <span style={{ ...MONO, fontSize: ".85rem", color: PINK, fontWeight: 700, letterSpacing: ".08em" }}>
+                  📥 IMPORTER DEPUIS YASSALA STORE
+                </span>
+                <button onClick={() => setShowImport(false)}
+                  style={{ background: "transparent", border: "none", color: "#5a5470", cursor: "pointer", fontSize: "1.1rem" }}>
+                  ✕
+                </button>
+              </div>
+              <input
+                value={storeSearch}
+                onChange={e => setStoreSearch(e.target.value)}
+                placeholder="🔍 Rechercher un produit..."
+                style={{ width: "100%", background: "#08050f", border: `1px solid ${BORDER_DIM}`, borderRadius: 8, padding: "9px 13px", color: "#f0eeff", fontSize: ".88rem", boxSizing: "border-box" as const }}
+              />
+              <div style={{ ...MONO, fontSize: ".65rem", color: "#5a5470", marginTop: 8 }}>
+                {importSel.size > 0
+                  ? `${importSel.size} produit(s) sélectionné(s) — seront copiés dans cet établissement`
+                  : `${storeProds.length} produit(s) disponibles dans le Store`}
+              </div>
+            </div>
+            {/* List */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 22px" }}>
+              {storeProds.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 0", ...MONO, fontSize: ".8rem", color: "#5a5470" }}>
+                  // Aucun produit global dans le Yassala Store
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {storeProds
+                    .filter(p => !storeSearch || p.name.toLowerCase().includes(storeSearch.toLowerCase()))
+                    .map(p => {
+                      const sel = importSel.has(p.id!);
+                      return (
+                        <div key={p.id}
+                          onClick={() => toggleImportSel(p.id!)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
+                            background: sel ? "rgba(255,45,120,.08)" : "rgba(255,255,255,.02)",
+                            border: `1px solid ${sel ? BORDER : BORDER_DIM}`,
+                            borderRadius: 10, cursor: "pointer", transition: "all .12s",
+                          }}>
+                          <div style={{
+                            width: 20, height: 20, borderRadius: 4, border: `2px solid ${sel ? PINK : "#5a5470"}`,
+                            background: sel ? PINK : "transparent", flexShrink: 0,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            {sel && <span style={{ color: "#fff", fontSize: ".75rem", fontWeight: 700 }}>✓</span>}
+                          </div>
+                          {p.image && (
+                            <img src={p.image} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: ".9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                            <div style={{ ...MONO, fontSize: ".7rem", color: PINK, marginTop: 2 }}>{Number(p.price).toFixed(2)} €</div>
+                            {p.desc && (
+                              <div style={{ fontSize: ".72rem", color: "#5a5470", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.desc.split(' • ')[0]}</div>
+                            )}
+                          </div>
+                          {p.badge && (
+                            <span style={{ ...MONO, fontSize: ".6rem", background: PINK, color: "#fff", padding: "2px 7px", borderRadius: 4, flexShrink: 0 }}>
+                              {p.badge}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+            {/* Footer */}
+            <div style={{ padding: "14px 22px", borderTop: `1px solid ${BORDER_DIM}`, display: "flex", gap: 8, flexShrink: 0 }}>
+              <button onClick={doImport} disabled={importSel.size === 0 || importing}
+                style={{
+                  flex: 1, background: importSel.size === 0 ? "rgba(255,45,120,.3)" : PINK,
+                  color: "#fff", border: "none", borderRadius: 8, padding: "12px", ...MONO,
+                  fontSize: ".82rem", cursor: importSel.size === 0 ? "not-allowed" : "pointer", fontWeight: 700,
+                }}>
+                {importing ? "Import en cours..." : importSel.size === 0 ? "Sélectionnez des produits" : `✓ IMPORTER ${importSel.size} PRODUIT(S)`}
+              </button>
+              <button onClick={() => setShowImport(false)}
+                style={{ background: "transparent", border: `1px solid ${BORDER_DIM}`, color: "#5a5470", borderRadius: 8, padding: "12px 16px", ...MONO, fontSize: ".8rem", cursor: "pointer" }}>
+                ANNULER
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Product Drawer ── */}
       {drawer && (
