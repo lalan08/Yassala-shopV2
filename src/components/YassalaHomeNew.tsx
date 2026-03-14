@@ -694,7 +694,11 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose, onA
       {/* Size + Extras picker */}
       {sizePickerProd && (() => {
         const sizes = parseSizes(sizePickerProd.desc || '');
-        const pizzasForHalf = prods.filter(p => p.id !== sizePickerProd.id && parseSizes(p.desc || '') && p.stock !== 0);
+        const prodCat = cats.find(c => c.key === sizePickerProd.cat || c.id === sizePickerProd.cat);
+        const isPizza = prodCat ? /pizza/i.test(prodCat.key + ' ' + prodCat.label) : false;
+        const pizzasForHalf = isPizza
+          ? prods.filter(p => p.id !== sizePickerProd.id && (p.cat === sizePickerProd.cat || (prodCat && p.cat === prodCat.id)) && parseSizes(p.desc || '') && p.stock !== 0)
+          : [];
         const suppTotal = selectedSupps.reduce((s, sid) => { const sp = supps.find(x => x.id === sid); return s + (sp ? sp.price : 0); }, 0);
         const basePrice = chosenSize ? chosenSize.price : sizePickerProd.price;
         const halfPrice = halfEnabled && halfProd && chosenSize ? (() => { const hs = parseSizes(halfProd.desc || ''); return Math.max(chosenSize.price, hs?.find(s => s.label === chosenSize.label)?.price ?? hs?.[0]?.price ?? halfProd.price); })() : basePrice;
