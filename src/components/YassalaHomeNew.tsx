@@ -54,6 +54,21 @@ interface HomeNewProps {
 /* ─── Helpers ────────────────────────────────────────────────────────── */
 function fmtPrice(p: number) { return p.toFixed(2).replace('.', ',') + ' €'; }
 function cartTotal(cart: CartItem[]) { return cart.reduce((s, i) => s + i.price * i.qty, 0); }
+/** Extrait les tailles depuis la description ("… • Petite 9€ · Grande 12€ · Familiale 17€") */
+function parseSizes(desc: string): { label: string; price: number }[] | null {
+  const idx = desc.indexOf(' • ');
+  if (idx === -1) return null;
+  const parts = desc.slice(idx + 3).split(' · ');
+  const sizes = parts.map(p => {
+    const m = p.match(/^(.+?)\s+([\d]+)€$/);
+    return m ? { label: m[1], price: parseFloat(m[2]) } : null;
+  }).filter(Boolean) as { label: string; price: number }[];
+  return sizes.length > 1 ? sizes : null;
+}
+function getDisplayDesc(desc: string) {
+  const idx = desc.indexOf(' • ');
+  return idx === -1 ? desc : desc.slice(0, idx);
+}
 function saveRecent(id: string) {
   if (typeof window === 'undefined') return;
   try {
@@ -339,46 +354,77 @@ function EtabSnapCard({ etab, onClick, isNight }: { etab: Etablissement; onClick
 function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onAdd: () => void; disabled: boolean; lastAdded?: boolean }) {
   const isAdded = !!lastAdded;
   const badgeBg = prod.badge==="HOT" ? PINK : prod.badge==="BEST" ? "#ffb400" : prod.badge==="NEW" ? "#22c55e" : PINK;
+  const hasImage = !!prod.image;
+  const addBtn = (inImage: boolean) => (
+    <button onClick={e => { e.stopPropagation(); if (!disabled) onAdd(); }} disabled={disabled}
+      style={inImage ? {
+        position: 'absolute', bottom: 7, right: 7, width: 34, height: 34, borderRadius: '50%',
+        background: disabled ? 'rgba(255,255,255,.12)' : isAdded ? '#22c55e' : PINK,
+        border: '2.5px solid rgba(8,5,15,.85)', color: '#fff',
+        fontSize: isAdded ? '.85rem' : '1.25rem', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer',
+        boxShadow: '0 3px 12px rgba(0,0,0,.5)', transition: 'all .2s',
+        fontFamily: "'Inter',sans-serif", fontWeight: 700,
+      } : {
+        flexShrink: 0, width: 34, height: 34, borderRadius: '50%',
+        background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
+        border: `1.5px solid ${isAdded ? '#22c55e' : PINK}`, color: '#fff',
+        fontSize: isAdded ? '.85rem' : '1.2rem', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer',
+        boxShadow: isAdded ? '0 0 0 3px rgba(34,197,94,.2)' : `0 0 0 3px ${PINK}22`,
+        transition: 'all .2s', fontFamily: "'Inter',sans-serif", fontWeight: 700,
+      }}>
+      {disabled ? '✕' : isAdded ? '✓' : '+'}
+    </button>
+  );
+
+  if (!hasImage) {
+    /* ── Style menu texte (sans image) ── */
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 12px 6px',
+        padding: '13px 14px 13px 16px', borderRadius: 14, cursor: 'pointer',
+        background: isAdded ? 'rgba(34,197,94,.06)' : CARD_BG,
+        borderLeft: `3px solid ${isAdded ? '#22c55e' : PINK}`,
+        border: isAdded ? '1px solid rgba(34,197,94,.2)' : `1px solid ${BORDER}`,
+        borderLeftWidth: 3, boxShadow: '0 1px 6px rgba(0,0,0,.25)', transition: 'all .2s' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+            {prod.badge && <span style={{ background: badgeBg, color: '#fff', fontSize: '.55rem',
+              fontWeight: 700, padding: '1px 7px', borderRadius: 8 }}>{prod.badge}</span>}
+            <span style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.95rem',
+              overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</span>
+          </div>
+          {prod.desc && <div style={{ color: '#6b7280', fontSize: '.73rem', lineHeight: 1.45,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>}
+          <div style={{ marginTop: 6, fontWeight: 800, fontSize: '.9rem',
+            color: disabled ? '#4b5563' : PINK }}>{fmtPrice(prod.price)}</div>
+        </div>
+        {addBtn(false)}
+      </div>
+    );
+  }
+
+  /* ── Style avec image (Deliveroo) ── */
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, margin: '0 12px 10px',
       borderRadius: 16, overflow: 'hidden',
       background: isAdded ? 'rgba(34,197,94,.08)' : CARD_BG,
       border: isAdded ? '1px solid rgba(34,197,94,.3)' : `1px solid ${BORDER}`,
-      boxShadow: '0 2px 12px rgba(0,0,0,.35)',
-      transition: 'all .25s', cursor: 'pointer' }}>
-      {/* Text */}
+      boxShadow: '0 2px 12px rgba(0,0,0,.35)', transition: 'all .25s', cursor: 'pointer' }}>
       <div style={{ flex: 1, minWidth: 0, padding: '14px 14px 14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        {prod.badge && (
-          <span style={{ display: 'inline-block', background: badgeBg, color: '#fff',
-            fontSize: '.6rem', fontFamily: "'Inter',sans-serif", fontWeight: 700,
-            padding: '2px 9px', borderRadius: 10, marginBottom: 6, alignSelf: 'flex-start' }}>{prod.badge}</span>
-        )}
+        {prod.badge && <span style={{ display: 'inline-block', background: badgeBg, color: '#fff',
+          fontSize: '.6rem', fontWeight: 700, padding: '2px 9px', borderRadius: 10,
+          marginBottom: 6, alignSelf: 'flex-start' }}>{prod.badge}</span>}
         <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '1rem',
           overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</div>
-        {prod.desc && (
-          <div style={{ color: '#6b7280', fontSize: '.78rem', lineHeight: 1.45, marginTop: 4,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>
-        )}
-        <div style={{ marginTop: 8, fontFamily: "'Inter',sans-serif", fontWeight: 800, fontSize: '1rem',
+        {prod.desc && <div style={{ color: '#6b7280', fontSize: '.78rem', lineHeight: 1.45, marginTop: 4,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>}
+        <div style={{ marginTop: 8, fontWeight: 800, fontSize: '1rem',
           color: disabled ? '#4b5563' : PINK }}>{fmtPrice(prod.price)}</div>
       </div>
-      {/* Image + button */}
-      <div style={{ position: 'relative', flexShrink: 0, width: 110, height: 110, background: 'rgba(255,255,255,.04)' }}>
-        {prod.image
-          ? <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.35 : 1 }} />
-          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', opacity: .15 }}>🍽️</div>}
-        <button onClick={e => { e.stopPropagation(); if (!disabled) onAdd(); }}
-          disabled={disabled}
-          style={{ position: 'absolute', bottom: 7, right: 7, width: 34, height: 34, borderRadius: '50%',
-            background: disabled ? 'rgba(255,255,255,.12)' : isAdded ? '#22c55e' : PINK,
-            border: '2.5px solid rgba(8,5,15,.85)', color: '#fff',
-            fontSize: isAdded ? '.85rem' : '1.25rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            boxShadow: '0 3px 12px rgba(0,0,0,.5)', transition: 'all .2s',
-            fontFamily: "'Inter',sans-serif", fontWeight: 700 }}>
-          {disabled ? '✕' : isAdded ? '✓' : '+'}
-        </button>
+      <div style={{ position: 'relative', flexShrink: 0, width: 110, height: 110 }}>
+        <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.35 : 1 }} />
+        {addBtn(true)}
       </div>
     </div>
   );
@@ -403,6 +449,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState('');
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
+  const [sizePickerProd, setSizePickerProd] = useState<EtabProd | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const coll = service === 'day' ? 'day' : 'night';
@@ -422,15 +469,24 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const addToCart = (prod: EtabProd) => {
+  const addToCart = (prod: EtabProd, sizeSuffix?: { label: string; price: number }) => {
     if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
+    const id    = sizeSuffix ? `${prod.id}_${sizeSuffix.label}` : prod.id;
+    const name  = sizeSuffix ? `${prod.name} (${sizeSuffix.label})` : prod.name;
+    const price = sizeSuffix ? sizeSuffix.price : prod.price;
     setLastAddedId(prod.id);
     setTimeout(() => setLastAddedId(null), 1200);
     setCart(prev => {
-      const existing = prev.find(i => i.id === prod.id);
-      if (existing) return prev.map(i => i.id === prod.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id: prod.id, name: prod.name, price: prod.price, qty: 1 }];
+      const existing = prev.find(i => i.id === id);
+      if (existing) return prev.map(i => i.id === id ? { ...i, qty: i.qty + 1 } : i);
+      return [...prev, { id, name, price, qty: 1 }];
     });
+  };
+  const pickOrAdd = (prod: EtabProd) => {
+    if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
+    const sizes = parseSizes(prod.desc || '');
+    if (sizes) { setSizePickerProd(prod); return; }
+    addToCart(prod);
   };
   const inc = (id: string) => setCart(prev => prev.map(i => i.id === id ? { ...i, qty: i.qty + 1 } : i));
   const dec = (id: string) => setCart(prev => {
@@ -531,7 +587,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
           /* Single category view */
           <div>
             {prods.filter(p => p.cat === activeCat).map(p => (
-              <ProductCard key={p.id} prod={p} onAdd={() => addToCart(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
+              <ProductCard key={p.id} prod={p} onAdd={() => pickOrAdd(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
             ))}
           </div>
         ) : (
@@ -549,7 +605,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
                       const isAdded = lastAddedId === p.id;
                       const disabled = !canOrder || p.stock === 0;
                       return (
-                        <div key={p.id} onClick={() => { if (!disabled) addToCart(p); }}
+                        <div key={p.id} onClick={() => { if (!disabled) pickOrAdd(p); }}
                           style={{ flexShrink: 0, width: 148, background: isAdded ? 'rgba(34,197,94,.08)' : CARD_BG,
                             borderRadius: 16, overflow: 'hidden', cursor: disabled ? 'default' : 'pointer',
                             border: isAdded ? '1px solid rgba(34,197,94,.3)' : `1px solid ${BORDER}`,
@@ -565,7 +621,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
                               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                               <span style={{ fontWeight: 800, color: disabled ? '#4b5563' : PINK, fontSize: '.88rem' }}>{fmtPrice(p.price)}</span>
-                              <button onClick={e => { e.stopPropagation(); if (!disabled) addToCart(p); }} disabled={disabled}
+                              <button onClick={e => { e.stopPropagation(); if (!disabled) pickOrAdd(p); }} disabled={disabled}
                                 style={{ width: 30, height: 30, borderRadius: '50%', border: '2px solid rgba(8,5,15,.7)',
                                   background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
                                   color: '#fff', fontSize: isAdded ? '.8rem' : '1.1rem',
@@ -594,12 +650,12 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
                     {cat.emoji ? `${cat.emoji} ` : ''}{cat.label}
                   </div>
                   {catProds.map(p => (
-                    <ProductCard key={p.id} prod={p} onAdd={() => addToCart(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
+                    <ProductCard key={p.id} prod={p} onAdd={() => pickOrAdd(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
                   ))}
                 </div>
               );
             }) : prods.map(p => (
-              <ProductCard key={p.id} prod={p} onAdd={() => addToCart(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
+              <ProductCard key={p.id} prod={p} onAdd={() => pickOrAdd(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
             ))}
           </>
         )}
@@ -705,6 +761,46 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
       {/* Toast */}
       {toast && (
         <div style={{ position: 'fixed', bottom: 90, left: '50%', transform: 'translateX(-50%)', background: '#1a1028', border: `1px solid ${BORDER}`, color: '#f0eeff', padding: '9px 18px', borderRadius: 8, fontFamily: "'Share Tech Mono',monospace", fontSize: '.78rem', zIndex: 800, whiteSpace: 'nowrap' }}>{toast}</div>
+      )}
+
+      {/* Size picker */}
+      {sizePickerProd && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 900 }} onClick={() => setSizePickerProd(null)}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.65)' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#120d22',
+            borderTop: `1px solid ${BORDER}`, borderRadius: '22px 22px 0 0', padding: '0 20px 36px' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 8px' }}>
+              <div style={{ width: 38, height: 4, background: 'rgba(255,255,255,.15)', borderRadius: 2 }} />
+            </div>
+            <div style={{ fontWeight: 800, color: '#f0eeff', fontSize: '1.05rem', marginBottom: 2 }}>{sizePickerProd.name}</div>
+            <div style={{ color: '#6b7280', fontSize: '.8rem', marginBottom: 18 }}>
+              {getDisplayDesc(sizePickerProd.desc || '')}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {parseSizes(sizePickerProd.desc || '')?.map(size => (
+                <button key={size.label} onClick={() => { addToCart(sizePickerProd, size); setSizePickerProd(null); }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '15px 18px', borderRadius: 14,
+                    border: `1px solid ${BORDER}`, background: 'rgba(255,255,255,.04)',
+                    cursor: 'pointer', transition: 'background .15s' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.95rem' }}>{size.label}</div>
+                    <div style={{ fontSize: '.72rem', color: '#6b7280', marginTop: 2 }}>
+                      {size.label === 'Petite' ? '~1 pers.' : size.label === 'Grande' ? '~2-3 pers.' : '~4-6 pers.'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontWeight: 800, color: PINK, fontSize: '1rem' }}>{fmtPrice(size.price)}</span>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: PINK,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: '1.1rem', fontWeight: 700 }}>+</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
