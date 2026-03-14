@@ -279,28 +279,46 @@ const DARK   = '#08050f';
 const CARD_BG = '#0e0a1a';
 const BORDER = 'rgba(255,45,120,.18)';
 
-function ProductCard({ prod, onAdd, disabled }: { prod: EtabProd; onAdd: () => void; disabled: boolean }) {
+function ProductCard({ prod, onAdd, disabled, lastAdded }: { prod: EtabProd; onAdd: () => void; disabled: boolean; lastAdded?: boolean }) {
+  const isAdded = !!lastAdded;
+  const badgeBg = prod.badge==="HOT" ? PINK : prod.badge==="BEST" ? "#ffb400" : prod.badge==="NEW" ? "#22c55e" : PINK;
   return (
-    <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {prod.image ? (
-        <div style={{ height: 130, overflow: 'hidden', position: 'relative' }}>
-          <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          {prod.badge && (
-            <span style={{ position: 'absolute', top: 8, left: 8, background: PINK, color: '#fff', fontSize: '.65rem', fontFamily: "'Share Tech Mono',monospace", padding: '2px 7px', borderRadius: 4, letterSpacing: '.06em' }}>{prod.badge}</span>
-          )}
-        </div>
-      ) : (
-        <div style={{ height: 130, background: 'rgba(255,45,120,.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>🍽️</div>
-      )}
-      <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <div style={{ fontWeight: 600, color: '#f0eeff', fontSize: '.88rem', lineHeight: 1.3 }}>{prod.name}</div>
-        {prod.desc && (
-          <div style={{ color: '#6b7280', fontSize: '.75rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+      borderBottom: '1px solid rgba(255,255,255,.06)',
+      background: isAdded ? 'rgba(34,197,94,.04)' : 'transparent',
+      transition: 'background .25s', cursor: 'pointer' }}>
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {prod.badge && (
+          <span style={{ display: 'inline-block', background: badgeBg, color: '#fff',
+            fontSize: '.6rem', fontFamily: "'Inter',sans-serif", fontWeight: 700,
+            padding: '1px 8px', borderRadius: 10, marginBottom: 4 }}>{prod.badge}</span>
         )}
-        <div style={{ marginTop: 'auto', paddingTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ color: PINK, fontFamily: "'Share Tech Mono',monospace", fontWeight: 700, fontSize: '.92rem' }}>{fmtPrice(prod.price)}</span>
-          <button onClick={disabled ? undefined : onAdd} disabled={disabled} style={{ width: 30, height: 30, borderRadius: '50%', border: `1.5px solid ${disabled ? 'rgba(255,255,255,.08)' : PINK}`, background: disabled ? 'transparent' : `${PINK}22`, color: disabled ? '#374151' : PINK, fontSize: '1.2rem', cursor: disabled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .15s' }}>+</button>
-        </div>
+        <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.95rem',
+          overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{prod.name}</div>
+        {prod.desc && (
+          <div style={{ color: '#6b7280', fontSize: '.78rem', lineHeight: 1.4, marginTop: 2,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{prod.desc}</div>
+        )}
+        <div style={{ marginTop: 5, fontFamily: "'Inter',sans-serif", fontWeight: 800, fontSize: '.95rem', color: '#f0eeff' }}>{fmtPrice(prod.price)}</div>
+      </div>
+      {/* Image + button */}
+      <div style={{ position: 'relative', flexShrink: 0, width: 96, height: 96, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,.04)' }}>
+        {prod.image
+          ? <img src={prod.image} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.4 : 1 }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', opacity: .2 }}>🍽️</div>}
+        <button onClick={e => { e.stopPropagation(); if (!disabled) onAdd(); }}
+          disabled={disabled}
+          style={{ position: 'absolute', bottom: 5, right: 5, width: 32, height: 32, borderRadius: '50%',
+            background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
+            border: '2.5px solid rgba(8,5,15,.8)', color: '#fff',
+            fontSize: isAdded ? '.85rem' : '1.2rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            boxShadow: '0 2px 10px rgba(0,0,0,.4)', transition: 'all .2s',
+            fontFamily: "'Inter',sans-serif", fontWeight: 700 }}>
+          {disabled ? '✕' : isAdded ? '✓' : '+'}
+        </button>
       </div>
     </div>
   );
@@ -324,6 +342,7 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
   const [address, setAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState('');
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const coll = service === 'day' ? 'day' : 'night';
@@ -345,6 +364,8 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
 
   const addToCart = (prod: EtabProd) => {
     if (!canOrder) { setToast(`Service fermé · ${serviceCountdown}`); return; }
+    setLastAddedId(prod.id);
+    setTimeout(() => setLastAddedId(null), 1200);
     setCart(prev => {
       const existing = prev.find(i => i.id === prod.id);
       if (existing) return prev.map(i => i.id === prod.id ? { ...i, qty: i.qty + 1 } : i);
@@ -379,8 +400,6 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
     } catch { setToast('Erreur, réessayez'); }
     finally { setSubmitting(false); }
   };
-
-  const visibleProds = activeCat === 'all' ? prods : prods.filter(p => p.cat === activeCat);
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: DARK, overflowY: 'auto', display: 'flex', flexDirection: 'column' }} ref={scrollRef}>
@@ -424,27 +443,101 @@ function EtabMenuPanel({ etab, service, canOrder, serviceCountdown, onClose }: {
           </div>
         )}
 
-        {/* Category chips */}
-        {cats.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '14px 0 6px', scrollbarWidth: 'none' }}>
-            {[{ key: 'all', label: 'Tout', emoji: '' }, ...cats].map(c => (
-              <button key={c.key} onClick={() => setActiveCat(c.key)} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 20, border: activeCat === c.key ? `1.5px solid ${PINK}` : '1.5px solid rgba(255,255,255,.1)', background: activeCat === c.key ? `${PINK}22` : 'transparent', color: activeCat === c.key ? PINK : '#9ca3af', fontSize: '.8rem', fontFamily: "'Share Tech Mono',monospace", cursor: 'pointer', letterSpacing: '.03em' }}>
-                {'emoji' in c && c.emoji ? `${c.emoji} ` : ''}{c.label}
+      </div>
+
+      {/* Sticky category chips */}
+      {cats.length > 0 && (
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: DARK, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 16px', scrollbarWidth: 'none', maxWidth: 720, margin: '0 auto' }}>
+            {[{ id: 'all', key: 'all', label: 'Tout', emoji: '', order: -1 }, ...cats].map(c => (
+              <button key={c.key} onClick={() => setActiveCat(c.key)}
+                style={{ flexShrink: 0, padding: '6px 16px', borderRadius: 30, border: 'none',
+                  background: activeCat === c.key ? '#f0eeff' : 'rgba(255,255,255,.08)',
+                  color: activeCat === c.key ? DARK : '#9ca3af',
+                  fontSize: '.8rem', fontFamily: "'Share Tech Mono',monospace",
+                  cursor: 'pointer', letterSpacing: '.03em', fontWeight: activeCat === c.key ? 700 : 400 }}>
+                {c.emoji ? `${c.emoji} ` : ''}{c.label}
               </button>
             ))}
           </div>
-        )}
-
-        {/* Products grid */}
-        <div style={{ marginBottom: 100, marginTop: 8 }}>
-          {visibleProds.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: '#4b5563', fontFamily: "'Share Tech Mono',monospace", fontSize: '.8rem' }}>Aucun produit disponible</div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
-              {visibleProds.map(p => <ProductCard key={p.id} prod={p} onAdd={() => addToCart(p)} disabled={!canOrder} />)}
-            </div>
-          )}
         </div>
+      )}
+
+      {/* Products */}
+      <div style={{ maxWidth: 720, width: '100%', margin: '0 auto', paddingBottom: 120 }}>
+        {prods.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#4b5563', fontFamily: "'Share Tech Mono',monospace", fontSize: '.8rem' }}>Aucun produit disponible</div>
+        ) : activeCat !== 'all' ? (
+          /* Single category view */
+          <div>
+            {prods.filter(p => p.cat === activeCat).map(p => (
+              <ProductCard key={p.id} prod={p} onAdd={() => addToCart(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
+            ))}
+          </div>
+        ) : (
+          /* All categories — Populaires + per-category sections */
+          <>
+            {/* 🔥 Populaires horizontal scroll */}
+            {(() => {
+              const popular = prods.filter(p => p.badge === 'HOT' || p.badge === 'BEST' || p.badge === 'PROMO').slice(0, 6);
+              if (popular.length === 0) return null;
+              return (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.9rem', padding: '16px 16px 8px' }}>🔥 Populaires</div>
+                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 16px 12px', scrollbarWidth: 'none' }}>
+                    {popular.map(p => {
+                      const isAdded = lastAddedId === p.id;
+                      const disabled = !canOrder || p.stock === 0;
+                      return (
+                        <div key={p.id} style={{ flexShrink: 0, width: 138, background: CARD_BG, borderRadius: 14, overflow: 'hidden', border: `1px solid ${BORDER}`, cursor: 'pointer' }} onClick={() => {}}>
+                          <div style={{ position: 'relative', height: 90, background: 'rgba(255,255,255,.04)' }}>
+                            {p.image
+                              ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: disabled ? 0.4 : 1 }} />
+                              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', opacity: .2 }}>🍽️</div>}
+                          </div>
+                          <div style={{ padding: '8px 10px' }}>
+                            <div style={{ fontWeight: 700, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.8rem', lineHeight: 1.3,
+                              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                              <span style={{ fontWeight: 800, color: disabled ? '#4b5563' : '#f0eeff', fontSize: '.85rem' }}>{fmtPrice(p.price)}</span>
+                              <button onClick={e => { e.stopPropagation(); if (!disabled) addToCart(p); }} disabled={disabled}
+                                style={{ width: 28, height: 28, borderRadius: '50%', border: 'none',
+                                  background: disabled ? 'rgba(255,255,255,.1)' : isAdded ? '#22c55e' : PINK,
+                                  color: '#fff', fontSize: isAdded ? '.8rem' : '1rem',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all .2s',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,.3)', fontWeight: 700 }}>
+                                {disabled ? '✕' : isAdded ? '✓' : '+'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Per-category sections */}
+            {cats.length > 0 ? cats.map(cat => {
+              const catProds = prods.filter(p => p.cat === cat.key || p.cat === cat.id);
+              if (catProds.length === 0) return null;
+              return (
+                <div key={cat.id} style={{ marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700, color: '#f0eeff', fontSize: '.9rem', padding: '16px 16px 4px', borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                    {cat.emoji ? `${cat.emoji} ` : ''}{cat.label}
+                  </div>
+                  {catProds.map(p => (
+                    <ProductCard key={p.id} prod={p} onAdd={() => addToCart(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
+                  ))}
+                </div>
+              );
+            }) : prods.map(p => (
+              <ProductCard key={p.id} prod={p} onAdd={() => addToCart(p)} disabled={!canOrder} lastAdded={lastAddedId === p.id} />
+            ))}
+          </>
+        )}
       </div>
 
       {/* Floating cart button */}
