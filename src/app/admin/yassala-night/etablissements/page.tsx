@@ -364,6 +364,10 @@ export default function NightEtablissementsPage() {
 
                 {/* Actions */}
                 <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" as const }}>
+                  <a href={`/admin/yassala-night/etablissements/${etab.id}/menu`}
+                    style={{ background: "rgba(255,45,120,.12)", border: "1px solid rgba(255,45,120,.35)", color: "#ff2d78", padding: "8px 14px", borderRadius: 6, fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem", cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 700 }}>
+                    📋 GÉRER LE MENU
+                  </a>
                   <button onClick={() => toggleStatus(etab)}
                     style={{ background: "transparent", border: etab.isActive ? "1px solid rgba(255,255,255,.1)" : "1px solid rgba(184,255,0,.3)", color: etab.isActive ? "#5a5470" : "#b8ff00", padding: "8px 14px", borderRadius: 6, fontFamily: "'Share Tech Mono',monospace", fontSize: ".75rem", cursor: "pointer" }}>
                     {etab.isActive ? "⏸ DÉSACTIVER" : "✓ ACTIVER"}
