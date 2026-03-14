@@ -126,7 +126,7 @@ type Category = { id?: string; key: string; label: string; emoji: string; order:
 type Pack = { id: string; name: string; tag: string; emoji: string; items: string; price: number; real: number; star: boolean; };
 type Settings = { shopOpen: boolean; deliveryMin: number; freeDelivery: number; hours: string; zone: string; whatsapp: string; paymentOnlineEnabled: boolean; paymentCashEnabled: boolean; fulfillmentDeliveryEnabled: boolean; fulfillmentPickupEnabled: boolean; aiRecommendEnabled: boolean; aiPredictEnabled: boolean; aiAnomalyEnabled: boolean; aiStockEnabled: boolean; aiCouponEnabled: boolean; aiRouteEnabled: boolean; };
 type CartItem = { id: string; name: string; price: number; qty: number; note?: string; };
-type Supplement = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; };
+type Supplement = { id: string; name: string; price: number; etablissementId?: string; isActive?: boolean; emoji?: string; pricePetite?: number; priceGrande?: number; priceFamiliale?: number; };
 type Banner   = { id: string; title: string; subtitle: string; desc: string; cta: string; link: string; gradient: string; image: string; brightness?: number; active: boolean; order: number; };
 type Etablissement = { id: string; name: string; slug?: string; description?: string; address?: string; phone?: string; logoUrl?: string; coverUrl?: string; openHours?: string; isActive: boolean; isOpen?: boolean; emoji?: string; bgColor?: string; category?: string; isComingSoon?: boolean; deliveryMin?: number; deliveryMax?: number; deliveryFee?: number; rating?: number; reviewCount?: number; };
 
@@ -191,6 +191,21 @@ function getDisplayDescEtab(desc: string) {
 function getBaseProductId(id: string) {
   const m = id.match(/^(.+)_(Petite|Grande|Familiale)(?:_half_.+)?$/);
   return m ? m[1] : id;
+}
+// Prix des suppléments selon la taille de pizza choisie
+// Crevettes : 4€/5€/6€ — autres : 2€/3€/4€
+function getSuppPrice(s: Supplement, sizeLabel?: string | null): number {
+  if (!sizeLabel) return s.price;
+  const isCrevettes = /crevett/i.test(s.name);
+  if (s.pricePetite !== undefined || s.priceGrande !== undefined || s.priceFamiliale !== undefined) {
+    if (sizeLabel === "Petite")    return s.pricePetite    ?? s.price;
+    if (sizeLabel === "Grande")    return s.priceGrande    ?? s.price;
+    if (sizeLabel === "Familiale") return s.priceFamiliale ?? s.price;
+  }
+  if (sizeLabel === "Petite")    return isCrevettes ? 4 : 2;
+  if (sizeLabel === "Grande")    return isCrevettes ? 5 : 3;
+  if (sizeLabel === "Familiale") return isCrevettes ? 6 : 4;
+  return s.price;
 }
 
 export default function YassalaDayView() {
@@ -1416,37 +1431,6 @@ export default function YassalaDayView() {
                   </div>
                 ) : (
                   <>
-                    {/* 🔥 Populaires */}
-                    {(() => {
-                      const pop = etabProds.filter(p => (p.badge==="HOT"||p.badge==="BEST") && p.stock>0).slice(0,6);
-                      if (!pop.length) return null;
-                      return (
-                        <div style={{padding:"18px 0 8px",background:D.card,marginBottom:8}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 16px",marginBottom:12}}>
-                            <span style={{fontSize:"1rem"}}>🔥</span>
-                            <span style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".95rem",color:D.text}}>Populaires</span>
-                          </div>
-                          <div style={{display:"flex",gap:12,overflowX:"auto",padding:"0 16px 4px",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
-                            {pop.map(p => (
-                              <div key={p.id} onClick={() => openProductModal(p)}
-                                style={{flexShrink:0,width:138,background:D.card,borderRadius:14,overflow:"hidden",
-                                  cursor:"pointer",boxShadow:D.shadow,border:`1px solid ${D.border}`}}>
-                                <div style={{height:90,overflow:"hidden",background:D.cardDark,position:"relative"}}>
-                                  {p.image ? <img src={p.image} alt={p.name} style={{width:"100%",height:"100%",objectFit:"cover"}} /> : <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"2rem",opacity:.25}}>🍽️</div>}
-                                  <span style={{position:"absolute",top:6,left:6,background: p.badge==="HOT" ? D.pink : "#ffb400",color:"#fff",fontSize:".58rem",fontFamily:"'Inter',sans-serif",fontWeight:700,padding:"2px 7px",borderRadius:10}}>
-                                    {p.badge==="HOT" ? "🔥" : "⭐"}
-                                  </span>
-                                </div>
-                                <div style={{padding:"8px 10px 10px"}}>
-                                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".85rem",color:D.text,overflow:"hidden",whiteSpace:"nowrap",textOverflow:"ellipsis"}}>{p.name}</div>
-                                  <div style={{fontFamily:"'Inter',sans-serif",fontWeight:800,fontSize:".88rem",color:D.pink,marginTop:2}}>{p.price.toFixed(2)}€</div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
                     {/* Category sections */}
                     {cats.filter(c => c.key !== "all").map(cat => {
                       const catProds = filtered.filter(p => p.cat === cat.key);
@@ -1475,7 +1459,7 @@ export default function YassalaDayView() {
           {sizePickerProd && (() => {
             const sizes = parseSizesEtab(sizePickerProd.desc||"") || [];
             const etabSupps = supplements.filter(s => !s.etablissementId || (selectedEtab && s.etablissementId === selectedEtab.id));
-            const suppTotal = sizePickerSelectedSupps.reduce((s,x) => s+x.price, 0);
+            const suppTotal = sizePickerSelectedSupps.reduce((s,x) => s + getSuppPrice(x, sizePickerChosenSize?.label), 0);
             const chosenPrice = sizePickerChosenSize ? sizePickerChosenSize.price + suppTotal : 0;
             const pizzasWithSizes = etabProds.filter(p => p.id !== sizePickerProd.id && parseSizesEtab(p.desc||"") && p.stock > 0);
             const confirmAdd = () => {
@@ -1578,10 +1562,14 @@ export default function YassalaDayView() {
                 {/* — Suppléments — */}
                 {etabSupps.length > 0 && (
                   <div style={{marginBottom:16}}>
-                    <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",fontWeight:700,color:D.muted,letterSpacing:".1em",textTransform:"uppercase",marginBottom:8}}>Suppléments</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <div style={{fontFamily:"'Inter',sans-serif",fontSize:".7rem",fontWeight:700,color:D.muted,letterSpacing:".1em",textTransform:"uppercase"}}>Suppléments</div>
+                      {!sizePickerChosenSize && <div style={{fontFamily:"'Inter',sans-serif",fontSize:".65rem",color:D.muted,fontStyle:"italic"}}>prix selon la taille</div>}
+                    </div>
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                       {etabSupps.map(s => {
                         const isOn = sizePickerSelectedSupps.some(x => x.id===s.id);
+                        const effPrice = getSuppPrice(s, sizePickerChosenSize?.label);
                         return (
                           <button key={s.id} onClick={() => setSizePickerSelectedSupps(prev => isOn ? prev.filter(x=>x.id!==s.id) : [...prev,s])}
                             style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:10,cursor:"pointer",
@@ -1590,7 +1578,7 @@ export default function YassalaDayView() {
                             {s.emoji && <span style={{fontSize:"1.1rem"}}>{s.emoji}</span>}
                             <span style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:".9rem",color:D.text,flex:1,textAlign:"left"}}>{s.name}</span>
                             <span style={{fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:".88rem",color:D.pink}}>
-                              {s.price > 0 ? `+${s.price.toFixed(2)}€` : "Gratuit"}
+                              {effPrice > 0 ? `+${effPrice.toFixed(2)}€` : "Gratuit"}
                             </span>
                             <div style={{width:20,height:20,borderRadius:4,border:`2px solid ${isOn?D.pink:D.border}`,background:isOn?D.pink:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                               {isOn && <span style={{color:"#fff",fontSize:".7rem",fontWeight:900}}>✓</span>}
